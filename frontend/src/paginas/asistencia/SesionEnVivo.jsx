@@ -10,7 +10,7 @@ import Icono from "../../componentes/Iconos.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import PanelRegistroManual from "../../componentes/PanelRegistroManual.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { textoPlazo } from "../../utilidades/formato";
+import { textoPlazo, fechaCorta } from "../../utilidades/formato";
 
 export default function SesionEnVivo() {
   const { id } = useParams();
@@ -143,7 +143,7 @@ export default function SesionEnVivo() {
             Ficha {sesion.numero_ficha} · Ambiente {sesion.numero_ambiente}
           </h1>
           <p>
-            {sesion.programa} · {new Date(sesion.fecha).toLocaleDateString("es-CO")} ·{" "}
+            {sesion.programa} · {fechaCorta(sesion.fecha)} ·{" "}
             {sesion.hora_inicio.slice(0, 5)}–{sesion.hora_fin.slice(0, 5)} ·{" "}
             <b>{marcados}/{sesion.aprendices.length}</b> registrados
           </p>

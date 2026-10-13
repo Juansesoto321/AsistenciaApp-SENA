@@ -63,7 +63,8 @@ async function listarBandeja(usuario) {
   const valores = usuario.rol === "instructor" ? [usuario.id] : [];
   const r = await pool.query(
     `SELECT j.id_justificacion, j.estado, j.tipo, j.descripcion, j.nombre_archivo, j.enviada_en, j.expira_en,
-            j.observacion_validacion,
+            j.observacion_validacion, j.validada_en,
+            rev.nombres || ' ' || rev.apellidos AS revisada_por,
             s.fecha, f.numero_ficha, u.nombres, u.apellidos, u.documento
      FROM justificacion j
      JOIN asistencia a ON a.id_asistencia = j.id_asistencia
@@ -71,6 +72,7 @@ async function listarBandeja(usuario) {
      JOIN horario h ON h.id_horario = s.id_horario
      JOIN ficha f ON f.id_ficha = h.id_ficha
      JOIN usuario u ON u.id_usuario = a.id_aprendiz
+     LEFT JOIN usuario rev ON rev.id_usuario = j.validada_por
      WHERE j.estado IN ('enviada','aprobada','rechazada') ${filtro}
      ORDER BY j.enviada_en DESC NULLS LAST`,
     valores

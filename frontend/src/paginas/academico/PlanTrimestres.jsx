@@ -3,6 +3,7 @@ import { api } from "../../servicios/api";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import { fechaCorta } from "../../utilidades/formato";
 
 /**
  * Plan de formación por trimestre de una ficha: en cada trimestre, qué
@@ -85,7 +86,7 @@ export default function PlanTrimestres({ plan, puedeEditar, alCambiar, alMensaje
               : `Trimestre en curso: ${actual} de ${ficha.trimestres}`}
           </b>
           <p>
-            Inició el {new Date(ficha.fecha_inicio).toLocaleDateString("es-CO")}. Cada trimestre dura tres meses.
+            Inició el {fechaCorta(ficha.fecha_inicio)}. Cada trimestre dura tres meses.
           </p>
         </div>
         {puedeEditar && (

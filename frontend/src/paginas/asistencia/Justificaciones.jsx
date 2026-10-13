@@ -4,7 +4,7 @@ import Cargando from "../../componentes/Cargando.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { textoPlazo as formatearPlazo } from "../../utilidades/formato";
+import { textoPlazo as formatearPlazo, fechaCorta, fechaHora } from "../../utilidades/formato";
 
 const textoPlazo = (horas) => formatearPlazo(Number(horas || 72));
 
@@ -17,9 +17,21 @@ const ETIQUETA_TIPO = {
   otro: "Otro",
 };
 
+// "enviada" es la que el aprendiz cargó y espera respuesta
+const ETIQUETA_ESTADO = { enviada: "Por revisar", aprobada: "Aprobada", rechazada: "Rechazada" };
+const FILTROS = [["enviada", "Por revisar"], ["aprobada", "Aprobadas"], ["rechazada", "Rechazadas"], ["todas", "Todas"]];
+
+/** El soporte llega como data URI; se convierte en un enlace local para verlo dentro de la página. */
+async function enlaceDeSoporte(dataUri) {
+  const respuesta = await fetch(dataUri);
+  return URL.createObjectURL(await respuesta.blob());
+}
+
 export default function Justificaciones() {
   const [lista, setLista] = useState(null);
+  const [filtro, setFiltro] = useState("enviada");
   const [detalle, setDetalle] = useState(null);
+  const [soporte, setSoporte] = useState(null); // { url, esImagen, esPdf, nombre } | "cargando" | "error"
   const [mensaje, setMensaje] = useState(null);
   const [plazo, setPlazo] = useState(72);
   const [rechazando, setRechazando] = useState(false);
@@ -28,7 +40,11 @@ export default function Justificaciones() {
 
   const cargar = () =>
     api("/justificaciones")
-      .then(setLista)
+      .then((datos) => {
+        setLista(datos);
+        // Si no hay nada por revisar, se muestran todas en vez de una lista vacía
+        setFiltro((actual) => (actual === "enviada" && !datos.some((j) => j.estado === "enviada") ? "todas" : actual));
+      })
       .catch((e) => {
         setLista([]);
         setMensaje({ tipo: "error", texto: e.message });
@@ -36,324 +52,210 @@ export default function Justificaciones() {
 
   useEffect(() => {
     cargar();
-
     api("/configuracion").then((c) => setPlazo(c.horas_justificacion)).catch(() => {});
   }, []);
 
-  function abrir(j) {
+  // Libera el enlace del soporte al cerrar o cambiar de justificación
+  useEffect(() => () => { if (soporte?.url) URL.revokeObjectURL(soporte.url); }, [soporte]);
+
+  async function abrir(j) {
     setDetalle(j);
     setRechazando(false);
     setObservacion("");
+    setSoporte(null);
+    if (!j.nombre_archivo) return;
+    setSoporte("cargando");
+    try {
+      const r = await api(`/justificaciones/${j.id_justificacion}/archivo`);
+      const tipo = r.archivo_datos.slice(5, r.archivo_datos.indexOf(";"));
+      setSoporte({
+        url: await enlaceDeSoporte(r.archivo_datos),
+        esImagen: tipo.startsWith("image/"),
+        esPdf: tipo === "application/pdf",
+        nombre: r.nombre_archivo || j.nombre_archivo,
+      });
+    } catch {
+      setSoporte("error");
+    }
+  }
+
+  function cerrar() {
+    if (procesando) return;
+    setDetalle(null);
+    setSoporte(null);
   }
 
   async function validar(j, estado, obs = "") {
     try {
       setProcesando(true);
-
-      const r = await api(`/justificaciones/${j.id_justificacion}`, {
-        method: "PATCH",
-        body: {
-          estado,
-          observacion: obs,
-        },
-      });
-
-      setMensaje({
-        tipo: "exito",
-        texto: r.mensaje,
-      });
-
+      const r = await api(`/justificaciones/${j.id_justificacion}`, { method: "PATCH", body: { estado, observacion: obs } });
+      setMensaje({ tipo: "exito", texto: `${r.mensaje}. El aprendiz ya fue notificado por correo.` });
       setDetalle(null);
+      setSoporte(null);
       setRechazando(false);
       setObservacion("");
-
       await cargar();
     } catch (e) {
-      setMensaje({
-        tipo: "error",
-        texto: e.message,
-      });
+      setMensaje({ tipo: "error", texto: e.message });
     } finally {
       setProcesando(false);
     }
   }
 
-  async function verArchivo(j) {
-    try {
-      const r = await api(
-        `/justificaciones/${j.id_justificacion}/archivo`
-      );
-
-      const enlace = document.createElement("a");
-      enlace.href = r.archivo_datos;
-      enlace.download = r.nombre_archivo || "adjunto";
-      enlace.click();
-    } catch (e) {
-      setMensaje({
-        tipo: "error",
-        texto: e.message,
-      });
-    }
-  }
+  const cuenta = (estado) => (lista || []).filter((j) => estado === "todas" || j.estado === estado).length;
+  const visibles = (lista || [])
+    .filter((j) => filtro === "todas" || j.estado === filtro)
+    .sort((a, b) => (b.estado === "enviada") - (a.estado === "enviada")); // las por revisar primero
 
   return (
     <>
       <div className="cabecera-pagina">
         <div>
           <h1>Justificaciones de inasistencia</h1>
-
           <p>
-            Los aprendices tienen {textoPlazo(plazo)} para cargar su excusa.
-            Después del cierre de la clase, la justificación también puede
-            ser revisada y modificada.
+            Los aprendices tienen {textoPlazo(plazo)} para cargar su excusa con el enlace que les llega al correo.
+            Revisa el soporte y apruébala o recházala: el aprendiz recibe la respuesta por correo.
           </p>
         </div>
       </div>
 
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
-      {lista === null ? <Cargando /> : (
-      <table className="tabla tabla-tarjetas">
-        <thead>
-          <tr>
-            <th>Fecha clase</th>
-            <th>Aprendiz</th>
-            <th>Ficha</th>
-            <th>Tipo</th>
-            <th>Enviada</th>
-            <th>Estado</th>
-            <th></th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {lista.map((j) => (
-            <tr key={j.id_justificacion}>
-              <td data-etiqueta="Fecha clase">
-                {new Date(j.fecha).toLocaleDateString("es-CO")}
-              </td>
-
-              <td data-etiqueta="Aprendiz">
-                {j.nombres} {j.apellidos}
-              </td>
-
-              <td data-etiqueta="Ficha">{j.numero_ficha}</td>
-
-              <td data-etiqueta="Tipo">
-                {ETIQUETA_TIPO[j.tipo] || "—"}
-              </td>
-
-              <td data-etiqueta="Enviada">
-                {j.enviada_en
-                  ? new Date(j.enviada_en).toLocaleString("es-CO")
-                  : "—"}
-              </td>
-
-              <td data-etiqueta="Estado">
-                <span className={`insignia ${j.estado}`}>
-                  {j.estado}
-                </span>
-              </td>
-
-              <td>
-                <button
-                  className="boton mini suave"
-                  onClick={() => abrir(j)}
-                >
-                  Revisar
-                </button>
-              </td>
-            </tr>
+      {lista === null ? <Cargando /> : (<>
+        <div className="pestanas" role="tablist" aria-label="Filtrar por estado">
+          {FILTROS.map(([valor, texto]) => (
+            <button key={valor} role="tab" aria-selected={filtro === valor} onClick={() => setFiltro(valor)}>
+              {texto} <span className="cuenta-pestana">{cuenta(valor)}</span>
+            </button>
           ))}
+        </div>
 
-          {!lista.length && (
+        <table className="tabla tabla-tarjetas">
+          <thead>
             <tr>
-              <td colSpan={7}>
-                <Vacio icono="justificaciones" titulo="No hay justificaciones para revisar">
-                  Cuando un aprendiz cargue la excusa de una inasistencia, aparecerá aquí para aprobarla o rechazarla.
-                </Vacio>
-              </td>
+              <th>Fecha clase</th>
+              <th>Aprendiz</th>
+              <th>Ficha</th>
+              <th>Tipo</th>
+              <th>Enviada</th>
+              <th>Estado</th>
+              <th>Revisó</th>
+              <th></th>
             </tr>
-          )}
-        </tbody>
-      </table>
-      )}
+          </thead>
+          <tbody>
+            {visibles.map((j) => (
+              <tr key={j.id_justificacion}>
+                <td data-etiqueta="Fecha clase">{fechaCorta(j.fecha)}</td>
+                <td data-etiqueta="Aprendiz">{j.nombres} {j.apellidos}</td>
+                <td data-etiqueta="Ficha">{j.numero_ficha}</td>
+                <td data-etiqueta="Tipo">
+                  {ETIQUETA_TIPO[j.tipo] || "—"}
+                  {j.nombre_archivo && <Icono nombre="adjunto" aria-label="Tiene soporte adjunto" style={{ marginLeft: 6, color: "var(--tinta-suave)" }} />}
+                </td>
+                <td data-etiqueta="Enviada">{j.enviada_en ? fechaHora(j.enviada_en) : "—"}</td>
+                <td data-etiqueta="Estado"><span className={`insignia ${j.estado}`}>{ETIQUETA_ESTADO[j.estado] || j.estado}</span></td>
+                <td data-etiqueta="Revisó">{j.revisada_por || "—"}</td>
+                <td>
+                  <button className={`boton mini ${j.estado === "enviada" ? "" : "suave"}`} onClick={() => abrir(j)}>
+                    {j.estado === "enviada" ? "Revisar" : "Ver"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {!visibles.length && (
+              <tr>
+                <td colSpan={8}>
+                  {filtro === "enviada" ? (
+                    <Vacio icono="justificaciones" titulo="No hay justificaciones por revisar">
+                      Cuando un aprendiz cargue la excusa de una inasistencia, aparecerá aquí para aprobarla o rechazarla.
+                    </Vacio>
+                  ) : (
+                    <Vacio icono="justificaciones" titulo="No hay justificaciones en este estado" />
+                  )}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </>)}
 
       {detalle && (
-        <div
-          className="superposicion"
-          onClick={() => !procesando && setDetalle(null)}
-        >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>
-              Justificación · {detalle.nombres} {detalle.apellidos}
-            </h2>
-
-            <p
-              style={{
-                color: "var(--tinta-suave)",
-                fontSize: 13.5,
-              }}
-            >
-              Clase del{" "}
-              {new Date(detalle.fecha).toLocaleDateString("es-CO")} ·
-              Ficha {detalle.numero_ficha} ·{" "}
-              {ETIQUETA_TIPO[detalle.tipo] || "Sin tipo"}
+        <div className="superposicion" onClick={cerrar}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Justificación · {detalle.nombres} {detalle.apellidos}</h2>
+            <p style={{ color: "var(--tinta-suave)", fontSize: 13.5 }}>
+              Clase del {fechaCorta(detalle.fecha)} · Ficha {detalle.numero_ficha} · {ETIQUETA_TIPO[detalle.tipo] || "Sin tipo"}
             </p>
 
             <label>Motivo descrito por el aprendiz</label>
-
-            <div
-              className="tarjeta"
-              style={{
-                background: "var(--violeta-50)",
-              }}
-            >
+            <div className="tarjeta" style={{ background: "var(--violeta-50)" }}>
               {detalle.descripcion || "Sin descripción"}
             </div>
 
-            {detalle.nombre_archivo && (
-              <p style={{ marginTop: 12 }}>
-                <Icono nombre="adjunto" /> Adjunto:{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    verArchivo(detalle);
-                  }}
-                >
-                  {detalle.nombre_archivo}
-                </a>
-              </p>
-            )}
-
-            {detalle.observacion_validacion && (
-              <>
-                <label style={{ marginTop: 14 }}>
-                  Observación de{" "}
-                  {detalle.estado === "rechazada"
-                    ? "rechazo"
-                    : "aprobación"}
-                </label>
-
-                <div
-                  className="tarjeta"
-                  style={{
-                    background: detalle.estado === "rechazada" ? "var(--rojo-suave)" : "var(--verde-suave)",
-                  }}
-                >
-                  {detalle.observacion_validacion}
-                </div>
-              </>
-            )}
-
-            {/* Estado actual */}
-            <div style={{ marginTop: 16 }}>
-              <label>Estado actual</label>
-
-              <div>
-                <span className={`insignia ${detalle.estado}`}>
-                  {detalle.estado}
-                </span>
+            <label style={{ marginTop: 14 }}>Soporte</label>
+            {!detalle.nombre_archivo && <p className="texto-suave">El aprendiz no adjuntó soporte (no es obligatorio en calamidad doméstica ni duelo).</p>}
+            {soporte === "cargando" && <Cargando texto="Cargando soporte…" />}
+            {soporte === "error" && <p className="texto-suave">No se pudo abrir el soporte.</p>}
+            {soporte?.url && (
+              <div className="visor-soporte">
+                {soporte.esImagen && <img src={soporte.url} alt={`Soporte de ${detalle.nombres}`} />}
+                {soporte.esPdf && <iframe src={soporte.url} title={`Soporte de ${detalle.nombres}`} />}
+                <a href={soporte.url} download={soporte.nombre}><Icono nombre="adjunto" /> Descargar {soporte.nombre}</a>
               </div>
-            </div>
+            )}
 
-            {/* Opciones para modificar la justificación */}
-            {!rechazando && (
-              <div
-                className="acciones-modal"
-                style={{ marginTop: 18 }}
-              >
-                <button
-                  className="boton peligro"
-                  disabled={procesando}
-                  onClick={() => {
-                    setRechazando(true);
-                    setObservacion("");
-                  }}
-                >
+            {detalle.estado !== "enviada" && (
+              <div className={`decision ${detalle.estado}`}>
+                <b>{ETIQUETA_ESTADO[detalle.estado]}</b>
+                {detalle.revisada_por && <> por {detalle.revisada_por}</>}
+                {detalle.validada_en && <> el {fechaHora(detalle.validada_en)}</>}
+                {detalle.observacion_validacion && <p>{detalle.observacion_validacion}</p>}
+              </div>
+            )}
+
+            {detalle.estado === "enviada" && !rechazando && (
+              <div className="acciones-modal" style={{ marginTop: 18 }}>
+                <button className="boton suave" disabled={procesando} onClick={cerrar}>Cerrar</button>
+                <button className="boton peligro" disabled={procesando} onClick={() => { setRechazando(true); setObservacion(""); }}>
                   Rechazar
                 </button>
-
-                <button
-                  className="boton exito"
-                  disabled={procesando}
-                  onClick={() =>
-                    validar(detalle, "aprobada")
-                  }
-                >
-                  {procesando
-                    ? "Procesando..."
-                    : detalle.estado === "aprobada"
-                    ? "Mantener aprobada"
-                    : "Aprobar · queda justificada"}
-                </button>
-
-                <button
-                  className="boton suave"
-                  disabled={procesando}
-                  onClick={() => setDetalle(null)}
-                >
-                  Cerrar
+                <button className="boton exito" disabled={procesando} onClick={() => validar(detalle, "aprobada")}>
+                  {procesando ? "Procesando…" : "Aprobar · queda justificada"}
                 </button>
               </div>
             )}
 
-            {/* Formulario para rechazo */}
-            {rechazando && (
+            {detalle.estado === "enviada" && rechazando && (
               <>
-                <label style={{ marginTop: 14 }}>
+                <label style={{ marginTop: 14 }} htmlFor="motivo-rechazo">
                   Explica por qué se rechaza
-                  <span style={{ color: "var(--rojo)" }}>
-                    {" "}
-                    (obligatorio, el aprendiz lo verá)
-                  </span>
+                  <span style={{ color: "var(--rojo)" }}> (obligatorio, el aprendiz lo verá)</span>
                 </label>
-
                 <textarea
+                  id="motivo-rechazo"
                   rows={3}
                   value={observacion}
-                  onChange={(e) =>
-                    setObservacion(e.target.value)
-                  }
+                  onChange={(e) => setObservacion(e.target.value)}
                   placeholder="Ej.: la foto no corresponde a una constancia médica válida."
                   disabled={procesando}
                 />
-
                 <div className="acciones-modal">
-                  <button
-                    className="boton suave"
-                    disabled={procesando}
-                    onClick={() => {
-                      setRechazando(false);
-                      setObservacion("");
-                    }}
-                  >
+                  <button className="boton suave" disabled={procesando} onClick={() => { setRechazando(false); setObservacion(""); }}>
                     Cancelar
                   </button>
-
-                  <button
-                    className="boton peligro"
-                    disabled={
-                      procesando || !observacion.trim()
-                    }
-                    onClick={() =>
-                      validar(
-                        detalle,
-                        "rechazada",
-                        observacion
-                      )
-                    }
-                  >
-                    {procesando
-                      ? "Procesando..."
-                      : "Confirmar rechazo"}
+                  <button className="boton peligro" disabled={procesando || !observacion.trim()} onClick={() => validar(detalle, "rechazada", observacion)}>
+                    {procesando ? "Procesando…" : "Confirmar rechazo"}
                   </button>
                 </div>
               </>
+            )}
+
+            {detalle.estado !== "enviada" && (
+              <div className="acciones-modal" style={{ marginTop: 18 }}>
+                <button className="boton suave" onClick={cerrar}>Cerrar</button>
+              </div>
             )}
           </div>
         </div>

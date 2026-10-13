@@ -40,6 +40,8 @@ input, select, textarea {
    quede texto invisible (blanco sobre blanco) en ningún desplegable. */
 select option { background: var(--blanco); color: var(--tinta); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--violeta-500); border-color: transparent; }
+/* Foco visible al navegar con teclado (no aparece al hacer clic) */
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--violeta-500); outline-offset: 2px; }
 label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }
 
 /* ---- Pantallas de acceso ---- */
@@ -93,10 +95,15 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-su
 .marca { display: flex; align-items: center; gap: 10px; padding: 6px 8px 18px; color: #fff; }
 .marca .icono { width: 38px; height: 38px; border-radius: 11px; background: var(--gradiente); display: grid; place-items: center; font-size: 19px; }
 .marca small { display: block; color: #9d90da; font-size: 11px; font-weight: 500; }
-.barra-lateral nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+/* min-height: 0 + overflow: el menú se desplaza solo en pantallas bajas, sin empujar el pie */
+.barra-lateral nav { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .barra-lateral nav a {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px;
   color: #cfc6ff; font-size: 14px; font-weight: 500;
+}
+.grupo-menu {
+  margin: 14px 12px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: #8a80c9;
 }
 .barra-lateral nav a:hover { background: rgba(255,255,255,0.07); }
 .barra-lateral nav a.activo { background: var(--gradiente); color: #fff; }
@@ -242,7 +249,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .tarjeta-metrica.atencion { background: var(--ambar-suave); border-color: #fcd9a8; }
 .tarjeta-metrica.atencion .valor, .tarjeta-metrica.atencion .nombre { color: var(--ambar); }
 .dos-columnas { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; align-items: start; }
-.titulo-tarjeta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.titulo-tarjeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin-bottom: 4px; }
 .titulo-tarjeta h3 { font-size: 16px; }
 .lista-clases { list-style: none; padding: 0; margin: 8px 0 0; }
 .lista-clases li {
@@ -257,6 +264,110 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 @media (max-width: 860px) {
   .resumen-panel, .dos-columnas { grid-template-columns: 1fr; }
 }
+
+/* Lo que pide acción hoy (panel) */
+.atencion-fila { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.aviso-atencion {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 12px;
+  font-size: 14px; font-weight: 600; border: 1px solid transparent; transition: filter .15s;
+}
+.aviso-atencion b { font-size: 16px; }
+.aviso-atencion:hover { filter: brightness(.97); }
+.aviso-atencion.ambar { background: var(--ambar-suave); color: var(--ambar); border-color: #fcd9a8; }
+.aviso-atencion.rojo { background: var(--rojo-suave); color: var(--rojo); border-color: #fecaca; }
+
+/* Clases de hoy con su avance de asistencia */
+.lista-clases li.clase-hoy { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 6px 14px; }
+.clase-hora { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.clase-info b { font-size: 14.5px; }
+.barra-asistencia { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--borde); margin: 8px 0 2px; }
+.barra-asistencia span, .leyenda-barra i { display: block; height: 100%; transition: width .4s; }
+.barra-asistencia .presente, .leyenda-barra .presente { background: var(--verde); }
+.barra-asistencia .tardanza, .leyenda-barra .tardanza { background: #f59e0b; }
+.barra-asistencia .justificada, .leyenda-barra .justificada { background: var(--azul); }
+.barra-asistencia .ausente, .leyenda-barra .ausente { background: var(--rojo); }
+.leyenda-barra { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borde); font-size: 12px; color: var(--tinta-suave); }
+.leyenda-barra span { display: inline-flex; align-items: center; gap: 6px; }
+.leyenda-barra i { width: 10px; height: 10px; border-radius: 3px; }
+.punto-lector { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; background: #a8a3c4; vertical-align: 0; }
+.punto-lector.en_linea { background: #22c55e; }
+.punto-lector.fuera_de_linea { background: var(--rojo); }
+@media (max-width: 560px) {
+  .lista-clases li.clase-hoy { grid-template-columns: 1fr; }
+  .clase-hora { flex-direction: row; align-items: center; }
+}
+
+/* Aprendices bajo el mínimo */
+.lista-riesgo { list-style: none; padding: 0; margin: 8px 0 0; }
+.lista-riesgo li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--borde); }
+.lista-riesgo b { font-size: 14px; }
+.lista-riesgo small { display: block; color: var(--tinta-suave); font-size: 12.5px; margin-top: 2px; }
+.porcentaje-riesgo { font-weight: 800; font-size: 17px; color: var(--rojo); font-variant-numeric: tabular-nums; }
+
+/* Horarios: "ver el calendario de" una ficha, un instructor o un ambiente */
+.barra-filtro { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.barra-filtro select { width: auto; min-width: 240px; max-width: 100%; }
+.barra-filtro .buscador { width: auto; flex: 1 1 260px; max-width: 420px; }
+
+/* Justificaciones: conteo en las pestañas, visor del soporte y decisión tomada */
+.cuenta-pestana {
+  display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px;
+  background: var(--violeta-50); color: var(--tinta-suave); font-size: 11.5px; font-weight: 700; text-align: center;
+}
+.pestanas button[aria-selected="true"] .cuenta-pestana { background: var(--violeta-100); color: var(--violeta-700); }
+.visor-soporte { display: grid; gap: 8px; }
+.visor-soporte img { max-width: 100%; max-height: 360px; object-fit: contain; border-radius: 10px; border: 1px solid var(--borde); background: var(--violeta-50); }
+.visor-soporte iframe { width: 100%; height: 380px; border: 1px solid var(--borde); border-radius: 10px; }
+.visor-soporte a { font-size: 13.5px; font-weight: 600; }
+.decision { margin-top: 16px; padding: 12px 14px; border-radius: 12px; font-size: 14px; }
+.decision.aprobada { background: var(--verde-suave); color: var(--verde); }
+.decision.rechazada { background: var(--rojo-suave); color: var(--rojo); }
+.decision p { margin: 6px 0 0; color: var(--tinta); }
+
+/* Mi perfil */
+.perfil-cabeza { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.perfil-cabeza h3 { font-size: 17px; margin-bottom: 4px; }
+.avatar.grande { width: 56px; height: 56px; font-size: 19px; }
+.datos-perfil { display: grid; gap: 8px; margin: 0 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--violeta-50); }
+.datos-perfil div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.datos-perfil dt { color: var(--tinta-suave); font-weight: 600; }
+.datos-perfil dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.campo-contrasena { display: flex; gap: 8px; align-items: center; }
+.campo-contrasena input { flex: 1; min-width: 0; }
+.requisitos { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 13px; color: var(--tinta-suave); }
+.requisitos li.cumple { color: var(--verde); font-weight: 600; }
+
+/* Reportes: resumen por ficha y rankings */
+.texto-suave { color: var(--tinta-suave); font-size: 13px; }
+.sub-celda { display: block; color: var(--tinta-suave); font-size: 12.5px; margin-top: 2px; }
+.dos-columnas.iguales { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 860px) { .dos-columnas.iguales { grid-template-columns: 1fr; } }
+.porcentaje-celda { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.mini-barra { width: 70px; height: 6px; border-radius: 99px; background: var(--borde); overflow: hidden; display: inline-block; }
+.mini-barra span { display: block; height: 100%; border-radius: 99px; }
+.ranking { list-style: none; padding: 0; margin: 8px 0 0; counter-reset: puesto; }
+.ranking li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--borde); counter-increment: puesto; }
+.ranking li::before {
+  content: counter(puesto); flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--violeta-50); color: var(--violeta-700); font-size: 12px; font-weight: 700;
+}
+.ranking li > div { flex: 1; min-width: 0; }
+.ranking b { font-size: 14px; }
+.ranking small { display: block; color: var(--tinta-suave); font-size: 12.5px; margin-top: 2px; }
+
+/* Gráfica de asistencia por día */
+.selector-dias { display: inline-flex; background: var(--violeta-50); border: 1px solid var(--borde); border-radius: 10px; padding: 2px; }
+.selector-dias button { white-space: nowrap; border: 0; background: none; padding: 4px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--tinta-suave); }
+.selector-dias button[aria-pressed="true"] { background: var(--blanco); color: var(--violeta-700); box-shadow: 0 1px 3px rgba(35, 24, 100, .12); }
+.grafica-tendencia { display: block; width: 100%; height: auto; margin-top: 10px; }
+.grafica-tendencia .rejilla { stroke: var(--borde); stroke-width: 1; }
+.grafica-tendencia .linea-minimo { stroke: var(--rojo); stroke-width: 1.2; stroke-dasharray: 5 5; opacity: .6; }
+.grafica-tendencia .eje { fill: var(--tinta-suave); font-size: 12.5px; }
+.grafica-tendencia .eje.minimo { fill: var(--rojo); font-weight: 600; }
+.grafica-tendencia .area { fill: var(--violeta-100); opacity: .7; }
+.grafica-tendencia .linea { fill: none; stroke: var(--violeta-600); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.grafica-tendencia .punto { fill: var(--blanco); stroke: var(--violeta-600); stroke-width: 2; }
+.grafica-tendencia .punto.bajo { stroke: var(--rojo); }
 
 /* ---- Calendario interactivo del panel ---- */
 .calendario-panel { padding: 18px 20px 20px; }
@@ -446,9 +557,10 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 }
 
 /* ---------- Pestañas ---------- */
-.pestanas { display: flex; gap: 4px; border-bottom: 1.5px solid var(--borde); margin-bottom: 18px; overflow-x: auto; }
+/* La línea de abajo es una sombra interna: así la pestaña activa la tapa sin márgenes negativos, que hacían aparecer una barra de desplazamiento vertical */
+.pestanas { display: flex; gap: 4px; box-shadow: inset 0 -1.5px 0 var(--borde); margin-bottom: 18px; overflow-x: auto; overflow-y: hidden; }
 .pestanas button {
-  background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1.5px;
+  background: none; border: 0; border-bottom: 3px solid transparent;
   padding: 10px 14px; font-weight: 600; color: var(--tinta-suave); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
 }
 .pestanas button:hover { color: var(--tinta); }

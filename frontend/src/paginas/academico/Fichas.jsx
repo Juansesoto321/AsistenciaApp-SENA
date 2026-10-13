@@ -5,6 +5,7 @@ import { useAuth } from "../../contexto/AuthContext.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import { colorAsistencia } from "../../componentes/AnilloAsistencia.jsx";
 
 const VACIA = { numero_ficha: "", programa: "", jornada: "mañana", fecha_inicio: "", fecha_fin: "", id_periodo: "", id_instructor: "", trimestres: "7" };
 
@@ -17,6 +18,14 @@ export default function Fichas() {
   const [modal, setModal] = useState(false);
   const [f, setF] = useState(VACIA);
   const [mensaje, setMensaje] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [estado, setEstado] = useState("activa");
+
+  const texto = busqueda.trim().toLowerCase();
+  const visibles = (fichas || []).filter((x) =>
+    (estado === "todas" || x.estado === estado) &&
+    (!texto || [x.numero_ficha, x.programa, x.instructor].some((v) => String(v).toLowerCase().includes(texto)))
+  );
 
   const cargar = () =>
     api("/fichas").then(setFichas).catch((e) => { setFichas([]); setMensaje({ tipo: "error", texto: e.message }); });
@@ -46,23 +55,41 @@ export default function Fichas() {
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
+      {fichas?.length > 0 && (
+        <div className="barra-filtro">
+          <input
+            type="search" className="buscador" placeholder="Buscar por número, programa o instructor"
+            aria-label="Buscar ficha" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+          />
+          <div className="selector-dias" role="group" aria-label="Estado de la ficha">
+            {[["activa", "Activas"], ["finalizada", "Finalizadas"], ["todas", "Todas"]].map(([valor, texto]) => (
+              <button key={valor} type="button" aria-pressed={estado === valor} onClick={() => setEstado(valor)}>{texto}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr><th>Ficha</th><th>Programa</th><th>Jornada</th><th>Instructor</th><th>Aprendices</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Ficha</th><th>Programa</th><th>Jornada</th><th>Instructor</th><th>Aprendices</th><th>Asistencia</th><th>Estado</th><th></th></tr></thead>
         <tbody>
-          {(fichas || []).map((x) => (
+          {visibles.map((x) => (
             <tr key={x.id_ficha}>
               <td><b>{x.numero_ficha}</b></td>
               <td>{x.programa}</td>
               <td style={{ textTransform: "capitalize" }}>{x.jornada}</td>
               <td>{x.instructor}</td>
               <td>{x.total_aprendices}</td>
+              <td>{x.porcentaje_asistencia === null
+                ? <span className="texto-suave">Sin clases</span>
+                : <b style={{ color: colorAsistencia(x.porcentaje_asistencia) }}>{x.porcentaje_asistencia} %</b>}</td>
               <td><span className={`insignia ${x.estado}`}>{x.estado}</span></td>
               <td><Link className="boton mini suave" to={`/fichas/${x.id_ficha}`}>Ver detalles →</Link></td>
             </tr>
           ))}
-          {fichas === null && <tr><td colSpan={7}><Cargando /></td></tr>}
-          {fichas?.length === 0 && <tr><td colSpan={7}><Vacio icono="fichas" titulo="Aún no hay fichas registradas" /></td></tr>}
+          {fichas === null && <tr><td colSpan={8}><Cargando /></td></tr>}
+          {fichas?.length === 0 && <tr><td colSpan={8}><Vacio icono="fichas" titulo="Aún no hay fichas registradas" /></td></tr>}
+          {fichas?.length > 0 && !visibles.length && <tr><td colSpan={8}><Vacio icono="fichas" titulo="Ninguna ficha coincide con la búsqueda" /></td></tr>}
         </tbody>
       </table>
       </div>

@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS cambio_asistencia (
   estado_anterior VARCHAR(20),
   estado_nuevo    VARCHAR(20) NOT NULL,
   motivo          TEXT NOT NULL,           -- todo registro manual requiere justificación
-  cambiado_por    INTEGER NOT NULL REFERENCES usuario(id_usuario),
+  cambiado_por    INTEGER REFERENCES usuario(id_usuario), -- NULL si lo cambió el lector (marca atrasada)
   fecha_cambio    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

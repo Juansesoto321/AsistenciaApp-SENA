@@ -5,7 +5,7 @@ require("../preparar");
 const { test, describe } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { calcularEstado } = require("../../src/servicios/marcacion");
+const { calcularEstado, horaDeLaMarca } = require("../../src/servicios/marcacion");
 const { validarContrasena, normalizarCorreo } = require("../../src/servicios/auth");
 const { validarCambios } = require("../../src/servicios/configuracion");
 const { parsearCsv } = require("../../src/servicios/competencias");
@@ -35,6 +35,22 @@ describe("calcularEstado (CU-13: presente o tardanza)", () => {
 
   test("acepta la hora sin segundos", () => {
     assert.equal(calcularEstado("07:00", 15, a(7, 30)), "tardanza");
+  });
+});
+
+describe("hora de la marca que envía el lector (ADMS)", () => {
+  const ahora = new Date(2026, 9, 13, 9, 0, 0); // 13 oct 2026, 9:00 a. m. hora local
+
+  test("usa la hora local del equipo, aunque la marca llegue tarde", () => {
+    assert.equal(horaDeLaMarca("2026-10-13 07:05:30", ahora).getTime(), new Date(2026, 9, 13, 7, 5, 30).getTime());
+    assert.equal(horaDeLaMarca("2026-10-13 07:05", ahora).getTime(), new Date(2026, 9, 13, 7, 5, 0).getTime());
+  });
+
+  test("sin hora, con una hora ilegible o con el reloj del equipo adelantado usa la del servidor", () => {
+    assert.equal(horaDeLaMarca(undefined, ahora), ahora);
+    assert.equal(horaDeLaMarca("ayer temprano", ahora), ahora);
+    assert.equal(horaDeLaMarca("2026-10-13 09:30:00", ahora), ahora); // 30 min en el futuro
+    assert.equal(horaDeLaMarca("2026-10-13 09:03:00", ahora).getMinutes(), 3); // 3 min: dentro del margen
   });
 });
 

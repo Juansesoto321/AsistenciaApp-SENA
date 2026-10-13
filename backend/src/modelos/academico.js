@@ -34,7 +34,13 @@ async function listarFichas(usuario) {
   const resultado = await pool.query(
     `SELECT f.*, p.nombre AS periodo,
             u.nombres || ' ' || u.apellidos AS instructor,
-            (SELECT COUNT(*) FROM matricula m WHERE m.id_ficha = f.id_ficha AND m.estado = 'activa') AS total_aprendices
+            (SELECT COUNT(*) FROM matricula m WHERE m.id_ficha = f.id_ficha AND m.estado = 'activa') AS total_aprendices,
+            -- Porcentaje de asistencia de la ficha en sus clases cerradas; NULL si aún no hay
+            (SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE a.estado IN ('presente','tardanza','justificada')) / NULLIF(COUNT(*), 0))
+               FROM asistencia a
+               JOIN sesion_clase s ON s.id_sesion = a.id_sesion
+               JOIN horario h ON h.id_horario = s.id_horario
+              WHERE h.id_ficha = f.id_ficha AND s.estado = 'cerrada')::int AS porcentaje_asistencia
      FROM ficha f
      JOIN periodo p ON p.id_periodo = f.id_periodo
      JOIN usuario u ON u.id_usuario = f.id_instructor

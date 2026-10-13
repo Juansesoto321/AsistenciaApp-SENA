@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../servicios/api";
 import Icono from "../../componentes/Iconos.jsx";
+import { fechaCorta, fechaHora } from "../../utilidades/formato";
 
 const TIPOS = [
   { valor: "cita_medica", etiqueta: "Cita médica" },
@@ -73,8 +74,8 @@ export default function JustificarPublico() {
         ) : info ? (<>
           <p className="subtitulo">
             {info.nombres} {info.apellidos} · Ficha {info.numero_ficha}<br />
-            Clase del {new Date(info.fecha).toLocaleDateString("es-CO")}<br />
-            Este enlace vence el {new Date(info.expira_en).toLocaleString("es-CO")}
+            Clase del {fechaCorta(info.fecha)}<br />
+            Este enlace vence el {fechaHora(info.expira_en)}
           </p>
           {info.estado !== "pendiente" ? (
             <div className="mensaje exito">Esta justificación ya fue enviada y está en estado: {info.estado}.</div>

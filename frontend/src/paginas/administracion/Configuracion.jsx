@@ -3,6 +3,7 @@ import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import { fechaCorta } from "../../utilidades/formato";
 
 const PERIODO_VACIO = { nombre: "", fecha_inicio: "", fecha_fin: "" };
 
@@ -69,8 +70,8 @@ export default function Configuracion() {
             {periodos.map((p) => (
               <tr key={p.id_periodo}>
                 <td>{p.nombre}</td>
-                <td>{new Date(p.fecha_inicio).toLocaleDateString("es-CO")}</td>
-                <td>{new Date(p.fecha_fin).toLocaleDateString("es-CO")}</td>
+                <td>{fechaCorta(p.fecha_inicio)}</td>
+                <td>{fechaCorta(p.fecha_fin)}</td>
               </tr>
             ))}
             {!periodos.length && <tr><td colSpan={3}><Vacio icono="horarios" titulo="Aún no hay periodos creados" /></td></tr>}

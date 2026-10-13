@@ -360,3 +360,151 @@ prueba("no se puede reducir los trimestres si quedarían competencias por fuera"
   });
   assert.equal(ampliar.estado, 200);
 });
+
+// ---------- Recuperar la contraseña ----------
+
+prueba("recuperar la contraseña no aprueba cuentas pendientes ni reactiva las desactivadas", async () => {
+  // Cuenta pendiente de aprobación: no recibe enlace
+  const registro = await e.peticion("POST", "/api/auth/registro", {
+    cuerpo: { nombres: "Eva", apellidos: "Pendiente", documento: "900020", correo: "eva@prueba.co", rol: "aprendiz", contrasena: "Prueba123*" },
+  });
+  assert.equal(registro.estado, 201);
+  assert.equal((await e.peticion("POST", "/api/auth/recuperar", { cuerpo: { correo: "eva@prueba.co" } })).estado, 200);
+  const enlaces = await e.pool.query(
+    "SELECT 1 FROM token_recuperacion t JOIN usuario u ON u.id_usuario = t.id_usuario WHERE u.correo = 'eva@prueba.co'"
+  );
+  assert.equal(enlaces.rows.length, 0);
+
+  // Cuenta desactivada con un enlace pedido antes: cambia la contraseña, pero sigue desactivada.
+  // Error corregido: antes quedaba activa y podía entrar.
+  await e.pool.query("UPDATE usuario SET estado = 'inactivo' WHERE id_usuario = $1", [e.ids.ajeno]);
+  await e.pool.query(
+    "INSERT INTO token_recuperacion (id_usuario, token, expira_en) VALUES ($1, 'enlace-de-ciro', NOW() + INTERVAL '1 hour')",
+    [e.ids.ajeno]
+  );
+  const cambio = await e.peticion("POST", "/api/auth/restablecer", { cuerpo: { token: "enlace-de-ciro", contrasena: "Nueva1234" } });
+  assert.equal(cambio.estado, 200);
+  const login = await e.peticion("POST", "/api/auth/login", { cuerpo: { correo: "ciro@prueba.co", contrasena: "Nueva1234" } });
+  assert.equal(login.estado, 403);
+  assert.match(login.datos.mensaje, /desactivada/);
+});
+
+// ---------- Lector real (protocolo ADMS de ZKTeco) ----------
+
+const SERIAL_ADMS = "ADMS-PRUEBA";
+let sesionAdms = null;
+
+/** "2026-10-13 08:02:15": así envía la hora el lector (hora local del equipo) */
+function horaDelEquipo(fecha) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${fecha.getFullYear()}-${p(fecha.getMonth() + 1)}-${p(fecha.getDate())} ${p(fecha.getHours())}:${p(fecha.getMinutes())}:${p(fecha.getSeconds())}`;
+}
+function haceMinutos(minutos) {
+  const f = new Date(Date.now() - minutos * 60000);
+  f.setMilliseconds(0);
+  return f;
+}
+const enviarAttlog = (lineas, serial = SERIAL_ADMS) => e.peticion("POST", `/iclock/cdata?SN=${serial}&table=ATTLOG`, {
+  crudo: lineas.join("\n"), encabezados: { "Content-Type": "text/plain" },
+});
+async function asistenciaEnAdms(idAprendiz) {
+  const { rows } = await e.pool.query(
+    `SELECT a.id_asistencia, a.estado, a.metodo, a.hora_marca,
+            (SELECT COUNT(*)::int FROM justificacion j WHERE j.id_asistencia = a.id_asistencia AND j.estado = 'pendiente') AS enlaces
+     FROM asistencia a WHERE a.id_sesion = $1 AND a.id_aprendiz = $2`,
+    [sesionAdms, idAprendiz]
+  );
+  return rows;
+}
+
+prueba("el lector real saluda y queda en línea; un serial desconocido se ignora", async () => {
+  await e.pool.query(
+    "INSERT INTO dispositivo (serial, modelo, id_ambiente, clave_api) VALUES ($1, 'SenseFace 2A', $2, 'no-aplica')",
+    [SERIAL_ADMS, e.ids.otroAmbiente]
+  );
+  const saludo = await e.peticion("GET", `/iclock/cdata?SN=${SERIAL_ADMS}`);
+  assert.equal(saludo.estado, 200);
+  assert.match(saludo.datos, /GET OPTION FROM: ADMS-PRUEBA/);
+  const { rows } = await e.pool.query("SELECT estado FROM dispositivo WHERE serial = $1", [SERIAL_ADMS]);
+  assert.equal(rows[0].estado, "en_linea");
+
+  assert.equal((await enviarAttlog(["900010\t2026-01-01 08:00:00"], "DESCONOCIDO")).datos, "OK");
+});
+
+prueba("el lector real usa la hora de la marca, no la de llegada, y no duplica lo que reenvía", async () => {
+  // Clase de hoy en el ambiente de este lector. Se inserta directo: la ficha ya tiene otra a esa hora.
+  const horario = await e.pool.query(
+    `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
+     VALUES ($1, $2, $3, $4, EXTRACT(DOW FROM CURRENT_DATE), '00:00', '23:59') RETURNING id_horario`,
+    [e.ids.ficha, e.ids.otroAmbiente, e.ids.instructor, e.ids.periodo]
+  );
+  const inicio = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: horario.rows[0].id_horario } });
+  assert.equal(inicio.estado, 200);
+  sesionAdms = inicio.datos.id_sesion;
+  await e.pool.query("UPDATE sesion_clase SET hora_apertura = NOW() - INTERVAL '10 minutes' WHERE id_sesion = $1", [sesionAdms]);
+
+  const marcaDeAna = haceMinutos(3);
+  const linea = `900010\t${horaDelEquipo(marcaDeAna)}\t0\t1\t0\t0\t0`;
+  assert.equal((await enviarAttlog([linea])).datos, "OK");
+  assert.equal((await enviarAttlog([linea])).datos, "OK"); // el equipo reintenta el mismo lote
+
+  const ana = await asistenciaEnAdms(e.ids.aprendiz);
+  assert.equal(ana.length, 1);
+  assert.equal(ana[0].metodo, "huella");
+  assert.equal(new Date(ana[0].hora_marca).getTime(), marcaDeAna.getTime());
+
+  // Una marca de ayer (cuando no había clase en ese ambiente) no cuenta para la de hoy
+  const ayer = new Date(Date.now() - 24 * 3600 * 1000);
+  assert.equal((await enviarAttlog([`900011\t${horaDelEquipo(ayer)}\t0\t1`])).datos, "OK");
+  assert.equal((await asistenciaEnAdms(e.ids.ausente)).length, 0);
+});
+
+prueba("una marca hecha en clase pero recibida después del cierre corrige la ausencia", async () => {
+  const marcaDeBeto = haceMinutos(1); // el lector estaba sin red y la envía tarde
+  const cierre = await e.peticion("POST", `/api/sesiones/${sesionAdms}/cerrar`, { token: tokens.instructor });
+  assert.equal(cierre.estado, 200);
+  let beto = await asistenciaEnAdms(e.ids.ausente);
+  assert.equal(beto[0].estado, "ausente");
+  assert.equal(beto[0].enlaces, 1);
+
+  assert.equal((await enviarAttlog([`900011\t${horaDelEquipo(marcaDeBeto)}\t0\t1`])).datos, "OK");
+  beto = await asistenciaEnAdms(e.ids.ausente);
+  assert.ok(["presente", "tardanza"].includes(beto[0].estado));
+  assert.equal(beto[0].metodo, "huella");
+  assert.equal(beto[0].enlaces, 0); // ya no necesita justificar
+
+  const cambio = await e.pool.query(
+    "SELECT estado_anterior, cambiado_por FROM cambio_asistencia WHERE id_asistencia = $1", [beto[0].id_asistencia]
+  );
+  assert.equal(cambio.rows[0].estado_anterior, "ausente");
+  assert.equal(cambio.rows[0].cambiado_por, null); // lo cambió el lector, no una persona
+  const aviso = await e.pool.query("SELECT 1 FROM notificacion WHERE id_usuario = $1 AND titulo = 'Asistencia corregida'", [e.ids.ausente]);
+  assert.equal(aviso.rows.length, 1);
+});
+
+// ---------- Panel y reportes ----------
+
+prueba("las clases de hoy traen cómo va la asistencia y el estado del lector", async () => {
+  const r = await e.peticion("GET", "/api/sesiones/hoy", { token: tokens.instructor });
+  assert.equal(r.estado, 200);
+  const clase = r.datos.find((c) => c.id_sesion === sesionAdms);
+  assert.equal(clase.matriculados, 2);
+  assert.equal(clase.presentes + clase.tardanzas, 2);
+  assert.equal(clase.estado_lector, "en_linea");
+});
+
+prueba("el resumen de reportes no necesita filtros; el aprendiz no lo ve", async () => {
+  const r = await e.peticion("GET", "/api/reportes/resumen", { token: tokens.coordinador });
+  assert.equal(r.estado, 200);
+  assert.equal(r.datos.por_ficha[0].numero_ficha, "999999");
+  assert.ok(r.datos.por_ficha[0].clases >= 2);
+  assert.equal(typeof r.datos.minimo, "number");
+  assert.ok(Array.isArray(r.datos.mas_faltas) && Array.isArray(r.datos.bajo_minimo));
+  assert.equal((await e.peticion("GET", "/api/reportes/resumen", { token: tokens.ana })).estado, 403);
+
+  const t = await e.peticion("GET", "/api/reportes/tendencia?dias=7", { token: tokens.instructor });
+  assert.equal(t.estado, 200);
+  assert.equal(t.datos.length, 7);
+  assert.ok(t.datos.at(-1).registros > 0); // hoy hubo clases
+  assert.equal((await e.peticion("GET", "/api/reportes/tendencia?dias=5", { token: tokens.coordinador })).estado, 400);
+});

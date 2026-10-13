@@ -10,47 +10,59 @@ import Icono from "./Iconos.jsx";
 const SOPORTE = <IconoSoporte />;
 const ico = (nombre) => <Icono nombre={nombre} />;
 
+// Un texto suelto es el título de un grupo del menú. Lo que se usa a diario
+// va arriba; la planeación y la administración, después.
+const CUENTA = [
+  "Mi cuenta",
+  ["/notificaciones", ico("notificaciones"), "Notificaciones"],
+  ["/perfil", ico("perfil"), "Mi perfil"],
+  ["/soporte", SOPORTE, "Soporte"],
+];
+const PLANEACION = [
+  "Planeación",
+  ["/fichas", ico("fichas"), "Fichas"],
+  ["/horarios", ico("horarios"), "Horarios"],
+  ["/competencias", ico("competencias"), "Competencias"],
+  ["/ambientes", ico("ambientes"), "Ambientes y lectores"],
+];
+const DIA_A_DIA = [
+  "Día a día",
+  ["/sesiones", ico("sesiones"), "Sesiones de clase"],
+  ["/justificaciones", ico("justificaciones"), "Justificaciones"],
+  ["/reportes", ico("reportes"), "Reportes"],
+];
+
 const MENUS = {
   coordinador: [
     ["/panel", ico("panel"), "Panel"],
+    ...DIA_A_DIA,
+    ...PLANEACION,
+    "Administración",
     ["/usuarios", ico("usuarios"), "Usuarios"],
-    ["/fichas", ico("fichas"), "Fichas"],
-    ["/ambientes", ico("ambientes"), "Ambientes y lectores"],
-    ["/horarios", ico("horarios"), "Horarios"],
-    ["/competencias", ico("competencias"), "Competencias"],
-    ["/sesiones", ico("sesiones"), "Sesiones de clase"],
-    ["/justificaciones", ico("justificaciones"), "Justificaciones"],
-    ["/reportes", ico("reportes"), "Reportes"],
     ["/configuracion", ico("configuracion"), "Configuración"],
-    ["/notificaciones", ico("notificaciones"), "Notificaciones"],
-    ["/soporte", SOPORTE, "Soporte"],
+    ...CUENTA,
   ],
   instructor: [
     ["/panel", ico("panel"), "Panel"],
+    "Día a día",
     ["/sesiones", ico("sesiones"), "Mis clases de hoy"],
+    ["/justificaciones", ico("justificaciones"), "Justificaciones"],
+    ["/reportes", ico("reportes"), "Reportes"],
+    "Mi formación",
     ["/fichas", ico("fichas"), "Mis fichas"],
     ["/horarios", ico("horarios"), "Mis horarios"],
     ["/competencias", ico("competencias"), "Competencias"],
-    ["/justificaciones", ico("justificaciones"), "Justificaciones"],
-    ["/reportes", ico("reportes"), "Reportes"],
-    ["/notificaciones", ico("notificaciones"), "Notificaciones"],
-    ["/soporte", SOPORTE, "Soporte"],
+    ...CUENTA,
   ],
   // Mismas opciones del coordinador salvo "Usuarios": el programador apoya la
   // planeacion academica pero no administra cuentas.
   programador: [
     ["/panel", ico("panel"), "Panel"],
-    ["/fichas", ico("fichas"), "Fichas"],
-    ["/ambientes", ico("ambientes"), "Ambientes y lectores"],
-    ["/horarios", ico("horarios"), "Horarios"],
-    ["/competencias", ico("competencias"), "Competencias"],
-    ["/sesiones", ico("sesiones"), "Sesiones de clase"],
-    ["/justificaciones", ico("justificaciones"), "Justificaciones"],
-    ["/reportes", ico("reportes"), "Reportes"],
+    ...DIA_A_DIA,
+    ...PLANEACION,
+    "Administración",
     ["/configuracion", ico("configuracion"), "Configuración"],
-    ["/notificaciones", ico("notificaciones"), "Notificaciones"],
-    ["/perfil", ico("perfil"), "Mi perfil"],
-    ["/soporte", SOPORTE, "Soporte"],
+    ...CUENTA,
   ],
   aprendiz: [
     ["/panel", ico("panel"), "Panel"],
@@ -77,16 +89,26 @@ export default function Diseno({ children }) {
   const usuario = sesion.usuario;
   const menu = MENUS[usuario.rol] || [];
   const [notifPendientes, setNotifPendientes] = useState(0);
+  const [porRevisar, setPorRevisar] = useState(0); // justificaciones que esperan respuesta
   const [menuAbierto, setMenuAbierto] = useState(false); // solo aplica en pantallas angostas
+  const revisaJustificaciones = usuario.rol !== "aprendiz";
 
-  // Numerito de notificaciones sin leer, cualquier rol, actualizado en vivo.
+  // Numeritos del menú, actualizados en vivo: notificaciones sin leer (todos)
+  // y justificaciones por revisar (instructor y coordinación).
   useEffect(() => {
-    const cargar = () => api("/notificaciones/contador").then((r) => setNotifPendientes(r.pendientes)).catch(() => {});
-    cargar();
+    const cargarNotificaciones = () =>
+      api("/notificaciones/contador").then((r) => setNotifPendientes(r.pendientes)).catch(() => {});
+    const cargarPorRevisar = () =>
+      api("/justificaciones/pendientes/contador").then((r) => setPorRevisar(Number(r.pendientes))).catch(() => {});
+    cargarNotificaciones();
+    if (revisaJustificaciones) cargarPorRevisar();
     const socket = conectarTiempoReal();
-    socket.on("notificaciones:actualizadas", cargar);
+    socket.on("notificaciones:actualizadas", cargarNotificaciones);
+    if (revisaJustificaciones) socket.on("justificaciones:actualizadas", cargarPorRevisar);
     return () => socket.disconnect();
-  }, [usuario.id]);
+  }, [usuario.id, revisaJustificaciones]);
+
+  const contadores = { "/notificaciones": notifPendientes, "/justificaciones": porRevisar };
 
   // En celular el menú se cierra al cambiar de página o con la tecla Escape
   useEffect(() => { setMenuAbierto(false); }, [pathname]);
@@ -128,12 +150,16 @@ export default function Diseno({ children }) {
           </button>
         </div>
         <nav>
-          {menu.map(([ruta, icono, nombre]) => (
-            <NavLink key={ruta} to={ruta} className={({ isActive }) => (isActive ? "activo" : "")}>
-              <span className="enlace-menu">{icono} {nombre}</span>
-              {ruta === "/notificaciones" && <Contador valor={notifPendientes} />}
-            </NavLink>
-          ))}
+          {menu.map((entrada) => {
+            if (typeof entrada === "string") return <p key={entrada} className="grupo-menu">{entrada}</p>;
+            const [ruta, icono, nombre] = entrada;
+            return (
+              <NavLink key={ruta} to={ruta} className={({ isActive }) => (isActive ? "activo" : "")}>
+                <span className="enlace-menu">{icono} {nombre}</span>
+                <Contador valor={contadores[ruta]} />
+              </NavLink>
+            );
+          })}
         </nav>
         <div className="pie-usuario">
           <div className="avatar" aria-hidden="true">{iniciales(usuario)}</div>

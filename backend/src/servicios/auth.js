@@ -12,6 +12,7 @@ const { escaparHtml } = require("../utilidades/formato");
 const MAX_INTENTOS = 5; // regla CU-01: bloqueo tras 5 intentos fallidos
 const MAX_CORREOS_RECUPERACION_POR_HORA = 3;
 const ROLES_AUTOREGISTRO = ["aprendiz", "instructor", "programador"];
+const ESTADOS_SIN_ACCESO = ["pendiente", "inactivo"];
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const validarContrasena = (c) =>
@@ -82,6 +83,9 @@ async function registrar(entrada) {
 async function solicitarRecuperacion(correo) {
   const u = await modelo.buscarPorCorreo(normalizarCorreo(correo));
   if (!u) return;
+  // Una cuenta sin aprobar o desactivada no puede entrar: no tiene sentido
+  // enviarle un enlace (antes, al usarlo, la cuenta quedaba activa)
+  if (ESTADOS_SIN_ACCESO.includes(u.estado)) return;
   // Evita que alguien use el formulario para llenar de correos la bandeja de otra persona
   if ((await modelo.contarTokensRecientes(u.id_usuario)) >= MAX_CORREOS_RECUPERACION_POR_HORA) return;
   const token = crypto.randomBytes(32).toString("hex");
