@@ -5,6 +5,11 @@ async function buscarPorCorreo(correo) {
   return r.rows[0] || null;
 }
 
+async function buscarPorId(idUsuario) {
+  const r = await pool.query("SELECT * FROM usuario WHERE id_usuario = $1", [idUsuario]);
+  return r.rows[0] || null;
+}
+
 // Solo se llama para cuentas activas o con el bloqueo ya vencido: si no
 // corresponde bloquear, la cuenta queda (o vuelve a quedar) activa.
 async function registrarIntentoFallido(idUsuario, intentos, bloquear) {
@@ -103,6 +108,7 @@ async function actualizarTelefono(idUsuario, telefono) {
 }
 
 module.exports = {
+  buscarPorId,
   buscarPorCorreo,
   registrarIntentoFallido,
   resetearIntentos,

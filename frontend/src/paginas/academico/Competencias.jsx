@@ -5,6 +5,7 @@ import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
+import Icono from "../../componentes/Iconos.jsx";
 
 const COMPETENCIA_VACIA = { codigo: "", nombre: "" };
 const RAP_VACIO = { id_competencia: "", codigo: "", nombre: "" };
@@ -34,6 +35,7 @@ export default function Competencias() {
   const [csv, setCsv] = useState("");
   const [resultadoCarga, setResultadoCarga] = useState(null);
   const [nuevaTematica, setNuevaTematica] = useState({});
+  const [busqueda, setBusqueda] = useState("");
 
   const cargar = () => {
     setCargando(true);
@@ -45,6 +47,14 @@ export default function Competencias() {
   useEffect(cargar, []);
 
   const rapsDe = (idCompetencia) => raps.filter((x) => x.id_competencia === idCompetencia);
+
+  // Búsqueda en competencias, RAP y temáticas. Si coincide un RAP, la competencia se abre sola.
+  const texto = busqueda.trim().toLowerCase();
+  const contiene = (v) => String(v || "").toLowerCase().includes(texto);
+  const rapCoincide = (rap) => contiene(rap.codigo) || contiene(rap.nombre) || rap.tematicas.some((t) => contiene(t.nombre));
+  const visibles = !texto ? competencias : competencias.filter((x) => contiene(x.nombre) || contiene(x.codigo) || rapsDe(x.id_competencia).some(rapCoincide));
+  const abierta = (x) => expandida === x.id_competencia || (texto && rapsDe(x.id_competencia).some(rapCoincide));
+  const cerrarMenu = (e) => { const menu = e.currentTarget.closest("details"); if (menu) menu.open = false; };
 
   async function guardarCompetencia() {
     if (!c.nombre.trim()) return setMensaje({ tipo: "error", texto: "El nombre de la competencia es obligatorio" });
@@ -136,7 +146,7 @@ export default function Competencias() {
         </div>
         {puedeEditar && (
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="boton suave" onClick={() => { setCsv(""); setResultadoCarga(null); setModalCarga(true); }}>⬆ Carga masiva</button>
+            <button className="boton suave" onClick={() => { setCsv(""); setResultadoCarga(null); setModalCarga(true); }}><Icono nombre="subir" /> Carga masiva</button>
             <button className="boton" onClick={() => { setC(COMPETENCIA_VACIA); setModalCompetencia("nueva"); }}>+ Nueva competencia</button>
           </div>
         )}
@@ -144,26 +154,38 @@ export default function Competencias() {
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
       {cargando && <Cargando />}
 
-      {competencias.map((x) => (
+      {competencias.length > 0 && (
+        <div className="barra-filtro">
+          <input type="search" className="buscador" placeholder="Buscar competencia, código de RAP o temática" aria-label="Buscar"
+            value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+          <span className="texto-suave">{visibles.length} de {competencias.length} competencias</span>
+        </div>
+      )}
+      {texto && !visibles.length && <Vacio icono="competencias" titulo="Nada coincide con la búsqueda" />}
+
+      {visibles.map((x) => (
         <div key={x.id_competencia} className="tarjeta" style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ cursor: "pointer" }} onClick={() => setExpandida(expandida === x.id_competencia ? null : x.id_competencia)}>
-              <b>{expandida === x.id_competencia ? "▾" : "▸"} {x.nombre}</b>
+            <button type="button" className="titulo-plegable" aria-expanded={!!abierta(x)} onClick={() => setExpandida(expandida === x.id_competencia ? null : x.id_competencia)}>
+              <b><Icono nombre={abierta(x) ? "abajo" : "arriba"} style={abierta(x) ? undefined : { transform: "rotate(90deg)" }} /> {x.nombre}</b>
               {x.codigo && <span style={{ color: "var(--tinta-suave)", marginLeft: 8 }}>· {x.codigo}</span>}
-              <div style={{ fontSize: 13, color: "var(--tinta-suave)" }}>
-                {x.total_raps} resultado(s) de aprendizaje
-              </div>
-            </div>
+              <span className="cuenta-raps">{x.total_raps} {Number(x.total_raps) === 1 ? "resultado de aprendizaje" : "resultados de aprendizaje"}</span>
+            </button>
             {puedeEditar && (
-              <div style={{ display: "flex", gap: 6 }}>
-                <button className="boton mini suave" onClick={() => { setC({ codigo: x.codigo || "", nombre: x.nombre }); setModalCompetencia(x); }}>Editar</button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <button className="boton mini suave" onClick={() => { setR({ ...RAP_VACIO, id_competencia: x.id_competencia }); setModalRap({ nuevo: true }); }}>+ RAP</button>
-                <button className="boton mini peligro" onClick={() => eliminarCompetencia(x)}>Eliminar</button>
+                <details className="menu-acciones">
+                  <summary className="boton mini suave" aria-label={`Más acciones para ${x.nombre}`}>···</summary>
+                  <div className="menu-acciones-lista">
+                    <button type="button" onClick={(e) => { cerrarMenu(e); setC({ codigo: x.codigo || "", nombre: x.nombre }); setModalCompetencia(x); }}>Editar competencia</button>
+                    <button type="button" className="peligro" onClick={(e) => { cerrarMenu(e); eliminarCompetencia(x); }}>Eliminar…</button>
+                  </div>
+                </details>
               </div>
             )}
           </div>
 
-          {expandida === x.id_competencia && (
+          {abierta(x) && (
             <div style={{ marginTop: 12, borderTop: "1px solid var(--borde)", paddingTop: 12 }}>
               {!rapsDe(x.id_competencia).length && <div className="vacio">Esta competencia aún no tiene resultados de aprendizaje.</div>}
               {rapsDe(x.id_competencia).map((rap) => (

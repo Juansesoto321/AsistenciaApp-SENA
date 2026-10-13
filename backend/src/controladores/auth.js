@@ -12,6 +12,14 @@ async function login(req, res, next) {
   }
 }
 
+async function renovar(req, res, next) {
+  try {
+    res.json(await servicio.renovarSesion(req.usuario.id));
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function registro(req, res, next) {
   try {
     const { nombres, apellidos, tipo_documento, documento, correo, telefono, contrasena, rol } = req.body;
@@ -58,4 +66,4 @@ async function actualizarPerfil(req, res, next) {
   }
 }
 
-module.exports = { login, registro, recuperar, restablecer, verPerfil, actualizarPerfil };
+module.exports = { login, renovar, registro, recuperar, restablecer, verPerfil, actualizarPerfil };

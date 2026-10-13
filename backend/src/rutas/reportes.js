@@ -17,5 +17,6 @@ router.get("/mi-historial", autorizar("aprendiz"), controlador.miHistorial);
 router.get("/estadisticas", autorizar("coordinador", "programador", "instructor"), controlador.estadisticas);
 router.get("/resumen", autorizar("coordinador", "programador", "instructor"), controlador.resumen);
 router.get("/tendencia", autorizar("coordinador", "programador", "instructor"), controlador.tendencia);
+router.post("/exportaciones", autorizar("coordinador", "programador", "instructor"), controlador.registrarExportacion);
 
 module.exports = router;

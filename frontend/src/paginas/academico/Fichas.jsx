@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useTabla from "../../componentes/useTabla.jsx";
 import { Link } from "react-router-dom";
 import { api } from "../../servicios/api";
 import { useAuth } from "../../contexto/AuthContext.jsx";
@@ -26,6 +27,8 @@ export default function Fichas() {
     (estado === "todas" || x.estado === estado) &&
     (!texto || [x.numero_ficha, x.programa, x.instructor].some((v) => String(v).toLowerCase().includes(texto)))
   );
+
+  const tabla = useTabla(visibles, { porPagina: 20 });
 
   const cargar = () =>
     api("/fichas").then(setFichas).catch((e) => { setFichas([]); setMensaje({ tipo: "error", texto: e.message }); });
@@ -71,9 +74,9 @@ export default function Fichas() {
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr><th>Ficha</th><th>Programa</th><th>Jornada</th><th>Instructor</th><th>Aprendices</th><th>Asistencia</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr>{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("programa", "Programa")}{tabla.encabezado("jornada", "Jornada")}{tabla.encabezado("instructor", "Instructor")}{tabla.encabezado("total_aprendices", "Aprendices")}{tabla.encabezado("porcentaje_asistencia", "Asistencia")}{tabla.encabezado("estado", "Estado")}<th></th></tr></thead>
         <tbody>
-          {visibles.map((x) => (
+          {tabla.visibles.map((x) => (
             <tr key={x.id_ficha}>
               <td><b>{x.numero_ficha}</b></td>
               <td>{x.programa}</td>
@@ -93,6 +96,7 @@ export default function Fichas() {
         </tbody>
       </table>
       </div>
+      {tabla.paginacion}
 
       {modal && (
         <div className="superposicion" onClick={() => setModal(false)}>

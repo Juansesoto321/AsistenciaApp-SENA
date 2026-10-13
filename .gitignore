@@ -5,3 +5,6 @@ dist/
 *.log
 .vite/
 .claude/
+
+# Copias de seguridad de la base (servicio "respaldos" de docker-compose)
+/respaldos/

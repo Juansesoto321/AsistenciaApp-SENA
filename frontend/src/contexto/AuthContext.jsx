@@ -1,10 +1,17 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { cerrarSesion as limpiarSesion, guardarSesion, obtenerSesion } from "../servicios/api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [sesion, setSesion] = useState(obtenerSesion);
+
+  // api.js renueva el token antes de que venza; aquí se toma el nuevo
+  useEffect(() => {
+    const alRenovar = (e) => setSesion(e.detail);
+    window.addEventListener("sesion-renovada", alRenovar);
+    return () => window.removeEventListener("sesion-renovada", alRenovar);
+  }, []);
 
   function iniciarSesion(datos) {
     guardarSesion(datos);

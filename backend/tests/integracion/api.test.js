@@ -508,3 +508,61 @@ prueba("el resumen de reportes no necesita filtros; el aprendiz no lo ve", async
   assert.ok(t.datos.at(-1).registros > 0); // hoy hubo clases
   assert.equal((await e.peticion("GET", "/api/reportes/tendencia?dias=5", { token: tokens.coordinador })).estado, 400);
 });
+
+// ---------- Registro de actividad y exportaciones ----------
+
+prueba("las exportaciones quedan en la auditoría, que solo consulta la coordinación", async () => {
+  const excel = await e.peticion("POST", "/api/reportes/exportaciones", {
+    token: tokens.instructor, cuerpo: { formato: "excel", contenido: "busqueda", filas: 12, filtros: { estado: "ausente" } },
+  });
+  assert.equal(excel.estado, 201);
+  const malo = await e.peticion("POST", "/api/reportes/exportaciones", { token: tokens.instructor, cuerpo: { formato: "exe" } });
+  assert.equal(malo.estado, 400);
+  assert.equal((await e.peticion("GET", "/api/reportes/exportar", { token: tokens.coordinador })).estado, 200); // CSV
+
+  const r = await e.peticion("GET", "/api/auditoria?accion=exportar_reporte", { token: tokens.coordinador });
+  assert.equal(r.estado, 200);
+  const formatos = r.datos.registros.map((x) => x.detalle.formato);
+  assert.ok(formatos.includes("excel") && formatos.includes("csv"));
+  assert.ok(r.datos.acciones.includes("login"));
+  assert.equal(r.datos.registros.find((x) => x.detalle.formato === "excel").usuario, "Instructor Prueba");
+
+  assert.equal((await e.peticion("GET", "/api/auditoria", { token: tokens.instructor })).estado, 403);
+  assert.equal((await e.peticion("GET", "/api/auditoria", { token: tokens.ana })).estado, 403);
+});
+
+// ---------- Soporte con captura ----------
+
+const PNG_1X1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+prueba("un ticket de soporte lleva captura; la ve quien lo creó y la coordinación, nadie más", async () => {
+  const sinImagen = await e.peticion("POST", "/api/soporte", {
+    token: tokens.ana, cuerpo: { tipo: "huella", descripcion: "No me toma la huella", archivo_datos: "data:application/pdf;base64,AAAA" },
+  });
+  assert.equal(sinImagen.estado, 400);
+
+  const creado = await e.peticion("POST", "/api/soporte", {
+    token: tokens.ana, cuerpo: { tipo: "huella", descripcion: "No me toma la huella", nombre_archivo: "lector.png", archivo_datos: PNG_1X1 },
+  });
+  assert.equal(creado.estado, 201);
+  const id = creado.datos.id_ticket;
+
+  const lista = await e.peticion("GET", "/api/soporte", { token: tokens.ana });
+  const ticket = lista.datos.find((t) => t.id_ticket === id);
+  assert.equal(ticket.tiene_captura, true);
+  assert.equal(ticket.archivo_datos, undefined); // la imagen no viaja en el listado
+
+  assert.equal((await e.peticion("GET", `/api/soporte/${id}/captura`, { token: tokens.ana })).datos.archivo_datos, PNG_1X1);
+  assert.equal((await e.peticion("GET", `/api/soporte/${id}/captura`, { token: tokens.coordinador })).estado, 200);
+  assert.equal((await e.peticion("GET", `/api/soporte/${id}/captura`, { token: tokens.instructor })).estado, 403);
+});
+
+// ---------- Sesión ----------
+
+prueba("la sesión se renueva con un token válido; sin token no", async () => {
+  const r = await e.peticion("POST", "/api/auth/renovar", { token: tokens.instructor });
+  assert.equal(r.estado, 200);
+  assert.equal(r.datos.usuario.rol, "instructor");
+  assert.equal((await e.peticion("GET", "/api/sesiones/hoy", { token: r.datos.token })).estado, 200);
+  assert.equal((await e.peticion("POST", "/api/auth/renovar")).estado, 401);
+});

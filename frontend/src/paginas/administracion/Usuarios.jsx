@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Icono from "../../componentes/Iconos.jsx";
@@ -14,6 +15,7 @@ export default function Usuarios() {
   const [f, setF] = useState(VACIO);
   const [csv, setCsv] = useState("");
   const [mensaje, setMensaje] = useState(null);
+  const tabla = useTabla(usuarios, { porPagina: 20, valores: { nombre: (u) => `${u.nombres} ${u.apellidos}` } });
 
   const cargar = () => {
     const q = new URLSearchParams(Object.entries(filtro).filter(([, v]) => v)).toString();
@@ -124,9 +126,9 @@ export default function Usuarios() {
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr><th>Nombre</th><th>Documento</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr>{tabla.encabezado("nombre", "Nombre")}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("correo", "Correo")}{tabla.encabezado("rol", "Rol")}{tabla.encabezado("estado", "Estado")}<th>Acciones</th></tr></thead>
         <tbody>
-          {(usuarios || []).map((u) => (
+          {tabla.visibles.map((u) => (
             <tr key={u.id_usuario}>
               <td>{u.nombres} {u.apellidos}</td>
               <td>{u.documento}</td>
@@ -146,6 +148,7 @@ export default function Usuarios() {
         </tbody>
       </table>
       </div>
+      {tabla.paginacion}
 
       {modal?.editar && (
         <div className="superposicion" onClick={() => setModal(null)}>

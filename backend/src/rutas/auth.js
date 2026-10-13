@@ -25,6 +25,7 @@ const limiteRegistro = limitarPeticiones({
 });
 
 router.post("/login", limiteLogin, controlador.login);
+router.post("/renovar", autenticar, controlador.renovar); // alarga la sesión de quien sigue usando la app
 router.post("/registro", limiteRegistro, controlador.registro);
 router.post("/recuperar", limiteRecuperar, controlador.recuperar);
 router.post("/restablecer", limiteRecuperar, controlador.restablecer);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../servicios/api";
 import Aviso from "../../componentes/Aviso.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
+import { useTema } from "../../utilidades/tema";
 
 // Las mismas reglas que valida el servidor
 const REQUISITOS = [
@@ -32,6 +33,7 @@ export default function Perfil() {
   const [claves, setClaves] = useState({ actual: "", nueva: "", repetida: "" });
   const [mensaje, setMensaje] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [tema, cambiarTema] = useTema();
 
   useEffect(() => {
     api("/auth/perfil")
@@ -111,6 +113,16 @@ export default function Perfil() {
           <button className="boton" style={{ marginTop: 16 }} disabled={guardando || !claves.actual || !nuevaValida || !coinciden} onClick={cambiarContrasena}>
             Cambiar contraseña
           </button>
+        </div>
+      </div>
+
+      <div className="tarjeta" style={{ marginTop: 14 }}>
+        <h3 style={{ fontSize: 16 }}>Apariencia</h3>
+        <p className="texto-suave" style={{ marginTop: 4 }}>El modo oscuro cansa menos la vista en ambientes con poca luz. Se guarda en este navegador.</p>
+        <div className="selector-dias" role="group" aria-label="Tema de la aplicación" style={{ marginTop: 12 }}>
+          {[["claro", "Claro"], ["oscuro", "Oscuro"], ["sistema", "Según el equipo"]].map(([valor, texto]) => (
+            <button key={valor} type="button" aria-pressed={tema === valor} onClick={() => cambiarTema(valor)}>{texto}</button>
+          ))}
         </div>
       </div>
     </>

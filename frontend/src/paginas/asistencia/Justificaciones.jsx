@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Icono from "../../componentes/Iconos.jsx";
@@ -106,6 +107,10 @@ export default function Justificaciones() {
   const visibles = (lista || [])
     .filter((j) => filtro === "todas" || j.estado === filtro)
     .sort((a, b) => (b.estado === "enviada") - (a.estado === "enviada")); // las por revisar primero
+  const tabla = useTabla(visibles, {
+    porPagina: 20,
+    valores: { fecha: (j) => new Date(j.fecha), aprendiz: (j) => `${j.nombres} ${j.apellidos}`, enviada_en: (j) => j.enviada_en && new Date(j.enviada_en) },
+  });
 
   return (
     <>
@@ -133,18 +138,18 @@ export default function Justificaciones() {
         <table className="tabla tabla-tarjetas">
           <thead>
             <tr>
-              <th>Fecha clase</th>
-              <th>Aprendiz</th>
-              <th>Ficha</th>
-              <th>Tipo</th>
-              <th>Enviada</th>
-              <th>Estado</th>
-              <th>Revisó</th>
+              {tabla.encabezado("fecha", "Fecha clase")}
+              {tabla.encabezado("aprendiz", "Aprendiz")}
+              {tabla.encabezado("numero_ficha", "Ficha")}
+              {tabla.encabezado("tipo", "Tipo")}
+              {tabla.encabezado("enviada_en", "Enviada")}
+              {tabla.encabezado("estado", "Estado")}
+              {tabla.encabezado("revisada_por", "Revisó")}
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {visibles.map((j) => (
+            {tabla.visibles.map((j) => (
               <tr key={j.id_justificacion}>
                 <td data-etiqueta="Fecha clase">{fechaCorta(j.fecha)}</td>
                 <td data-etiqueta="Aprendiz">{j.nombres} {j.apellidos}</td>
@@ -179,6 +184,7 @@ export default function Justificaciones() {
             )}
           </tbody>
         </table>
+        {tabla.paginacion}
       </>)}
 
       {detalle && (

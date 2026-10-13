@@ -27,6 +27,7 @@ import Reportes from "./paginas/asistencia/Reportes.jsx";
 // Administración
 import Usuarios from "./paginas/administracion/Usuarios.jsx";
 import Configuracion from "./paginas/administracion/Configuracion.jsx";
+import Registro from "./paginas/administracion/Registro.jsx";
 
 // Quién entra a cada grupo de pantallas (el backend vuelve a validarlo)
 const COORDINACION = ["coordinador", "programador"];
@@ -66,6 +67,7 @@ export default function App() {
 
       <Route path="/usuarios" element={<Protegida roles={["coordinador"]}><Usuarios /></Protegida>} />
       <Route path="/configuracion" element={<Protegida roles={COORDINACION}><Configuracion /></Protegida>} />
+      <Route path="/registro" element={<Protegida roles={COORDINACION}><Registro /></Protegida>} />
 
       <Route path="*" element={<Navigate to="/panel" replace />} />
     </Routes>

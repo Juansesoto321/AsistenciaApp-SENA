@@ -11,10 +11,10 @@ import { textoPlazo } from "../utilidades/formato";
  * auditoría); "Otro" pide escribirlo.
  */
 const ESTADOS = [
-  { valor: "presente", texto: "Presente", color: "var(--verde)" },
-  { valor: "tardanza", texto: "Tardanza", color: "var(--ambar)" },
-  { valor: "ausente", texto: "Ausente", color: "var(--rojo)" },
-  { valor: "justificada", texto: "Justificada", color: "var(--azul)" },
+  { valor: "presente", texto: "Presente", color: "var(--verde-solido)" },
+  { valor: "tardanza", texto: "Tardanza", color: "var(--ambar-solido)" },
+  { valor: "ausente", texto: "Ausente", color: "var(--rojo-solido)" },
+  { valor: "justificada", texto: "Justificada", color: "var(--azul-solido)" },
 ];
 
 const AYUDA_ESTADO = {
