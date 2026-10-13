@@ -8,8 +8,9 @@ import Cargando from "../../componentes/Cargando.jsx";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
+import PanelRegistroManual from "../../componentes/PanelRegistroManual.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { textoPlazo } from "../../utilidades/formato";
+import { textoPlazo, fechaCorta } from "../../utilidades/formato";
 
 export default function SesionEnVivo() {
   const { id } = useParams();
@@ -20,8 +21,7 @@ export default function SesionEnVivo() {
 
   const [sesion, setSesion] = useState(null);
   const [alerta, setAlerta] = useState(null);
-  const [modal, setModal] = useState(null);
-  const [manual, setManual] = useState({ estado: "presente", motivo: "" });
+  const [modal, setModal] = useState(null); // aprendiz con el panel de registro manual abierto
   const [mensaje, setMensaje] = useState(null);
   const [plazo, setPlazo] = useState(72);
   const [cerrando, setCerrando] = useState(false);
@@ -66,19 +66,20 @@ export default function SesionEnVivo() {
     };
   }, [id]);
 
-  async function guardarManual() {
-    if (!manual.motivo.trim()) return setMensaje({ tipo: "error", texto: "Debes ingresar una justificación." });
+  // Lo llama el panel de registro manual; devuelve si se guardó para que el panel se cierre o no
+  async function guardarManual(estado, motivo) {
     try {
       const r = await api(`/sesiones/${id}/asistencia-manual`, {
         method: "POST",
-        body: { id_aprendiz: modal.id_usuario, estado: manual.estado, motivo: manual.motivo },
+        body: { id_aprendiz: modal.id_usuario, estado, motivo },
       });
-      setMensaje({ tipo: "exito", texto: r.mensaje });
+      setMensaje({ tipo: "exito", texto: `${modal.nombres}: ${r.mensaje.toLowerCase()}` });
       setModal(null);
-      setManual({ estado: "presente", motivo: "" });
       cargar();
+      return true;
     } catch (e) {
       setMensaje({ tipo: "error", texto: e.message });
+      return false;
     }
   }
 
@@ -142,7 +143,7 @@ export default function SesionEnVivo() {
             Ficha {sesion.numero_ficha} · Ambiente {sesion.numero_ambiente}
           </h1>
           <p>
-            {sesion.programa} · {new Date(sesion.fecha).toLocaleDateString("es-CO")} ·{" "}
+            {sesion.programa} · {fechaCorta(sesion.fecha)} ·{" "}
             {sesion.hora_inicio.slice(0, 5)}–{sesion.hora_fin.slice(0, 5)} ·{" "}
             <b>{marcados}/{sesion.aprendices.length}</b> registrados
           </p>
@@ -203,7 +204,7 @@ export default function SesionEnVivo() {
                 <button
                   className="boton mini suave"
                   disabled={cerrando}
-                  onClick={() => { setModal(a); setManual({ estado: a.estado || "presente", motivo: "" }); }}
+                  onClick={() => setModal(a)}
                 >
                   Registro manual
                 </button>
@@ -217,32 +218,12 @@ export default function SesionEnVivo() {
       </table>
 
       {modal && (
-        <div className="superposicion" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Registro manual · {modal.nombres} {modal.apellidos}</h2>
-            <p style={{ color: "var(--tinta-suave)", fontSize: 13.5 }}>
-              Para casos excepcionales: lesión, lector caído o huella no reconocida. Queda trazado en auditoría.
-            </p>
-            <label>Estado</label>
-            <select value={manual.estado} onChange={(e) => setManual({ ...manual, estado: e.target.value })}>
-              <option value="presente">Presente</option>
-              <option value="tardanza">Tardanza</option>
-              <option value="ausente">Ausente</option>
-              <option value="justificada">Justificada</option>
-            </select>
-            <label>Justificación del registro manual (obligatoria)</label>
-            <textarea
-              rows={3}
-              value={manual.motivo}
-              onChange={(e) => setManual({ ...manual, motivo: e.target.value })}
-              placeholder="Ej.: lesión en la mano derecha, el lector no reconoció la huella tras 3 intentos…"
-            />
-            <div className="acciones-modal">
-              <button className="boton suave" onClick={() => setModal(null)}>Cancelar</button>
-              <button className="boton" disabled={!manual.motivo.trim()} onClick={guardarManual}>Guardar registro</button>
-            </div>
-          </div>
-        </div>
+        <PanelRegistroManual
+          aprendiz={modal}
+          plazoHoras={plazo}
+          alGuardar={guardarManual}
+          alCerrar={() => setModal(null)}
+        />
       )}
 
       {cerrando && (

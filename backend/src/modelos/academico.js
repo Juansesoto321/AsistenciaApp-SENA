@@ -34,7 +34,13 @@ async function listarFichas(usuario) {
   const resultado = await pool.query(
     `SELECT f.*, p.nombre AS periodo,
             u.nombres || ' ' || u.apellidos AS instructor,
-            (SELECT COUNT(*) FROM matricula m WHERE m.id_ficha = f.id_ficha AND m.estado = 'activa') AS total_aprendices
+            (SELECT COUNT(*) FROM matricula m WHERE m.id_ficha = f.id_ficha AND m.estado = 'activa') AS total_aprendices,
+            -- Porcentaje de asistencia de la ficha en sus clases cerradas; NULL si aún no hay
+            (SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE a.estado IN ('presente','tardanza','justificada')) / NULLIF(COUNT(*), 0))
+               FROM asistencia a
+               JOIN sesion_clase s ON s.id_sesion = a.id_sesion
+               JOIN horario h ON h.id_horario = s.id_horario
+              WHERE h.id_ficha = f.id_ficha AND s.estado = 'cerrada')::int AS porcentaje_asistencia
      FROM ficha f
      JOIN periodo p ON p.id_periodo = f.id_periodo
      JOIN usuario u ON u.id_usuario = f.id_instructor
@@ -55,9 +61,10 @@ async function crearPeriodo(datos) {
 
 async function crearFicha(datos) {
   const resultado = await pool.query(
-    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [datos.numero_ficha, datos.programa, datos.jornada, datos.fecha_inicio, datos.fecha_fin, datos.id_periodo, datos.id_instructor]
+    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor, trimestres)
+     VALUES ($1,$2,$3,$4,$5,$6,$7, COALESCE($8, 7)) RETURNING *`,
+    [datos.numero_ficha, datos.programa, datos.jornada, datos.fecha_inicio, datos.fecha_fin, datos.id_periodo,
+     datos.id_instructor, datos.trimestres || null]
   );
   return resultado.rows[0];
 }
@@ -85,18 +92,19 @@ async function listarHorarios(usuario, filtros = {}) {
 
   const where = condiciones.length ? `WHERE ${condiciones.join(" AND ")}` : "";
   const resultado = await pool.query(
-    `SELECT h.*, f.numero_ficha, f.programa, a.numero_ambiente, a.sede_centro,
+    `SELECT h.*, f.numero_ficha, f.programa, f.jornada, a.numero_ambiente, a.sede_centro,
             u.nombres || ' ' || u.apellidos AS instructor,
             rap.codigo AS codigo_rap, rap.nombre AS resultado_aprendizaje,
-            c.nombre AS competencia, t.nombre AS tematica,
-            p.nombre AS periodo, p.fecha_inicio AS periodo_inicio, p.fecha_fin AS periodo_fin
+            c.id_competencia AS id_competencia_efectiva, c.nombre AS competencia, t.nombre AS tematica,
+            p.nombre AS periodo, v.vigente_desde, v.vigente_hasta
      FROM horario h
+     JOIN horario_vigencia v ON v.id_horario = h.id_horario
      JOIN ficha f ON f.id_ficha = h.id_ficha
      JOIN ambiente a ON a.id_ambiente = h.id_ambiente
      JOIN usuario u ON u.id_usuario = h.id_instructor
      JOIN periodo p ON p.id_periodo = h.id_periodo
      LEFT JOIN resultado_aprendizaje rap ON rap.id_rap = h.id_rap
-     LEFT JOIN competencia c ON c.id_competencia = rap.id_competencia
+     LEFT JOIN competencia c ON c.id_competencia = COALESCE(h.id_competencia, rap.id_competencia)
      LEFT JOIN tematica t ON t.id_tematica = h.id_tematica
      ${where}
      ORDER BY h.dia_semana, h.hora_inicio`,
@@ -105,18 +113,39 @@ async function listarHorarios(usuario, filtros = {}) {
   return resultado.rows;
 }
 
-/** `idExcluir` evita que un horario choque consigo mismo al editarlo. */
+/**
+ * Busca un horario que choque con el nuevo: mismo día, horas que se cruzan,
+ * fechas de vigencia que se traslapan (dos trimestres distintos no chocan) y
+ * el mismo instructor, el mismo ambiente o la misma ficha.
+ * Las fechas del nuevo horario se calculan aquí con la misma regla de la vista
+ * horario_vigencia. `idExcluir` evita que un horario choque consigo mismo al editarlo.
+ */
 async function buscarConflictoHorario(datos, idExcluir = null) {
   const resultado = await pool.query(
-    `SELECT h.id_horario, f.numero_ficha,
-            CASE WHEN h.id_instructor = $1 THEN 'instructor' ELSE 'ambiente' END AS tipo
-     FROM horario h JOIN ficha f ON f.id_ficha = h.id_ficha
+    `WITH nuevo AS (
+       SELECT CASE WHEN $7::int IS NULL THEN p.fecha_inicio
+                   ELSE (f.fecha_inicio + make_interval(months => ($7::int - 1) * 3))::date END AS desde,
+              CASE WHEN $7::int IS NULL THEN p.fecha_fin
+                   ELSE (f.fecha_inicio + make_interval(months => $7::int * 3))::date - 1 END AS hasta
+       FROM ficha f, periodo p
+       WHERE f.id_ficha = $8 AND p.id_periodo = $9
+     )
+     SELECT h.id_horario, fh.numero_ficha,
+            CASE WHEN h.id_instructor = $1 THEN 'instructor'
+                 WHEN h.id_ambiente = $2 THEN 'ambiente'
+                 ELSE 'ficha' END AS tipo
+     FROM horario h
+     JOIN ficha fh ON fh.id_ficha = h.id_ficha
+     JOIN horario_vigencia v ON v.id_horario = h.id_horario
+     CROSS JOIN nuevo n
      WHERE h.dia_semana = $3
-       AND (h.id_instructor = $1 OR h.id_ambiente = $2)
+       AND (h.id_instructor = $1 OR h.id_ambiente = $2 OR h.id_ficha = $8)
        AND (h.hora_inicio, h.hora_fin) OVERLAPS ($4::time, $5::time)
+       AND v.vigente_desde <= n.hasta AND v.vigente_hasta >= n.desde
        AND ($6::int IS NULL OR h.id_horario <> $6)
      LIMIT 1`,
-    [datos.id_instructor, datos.id_ambiente, datos.dia_semana, datos.hora_inicio, datos.hora_fin, idExcluir]
+    [datos.id_instructor, datos.id_ambiente, datos.dia_semana, datos.hora_inicio, datos.hora_fin, idExcluir,
+     datos.trimestre ?? null, datos.id_ficha, datos.id_periodo]
   );
   return resultado.rows[0];
 }
@@ -126,26 +155,46 @@ async function buscarHorario(id) {
   return resultado.rows[0] || null;
 }
 
-async function editarHorario(id, datos) {
+async function buscarFichaParaHorario(idFicha) {
   const resultado = await pool.query(
-    `UPDATE horario SET id_ficha = $1, id_ambiente = $2, id_instructor = $3,
-            id_periodo = $4, dia_semana = $5, hora_inicio = $6, hora_fin = $7,
-            id_rap = $8, id_tematica = $9
-     WHERE id_horario = $10 RETURNING *`,
-    [datos.id_ficha, datos.id_ambiente, datos.id_instructor, datos.id_periodo,
-     datos.dia_semana, datos.hora_inicio, datos.hora_fin,
-     datos.id_rap || null, datos.id_tematica || null, id]
+    "SELECT id_ficha, id_periodo, fecha_inicio, trimestres, estado FROM ficha WHERE id_ficha = $1",
+    [idFicha]
   );
   return resultado.rows[0] || null;
 }
 
-async function crearHorario(datos) {
+async function buscarRap(idRap) {
+  const resultado = await pool.query("SELECT id_rap, id_competencia FROM resultado_aprendizaje WHERE id_rap = $1", [idRap]);
+  return resultado.rows[0] || null;
+}
+
+async function buscarTematica(idTematica) {
+  const resultado = await pool.query("SELECT id_tematica, id_rap FROM tematica WHERE id_tematica = $1", [idTematica]);
+  return resultado.rows[0] || null;
+}
+
+async function editarHorario(id, datos) {
   const resultado = await pool.query(
+    `UPDATE horario SET id_ficha = $1, id_ambiente = $2, id_instructor = $3,
+            id_periodo = $4, dia_semana = $5, hora_inicio = $6, hora_fin = $7,
+            id_rap = $8, id_tematica = $9, id_competencia = $10, trimestre = $11
+     WHERE id_horario = $12 RETURNING *`,
+    [datos.id_ficha, datos.id_ambiente, datos.id_instructor, datos.id_periodo,
+     datos.dia_semana, datos.hora_inicio, datos.hora_fin,
+     datos.id_rap || null, datos.id_tematica || null, datos.id_competencia, datos.trimestre ?? null, id]
+  );
+  return resultado.rows[0] || null;
+}
+
+/** `cliente` permite crear varios días dentro de una misma transacción. */
+async function crearHorario(datos, cliente = pool) {
+  const resultado = await cliente.query(
     `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana,
-                          hora_inicio, hora_fin, id_rap, id_tematica)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+                          hora_inicio, hora_fin, id_rap, id_tematica, id_competencia, trimestre)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
     [datos.id_ficha, datos.id_ambiente, datos.id_instructor, datos.id_periodo, datos.dia_semana,
-     datos.hora_inicio, datos.hora_fin, datos.id_rap || null, datos.id_tematica || null]
+     datos.hora_inicio, datos.hora_fin, datos.id_rap || null, datos.id_tematica || null,
+     datos.id_competencia, datos.trimestre ?? null]
   );
   return resultado.rows[0];
 }
@@ -247,6 +296,9 @@ module.exports = {
   listarHorarios,
   buscarConflictoHorario,
   buscarHorario,
+  buscarFichaParaHorario,
+  buscarRap,
+  buscarTematica,
   crearHorario,
   editarHorario,
   eliminarHorario,

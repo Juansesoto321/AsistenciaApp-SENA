@@ -15,5 +15,7 @@ router.get("/busquedas-guardadas", controlador.listarBusquedasGuardadas);
 router.post("/busquedas-guardadas", controlador.guardarBusqueda);
 router.get("/mi-historial", autorizar("aprendiz"), controlador.miHistorial);
 router.get("/estadisticas", autorizar("coordinador", "programador", "instructor"), controlador.estadisticas);
+router.get("/resumen", autorizar("coordinador", "programador", "instructor"), controlador.resumen);
+router.get("/tendencia", autorizar("coordinador", "programador", "instructor"), controlador.tendencia);
 
 module.exports = router;

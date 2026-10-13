@@ -3,10 +3,12 @@ import { useParams, Link } from "react-router-dom";
 import { api } from "../../servicios/api";
 import { useAuth } from "../../contexto/AuthContext.jsx";
 import IconoHuella from "../../componentes/IconoHuella.jsx";
+import Icono from "../../componentes/Iconos.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import PlanTrimestres from "./PlanTrimestres.jsx";
 
 export default function DetalleFicha() {
   const { id } = useParams();
@@ -21,9 +23,13 @@ export default function DetalleFicha() {
   const [pasoEnrolar, setPasoEnrolar] = useState(1);
   const [lecturas, setLecturas] = useState([]);
   const [mensaje, setMensaje] = useState(null);
+  const [pestana, setPestana] = useState("aprendices"); // "aprendices" | "plan"
+  const [plan, setPlan] = useState(null); // ficha + plan por trimestres
+  const puedePlanear = ["coordinador", "programador"].includes(rol);
 
   const cargar = () => api(`/fichas/${id}/matriculas`).then(setMatriculas).catch((e) => { setMatriculas([]); setMensaje({ tipo: "error", texto: e.message }); });
-  useEffect(() => { cargar(); }, [id]);
+  const cargarPlan = () => api(`/fichas/${id}/programacion`).then(setPlan).catch((e) => setMensaje({ tipo: "error", texto: e.message }));
+  useEffect(() => { cargar(); cargarPlan(); }, [id]);
 
   async function abrirMatricular() {
     const todos = await api("/usuarios?rol=aprendiz&estado=activo");
@@ -86,13 +92,30 @@ export default function DetalleFicha() {
       <div className="cabecera-pagina">
         <div>
           <Link to="/fichas" style={{ fontSize: 13.5 }}>← Volver a fichas</Link>
-          <h1>Aprendices de la ficha</h1>
-          <p>Matrícula y enrolamiento de huella digital (requiere consentimiento del aprendiz).</p>
+          <h1>{plan ? `Ficha ${plan.ficha.numero_ficha}` : "Ficha"}</h1>
+          <p>{plan?.ficha.programa || "Aprendices y plan de formación"}</p>
         </div>
-        {["coordinador", "programador"].includes(rol) && <button className="boton" onClick={abrirMatricular}>+ Matricular aprendices</button>}
+        {pestana === "aprendices" && puedePlanear && <button className="boton" onClick={abrirMatricular}>+ Matricular aprendices</button>}
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
+      <div className="pestanas" role="tablist">
+        <button role="tab" aria-selected={pestana === "aprendices"} onClick={() => setPestana("aprendices")}>
+          <Icono nombre="usuarios" /> Aprendices {matriculas ? `(${matriculas.length})` : ""}
+        </button>
+        <button role="tab" aria-selected={pestana === "plan"} onClick={() => setPestana("plan")}>
+          <Icono nombre="competencias" /> Plan por trimestres
+        </button>
+      </div>
+
+      {pestana === "plan" && (plan
+        ? <PlanTrimestres plan={plan} puedeEditar={puedePlanear} alCambiar={cargarPlan} alMensaje={setMensaje} />
+        : <Cargando />)}
+
+      {pestana === "aprendices" && (<>
+      <p className="nota-estado" style={{ marginBottom: 12 }}>
+        Matrícula y enrolamiento de huella digital (requiere consentimiento del aprendiz).
+      </p>
       <div className="tabla-desplazable">
       <table className="tabla">
         <thead><tr><th>Aprendiz</th><th>Documento</th><th>Correo</th><th>Huella</th><th>Matrícula</th><th>Acciones</th></tr></thead>
@@ -119,6 +142,7 @@ export default function DetalleFicha() {
         </tbody>
       </table>
       </div>
+      </>)}
 
       {modal === "matricular" && (
         <div className="superposicion" onClick={() => setModal(null)}>

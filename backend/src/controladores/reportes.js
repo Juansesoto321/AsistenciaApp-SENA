@@ -55,4 +55,20 @@ async function estadisticas(req, res, next) {
   }
 }
 
-module.exports = { buscar, exportar, listarBusquedasGuardadas, guardarBusqueda, miHistorial, estadisticas };
+async function resumen(req, res, next) {
+  try {
+    res.json(await servicio.resumen(req.usuario));
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function tendencia(req, res, next) {
+  try {
+    res.json(await servicio.obtenerTendencia(req.usuario, req.query.dias));
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { buscar, exportar, listarBusquedasGuardadas, guardarBusqueda, miHistorial, estadisticas, resumen, tendencia };

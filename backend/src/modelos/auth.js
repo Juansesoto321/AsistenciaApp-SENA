@@ -69,9 +69,13 @@ async function marcarTokenUsado(idToken) {
   await pool.query("UPDATE token_recuperacion SET usado = TRUE WHERE id_token = $1", [idToken]);
 }
 
+// Restablecer la contraseña desbloquea la cuenta, pero no aprueba una cuenta
+// pendiente ni reactiva una desactivada: eso solo lo decide el coordinador.
 async function restablecerContrasena(idUsuario, hash) {
   await pool.query(
-    "UPDATE usuario SET contrasena_hash = $1, intentos_fallidos = 0, estado = 'activo', bloqueado_hasta = NULL WHERE id_usuario = $2",
+    `UPDATE usuario SET contrasena_hash = $1, intentos_fallidos = 0, bloqueado_hasta = NULL,
+            estado = CASE WHEN estado = 'bloqueado' THEN 'activo' ELSE estado END
+     WHERE id_usuario = $2`,
     [hash, idUsuario]
   );
 }

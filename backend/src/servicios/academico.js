@@ -2,8 +2,11 @@ const crypto = require("crypto");
 const modelo = require("../modelos/academico");
 const { auditar } = require("./auditoria");
 const { error } = require("../utilidades/errores");
+const { enTransaccion } = require("../modelos/transaccion");
+const { trimestreEnCurso } = require("./programacion");
 
 const ESTADOS_MATRICULA = ["activa", "retirada", "finalizada"];
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
 async function obtenerPeriodos() {
   return modelo.listarPeriodos();
@@ -34,7 +37,7 @@ async function obtenerHorarios(usuario, filtros) {
 /** Valida lo mínimo antes de ir a la base de datos, con mensajes claros. */
 function validarHorario(h) {
   if (!h.id_ficha || !h.id_ambiente || !h.id_instructor || !h.id_periodo)
-    throw error("Selecciona ficha, ambiente, instructor y periodo", "validacion");
+    throw error("Selecciona ficha, ambiente e instructor", "validacion");
   const dia = Number(h.dia_semana);
   if (h.dia_semana === "" || h.dia_semana === null || !Number.isInteger(dia) || dia < 0 || dia > 6)
     throw error("Selecciona un día de la semana válido", "validacion");
@@ -44,20 +47,81 @@ function validarHorario(h) {
     throw error("La hora de fin debe ser posterior a la hora de inicio", "validacion");
 }
 
-function errorDeConflicto(conflicto) {
+function errorDeConflicto(conflicto, dia) {
+  const cuando = dia === undefined ? "en ese horario" : `el ${DIAS[dia]} a esa hora`;
   return error(
-    `Conflicto de ${conflicto.tipo}: se cruza con la ficha ${conflicto.numero_ficha} en ese horario`,
+    conflicto.tipo === "ficha"
+      ? `Conflicto de ficha: la ficha ${conflicto.numero_ficha} ya tiene otra clase ${cuando}`
+      : `Conflicto de ${conflicto.tipo}: se cruza con la ficha ${conflicto.numero_ficha} ${cuando}`,
     "conflicto_horario"
   );
 }
 
+/**
+ * Completa y valida lo curricular y el trimestre:
+ * - la competencia es obligatoria (si llega solo el resultado de aprendizaje,
+ *   se toma su competencia) y el RAP y la temática deben pertenecerle;
+ * - el trimestre debe existir en la ficha; al crear, por defecto es el que
+ *   está en curso; el periodo se toma de la ficha.
+ */
+async function completarHorario(h, { esNuevo }) {
+  const ficha = await modelo.buscarFichaParaHorario(h.id_ficha);
+  if (!ficha) throw error("La ficha no existe", "validacion");
+
+  const rap = h.id_rap ? await modelo.buscarRap(h.id_rap) : null;
+  if (h.id_rap && !rap) throw error("El resultado de aprendizaje no existe", "validacion");
+  const idCompetencia = Number(h.id_competencia) || rap?.id_competencia;
+  if (!idCompetencia) throw error("Selecciona la competencia que se verá en esta clase", "validacion");
+  if (rap && rap.id_competencia !== idCompetencia)
+    throw error("El resultado de aprendizaje no pertenece a esa competencia", "validacion");
+  if (h.id_tematica) {
+    const tematica = await modelo.buscarTematica(h.id_tematica);
+    if (!tematica || !rap || tematica.id_rap !== rap.id_rap)
+      throw error("La temática no pertenece a ese resultado de aprendizaje", "validacion");
+  }
+
+  let trimestre = h.trimestre === "" || h.trimestre === undefined ? null : h.trimestre;
+  if (trimestre === null && esNuevo) trimestre = Math.max(1, trimestreEnCurso(ficha.fecha_inicio, ficha.trimestres));
+  if (trimestre !== null) {
+    trimestre = Number(trimestre);
+    if (!Number.isInteger(trimestre) || trimestre < 1 || trimestre > ficha.trimestres)
+      throw error(`El trimestre debe estar entre 1 y ${ficha.trimestres}`, "validacion");
+  }
+
+  return { ...h, id_competencia: idCompetencia, trimestre, id_periodo: h.id_periodo || ficha.id_periodo };
+}
+
+/** Acepta `dias_semana` (varios días a la vez) o `dia_semana` (uno). */
+function diasSolicitados(datos) {
+  const dias = Array.isArray(datos.dias_semana) ? datos.dias_semana : [datos.dia_semana];
+  const unicos = [...new Set(dias.filter((d) => d !== "" && d !== null && d !== undefined).map(Number))];
+  if (!unicos.length) throw error("Selecciona al menos un día de la semana", "validacion");
+  return unicos.sort((a, b) => a - b);
+}
+
+/**
+ * Crea la clase en uno o varios días. Se valida todo antes de guardar y se
+ * guarda en una sola transacción: o se crean todos los días o ninguno.
+ */
 async function crearHorario(datos, usuario) {
-  validarHorario(datos);
-  const conflicto = await modelo.buscarConflictoHorario(datos);
-  if (conflicto) throw errorDeConflicto(conflicto);
-  const horario = await modelo.crearHorario(datos);
-  await auditar(usuario.id, "crear_horario", "horario", horario.id_horario);
-  return horario;
+  const dias = diasSolicitados(datos);
+  const base = await completarHorario(datos, { esNuevo: true });
+  const porDia = dias.map((dia) => ({ ...base, dia_semana: dia }));
+
+  for (const h of porDia) {
+    validarHorario(h);
+    const conflicto = await modelo.buscarConflictoHorario(h);
+    if (conflicto) throw errorDeConflicto(conflicto, dias.length > 1 ? h.dia_semana : undefined);
+  }
+
+  const creados = await enTransaccion(async (cliente) => {
+    const lista = [];
+    for (const h of porDia) lista.push(await modelo.crearHorario(h, cliente));
+    return lista;
+  });
+  for (const h of creados) await auditar(usuario.id, "crear_horario", "horario", h.id_horario);
+  // Compatibilidad: con un solo día se devuelve el horario; con varios, la lista
+  return creados.length === 1 ? creados[0] : { horarios: creados };
 }
 
 async function editarHorario(id, datos, usuario) {
@@ -65,7 +129,7 @@ async function editarHorario(id, datos, usuario) {
   if (!actual) throw error("Horario no encontrado", "no_encontrado");
 
   // Campos no enviados conservan su valor actual
-  const nuevo = {
+  const combinado = {
     id_ficha: datos.id_ficha ?? actual.id_ficha,
     id_ambiente: datos.id_ambiente ?? actual.id_ambiente,
     id_instructor: datos.id_instructor ?? actual.id_instructor,
@@ -75,8 +139,14 @@ async function editarHorario(id, datos, usuario) {
     hora_fin: datos.hora_fin ?? actual.hora_fin,
     id_rap: datos.id_rap !== undefined ? datos.id_rap : actual.id_rap,
     id_tematica: datos.id_tematica !== undefined ? datos.id_tematica : actual.id_tematica,
+    id_competencia: datos.id_competencia !== undefined ? datos.id_competencia : actual.id_competencia,
+    trimestre: datos.trimestre !== undefined ? datos.trimestre : actual.trimestre,
   };
+  // Si cambia de ficha, el periodo pasa a ser el de la nueva ficha
+  if (datos.id_ficha && Number(datos.id_ficha) !== actual.id_ficha && datos.id_periodo === undefined)
+    combinado.id_periodo = null;
 
+  const nuevo = await completarHorario(combinado, { esNuevo: false });
   validarHorario(nuevo);
   const conflicto = await modelo.buscarConflictoHorario(nuevo, Number(id));
   if (conflicto) throw errorDeConflicto(conflicto);

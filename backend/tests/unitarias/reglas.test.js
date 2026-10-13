@@ -5,10 +5,11 @@ require("../preparar");
 const { test, describe } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { calcularEstado } = require("../../src/servicios/marcacion");
+const { calcularEstado, horaDeLaMarca } = require("../../src/servicios/marcacion");
 const { validarContrasena, normalizarCorreo } = require("../../src/servicios/auth");
 const { validarCambios } = require("../../src/servicios/configuracion");
 const { parsearCsv } = require("../../src/servicios/competencias");
+const { trimestreEnCurso } = require("../../src/servicios/programacion");
 
 describe("calcularEstado (CU-13: presente o tardanza)", () => {
   const a = (hora, minuto) => new Date(2026, 8, 23, hora, minuto); // 23 sep 2026, hora local
@@ -34,6 +35,22 @@ describe("calcularEstado (CU-13: presente o tardanza)", () => {
 
   test("acepta la hora sin segundos", () => {
     assert.equal(calcularEstado("07:00", 15, a(7, 30)), "tardanza");
+  });
+});
+
+describe("hora de la marca que envía el lector (ADMS)", () => {
+  const ahora = new Date(2026, 9, 13, 9, 0, 0); // 13 oct 2026, 9:00 a. m. hora local
+
+  test("usa la hora local del equipo, aunque la marca llegue tarde", () => {
+    assert.equal(horaDeLaMarca("2026-10-13 07:05:30", ahora).getTime(), new Date(2026, 9, 13, 7, 5, 30).getTime());
+    assert.equal(horaDeLaMarca("2026-10-13 07:05", ahora).getTime(), new Date(2026, 9, 13, 7, 5, 0).getTime());
+  });
+
+  test("sin hora, con una hora ilegible o con el reloj del equipo adelantado usa la del servidor", () => {
+    assert.equal(horaDeLaMarca(undefined, ahora), ahora);
+    assert.equal(horaDeLaMarca("ayer temprano", ahora), ahora);
+    assert.equal(horaDeLaMarca("2026-10-13 09:30:00", ahora), ahora); // 30 min en el futuro
+    assert.equal(horaDeLaMarca("2026-10-13 09:03:00", ahora).getMinutes(), 3); // 3 min: dentro del margen
   });
 });
 
@@ -70,6 +87,25 @@ describe("configuración del sistema", () => {
 
   test("rechaza claves desconocidas", () => {
     assert.throws(() => validarCambios({ clave_inventada: "1" }), /desconocido/);
+  });
+});
+
+describe("trimestre en curso de una ficha", () => {
+  const inicio = "2026-07-01T00:00:00";
+
+  test("los tres primeros meses son el trimestre 1", () => {
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 6, 1)), 1);
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 8, 30)), 1);
+  });
+
+  test("después avanza cada tres meses", () => {
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 9, 13)), 2);
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2027, 0, 5)), 3);
+  });
+
+  test("antes de empezar es 0 y nunca pasa del total de trimestres", () => {
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 5, 20)), 0);
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2030, 0, 1)), 7);
   });
 });
 

@@ -3,6 +3,26 @@ import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import { fechaHora, haceCuanto } from "../../utilidades/formato";
+
+const RECARGA_MS = 30_000; // el estado del lector cambia solo: se vuelve a consultar cada 30 s
+
+// Lo que significa cada estado del lector, en palabras de quien lo usa
+const ESTADO_LECTOR = {
+  en_linea: { texto: "En línea", clase: "activa" },
+  fuera_de_linea: { texto: "Sin señal", clase: "ausente" },
+  no_verificado: { texto: "Aún no se conecta", clase: "pendiente" },
+};
+
+function EstadoLector({ estado }) {
+  const e = ESTADO_LECTOR[estado] || { texto: estado, clase: "" };
+  return (
+    <span className={`insignia ${e.clase}`}>
+      {estado === "en_linea" && <span className="pulso" aria-hidden="true" />}
+      {e.texto}
+    </span>
+  );
+}
 
 export default function Ambientes() {
   const [ambientes, setAmbientes] = useState(null);
@@ -15,7 +35,12 @@ export default function Ambientes() {
 
   const cargar = () =>
     api("/ambientes").then(setAmbientes).catch((e) => { setAmbientes([]); setMensaje({ tipo: "error", texto: e.message }); });
-  useEffect(() => { cargar(); api("/periodos").then(setPeriodos).catch(() => {}); }, []);
+  useEffect(() => {
+    cargar();
+    api("/periodos").then(setPeriodos).catch(() => {});
+    const reloj = setInterval(() => api("/ambientes").then(setAmbientes).catch(() => {}), RECARGA_MS);
+    return () => clearInterval(reloj);
+  }, []);
 
   async function crearAmbiente() {
     try {
@@ -36,22 +61,22 @@ export default function Ambientes() {
   return (
     <>
       <div className="cabecera-pagina">
-        <div><h1>Ambientes y lectores</h1><p>Cada ambiente puede tener un lector biométrico asociado. El estado se actualiza con el heartbeat del dispositivo.</p></div>
+        <div><h1>Ambientes y lectores</h1><p>Cada ambiente puede tener un lector biométrico. El lector envía una señal cada pocos segundos; si pasan 3 minutos sin señal aparece como «Sin señal».</p></div>
         <button className="boton" onClick={() => setModal("ambiente")}>+ Nuevo ambiente</button>
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr><th>Ambiente</th><th>Sede / Centro</th><th>Lector</th><th>Estado del lector</th><th>Último heartbeat</th><th></th></tr></thead>
+        <thead><tr><th>Ambiente</th><th>Sede / Centro</th><th>Lector</th><th>Estado del lector</th><th>Última señal</th><th></th></tr></thead>
         <tbody>
           {(ambientes || []).map((a) => (
             <tr key={a.id_ambiente}>
               <td><b>{a.numero_ambiente}</b></td>
               <td>{a.sede_centro}</td>
               <td>{a.serial ? `${a.serial} · ${a.modelo}` : "—"}</td>
-              <td>{a.serial ? <span className={`insignia ${a.estado_dispositivo}`}>{a.estado_dispositivo.replaceAll("_", " ")}</span> : "—"}</td>
-              <td>{a.ultimo_heartbeat ? new Date(a.ultimo_heartbeat).toLocaleTimeString("es-CO") : "—"}</td>
+              <td>{a.serial ? <EstadoLector estado={a.estado_dispositivo} /> : "—"}</td>
+              <td>{a.ultimo_heartbeat ? <span title={fechaHora(a.ultimo_heartbeat)}>{haceCuanto(a.ultimo_heartbeat)}</span> : "Nunca"}</td>
               <td>{!a.serial && <button className="boton mini" onClick={() => { setModal({ lector: a }); setClaveGenerada(null); setLector({ serial: "", modelo: "ZKTeco SenseFace 2A" }); }}>+ Asociar lector</button>}</td>
             </tr>
           ))}

@@ -61,4 +61,36 @@ async function obtenerEstadisticas(usuario) {
   return modelo.estadisticas(usuario);
 }
 
-module.exports = { buscar, exportarCSV, listarBusquedasGuardadas, guardarBusqueda, historialAprendiz, obtenerEstadisticas };
+const MAX_EN_RANKING = 10;
+
+/**
+ * Lo que muestra Reportes al abrir, sin filtrar nada: cómo va cada ficha, los
+ * aprendices con más faltas y los que están bajo el porcentaje mínimo. El
+ * instructor solo ve las clases que dicta (regla CU-17).
+ */
+async function resumen(usuario) {
+  const [porFicha, porAprendiz, minimo] = await Promise.all([
+    modelo.resumenPorFicha(usuario),
+    modelo.resumenPorAprendiz(usuario),
+    modelo.porcentajeMinimo(),
+  ]);
+  const masFaltas = porAprendiz
+    .filter((a) => a.ausencias > 0)
+    .sort((a, b) => b.ausencias - a.ausencias || a.porcentaje - b.porcentaje)
+    .slice(0, MAX_EN_RANKING);
+  const bajoMinimo = porAprendiz.filter((a) => a.porcentaje < minimo); // ya vienen del más bajo al más alto
+  return { minimo, por_ficha: porFicha, mas_faltas: masFaltas, bajo_minimo: bajoMinimo };
+}
+
+const DIAS_PERMITIDOS = [7, 14, 30, 90];
+
+async function obtenerTendencia(usuario, dias = 30) {
+  const numero = Number(dias);
+  if (!DIAS_PERMITIDOS.includes(numero)) throw error(`Los días deben ser ${DIAS_PERMITIDOS.join(", ")}`, "validacion");
+  return modelo.tendencia(usuario, numero);
+}
+
+module.exports = {
+  buscar, exportarCSV, listarBusquedasGuardadas, guardarBusqueda, historialAprendiz, obtenerEstadisticas,
+  resumen, obtenerTendencia,
+};

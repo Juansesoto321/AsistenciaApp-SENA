@@ -4,16 +4,13 @@ import { useAuth } from "../../contexto/AuthContext.jsx";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { aMinutos, lunesDe, mismoDia, ocurreEn, sumarDias } from "../../utilidades/fechas";
+import { aMinutos, lunesDe, mismoDia, ocurreEn, rangoCorto, sumarDias } from "../../utilidades/fechas";
 import Aviso from "../../componentes/Aviso.jsx";
+import FormularioHorario from "./FormularioHorario.jsx";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 // Orden de semana laboral (lunes a domingo), aunque dia_semana en BD sea 0=domingo
 const ORDEN_SEMANA = [1, 2, 3, 4, 5, 6, 0];
-const VACIO = {
-  id_ficha: "", id_ambiente: "", id_instructor: "", id_periodo: "",
-  dia_semana: "1", hora_inicio: "07:00", hora_fin: "13:00", id_rap: "", id_tematica: "",
-};
 
 // Paleta estable por ficha, para distinguir bloques de un vistazo
 const COLORES = ["#6d4aff", "#0e9f6e", "#d97706", "#dc2626", "#0284c7", "#7c3aed", "#be185d"];
@@ -36,19 +33,20 @@ export default function Horarios() {
   const [fichas, setFichas] = useState([]);
   const [ambientes, setAmbientes] = useState([]);
   const [instructores, setInstructores] = useState([]);
-  const [periodos, setPeriodos] = useState([]);
   const [raps, setRaps] = useState([]);
+  const [competencias, setCompetencias] = useState([]);
 
-  // Instructor y aprendiz ven lo suyo sin elegir nada; los demás deben filtrar primero.
-  const [tipoFiltro, setTipoFiltro] = useState(vistaPropia ? "instructor" : "");
+  // Instructor y aprendiz ven lo suyo sin elegir nada. La coordinación ve de
+  // entrada la primera ficha activa y puede cambiar a otra ficha, a un
+  // instructor o a un ambiente; el calendario se carga al elegir.
+  const [tipoFiltro, setTipoFiltro] = useState(vistaPropia ? "instructor" : "ficha");
   const [valorFiltro, setValorFiltro] = useState(vistaPropia ? String(sesion.usuario.id) : "");
   const [aplicado, setAplicado] = useState(vistaPropia);
 
   const [modal, setModal] = useState(null); // null | "nuevo" | horario a editar
   const [detalle, setDetalle] = useState(null);
-  const [f, setF] = useState(VACIO);
   const [mensaje, setMensaje] = useState(null);
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(true); // se carga al abrir (lo propio o la primera ficha)
 
   const [vista, setVista] = useState("semana"); // "semana" | "mes"
   const [ancla, setAncla] = useState(() => new Date()); // fecha dentro de la semana/mes visible
@@ -56,10 +54,15 @@ export default function Horarios() {
   useEffect(() => {
     if (!esAprendiz) api("/competencias/raps").then(setRaps).catch(() => {});
     if (puedeEditar) {
-      api("/fichas").then(setFichas);
+      api("/fichas").then((lista) => {
+        setFichas(lista);
+        const primera = lista.find((f) => f.estado === "activa") || lista[0];
+        if (primera) { setValorFiltro(String(primera.id_ficha)); cargar("ficha", String(primera.id_ficha)); }
+        else setCargando(false);
+      }).catch((e) => { setCargando(false); setMensaje({ tipo: "error", texto: e.message }); });
       api("/ambientes").then(setAmbientes);
       api("/instructores").then(setInstructores);
-      api("/periodos").then(setPeriodos);
+      api("/competencias").then(setCompetencias);
     }
   }, []);
 
@@ -89,11 +92,6 @@ export default function Horarios() {
     for (let m = rango.desde; m <= rango.hasta; m += 60) filas.push(m);
     return filas;
   }, [rango]);
-
-  const tematicasDelRap = useMemo(
-    () => raps.find((r) => String(r.id_rap) === String(f.id_rap))?.tematicas || [],
-    [raps, f.id_rap]
-  );
 
   // Fechas reales de la semana visible (lunes a domingo)
   const diasSemana = useMemo(() => {
@@ -131,31 +129,18 @@ export default function Horarios() {
   const hoy = new Date();
 
   function abrirNuevo() {
-    setF(VACIO);
     setModal("nuevo");
   }
 
   function abrirEdicion(h) {
-    setF({
-      id_ficha: h.id_ficha, id_ambiente: h.id_ambiente, id_instructor: h.id_instructor,
-      id_periodo: h.id_periodo, dia_semana: String(h.dia_semana),
-      hora_inicio: h.hora_inicio.slice(0, 5), hora_fin: h.hora_fin.slice(0, 5),
-      id_rap: h.id_rap || "", id_tematica: h.id_tematica || "",
-    });
     setDetalle(null);
     setModal(h);
   }
 
-  async function guardar() {
-    if (!f.id_ficha || !f.id_ambiente || !f.id_instructor || !f.id_periodo || !f.hora_inicio || !f.hora_fin)
-      return setMensaje({ tipo: "error", texto: "Completa todos los campos obligatorios" });
-    const cuerpo = { ...f, id_rap: f.id_rap || null, id_tematica: f.id_tematica || null };
-    try {
-      if (modal === "nuevo") await api("/horarios", { method: "POST", body: cuerpo });
-      else await api(`/horarios/${modal.id_horario}`, { method: "PUT", body: cuerpo });
-      setMensaje({ tipo: "exito", texto: modal === "nuevo" ? "Horario creado sin conflictos" : "Horario actualizado" });
-      setModal(null); setF(VACIO); cargar();
-    } catch (e) { setMensaje({ tipo: "error", texto: e.message }); }
+  function alGuardar(texto) {
+    setMensaje({ tipo: "exito", texto });
+    setModal(null);
+    cargar();
   }
 
   async function eliminar(id) {
@@ -173,6 +158,22 @@ export default function Horarios() {
   }
 
   const opcionesFiltro = { instructor: instructores, ficha: fichas, ambiente: ambientes }[tipoFiltro] || [];
+  const ID_DE = { instructor: (x) => x.id_usuario, ficha: (x) => x.id_ficha, ambiente: (x) => x.id_ambiente };
+
+  // Al cambiar "ver por", se muestra de una vez la primera opción de la lista
+  function cambiarTipo(tipo) {
+    setTipoFiltro(tipo);
+    const primero = ({ instructor: instructores, ficha: fichas, ambiente: ambientes }[tipo] || [])[0];
+    const id = primero ? String(ID_DE[tipo](primero)) : "";
+    setValorFiltro(id);
+    if (id) cargar(tipo, id);
+    else { setHorarios([]); setAplicado(false); }
+  }
+
+  function cambiarValor(valor) {
+    setValorFiltro(valor);
+    if (valor) cargar(tipoFiltro, valor);
+  }
 
   return (
     <>
@@ -182,54 +183,41 @@ export default function Horarios() {
           <p>
             {esAprendiz
               ? "Tus clases de la semana: ambiente, instructor y tema de cada una. Toca una clase para ver el detalle."
-              : "Vista semanal de las clases programadas. El sistema valida que no haya cruces de instructor ni de ambiente."}
+              : "Vista semanal de las clases programadas. El sistema valida que no haya cruces de instructor, ambiente ni ficha."}
           </p>
         </div>
-        {puedeEditar && <button className="boton" onClick={abrirNuevo}>+ Nuevo horario</button>}
+        {puedeEditar && <button className="boton" onClick={abrirNuevo}>+ Nueva clase</button>}
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
       {!vistaPropia && (
-        <div className="tarjeta" style={{ marginBottom: 18 }}>
-          <b>¿Qué horario quieres ver?</b>
-          <p style={{ color: "var(--tinta-suave)", fontSize: 13.5, margin: "4px 0 10px" }}>
-            Elige primero por quién o por dónde quieres consultar.
-          </p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div>
-              <label>Buscar por</label>
-              <select value={tipoFiltro} onChange={(e) => { setTipoFiltro(e.target.value); setValorFiltro(""); setAplicado(false); }}>
-                <option value="">Selecciona…</option>
-                <option value="instructor">Instructor</option>
-                <option value="ficha">Ficha</option>
-                <option value="ambiente">Ambiente</option>
-              </select>
-            </div>
-            <div style={{ minWidth: 260 }}>
-              <label>{tipoFiltro ? tipoFiltro.charAt(0).toUpperCase() + tipoFiltro.slice(1) : "Valor"}</label>
-              <select value={valorFiltro} disabled={!tipoFiltro} onChange={(e) => { setValorFiltro(e.target.value); setAplicado(false); }}>
-                <option value="">Selecciona…</option>
-                {tipoFiltro === "instructor" && opcionesFiltro.map((i) => (
-                  <option key={i.id_usuario} value={i.id_usuario}>{i.nombres} {i.apellidos}</option>
-                ))}
-                {tipoFiltro === "ficha" && opcionesFiltro.map((x) => (
-                  <option key={x.id_ficha} value={x.id_ficha}>{x.numero_ficha} · {x.programa}</option>
-                ))}
-                {tipoFiltro === "ambiente" && opcionesFiltro.map((a) => (
-                  <option key={a.id_ambiente} value={a.id_ambiente}>{a.numero_ambiente} · {a.sede_centro}</option>
-                ))}
-              </select>
-            </div>
-            <button className="boton" disabled={!tipoFiltro || !valorFiltro} onClick={() => cargar()}>Ver calendario</button>
+        <div className="barra-filtro">
+          <span className="texto-suave">Ver el calendario de</span>
+          <div className="selector-dias" role="group" aria-label="Ver el calendario por">
+            {[["ficha", "Una ficha"], ["instructor", "Un instructor"], ["ambiente", "Un ambiente"]].map(([tipo, texto]) => (
+              <button key={tipo} type="button" aria-pressed={tipoFiltro === tipo} onClick={() => cambiarTipo(tipo)}>{texto}</button>
+            ))}
           </div>
+          <select aria-label={`Elegir ${tipoFiltro}`} value={valorFiltro} onChange={(e) => cambiarValor(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {tipoFiltro === "instructor" && opcionesFiltro.map((i) => (
+              <option key={i.id_usuario} value={i.id_usuario}>{i.nombres} {i.apellidos}</option>
+            ))}
+            {tipoFiltro === "ficha" && opcionesFiltro.map((x) => (
+              <option key={x.id_ficha} value={x.id_ficha}>{x.numero_ficha} · {x.programa}</option>
+            ))}
+            {tipoFiltro === "ambiente" && opcionesFiltro.map((a) => (
+              <option key={a.id_ambiente} value={a.id_ambiente}>{a.numero_ambiente} · {a.sede_centro}</option>
+            ))}
+          </select>
         </div>
       )}
 
       {cargando && <Cargando texto="Cargando calendario…" />}
 
       {!cargando && !aplicado && (
-        <Vacio icono="horarios" titulo="Elige qué calendario quieres ver">
-          Selecciona un instructor, una ficha o un ambiente en el recuadro de arriba.
+        <Vacio icono="horarios" titulo={vistaPropia ? "No tienes clases programadas" : "Todavía no hay fichas"}>
+          {vistaPropia ? "Cuando la coordinación programe tus clases, aparecerán aquí." : "Crea una ficha y programa sus clases con «+ Nueva clase»."}
         </Vacio>
       )}
 
@@ -397,7 +385,8 @@ export default function Horarios() {
             </h2>
             <p style={{ color: "var(--tinta-suave)", marginTop: -6 }}>
               {detalle.hora_inicio.slice(0, 5)} – {detalle.hora_fin.slice(0, 5)}
-              {detalle.periodo ? ` · Periodo ${detalle.periodo}` : ""}
+              {" · "}{detalle.trimestre ? `Trimestre ${detalle.trimestre}` : `Periodo ${detalle.periodo}`}
+              {" "}({rangoCorto(detalle.vigente_desde, detalle.vigente_hasta)})
             </p>
             <table className="tabla">
               <tbody>
@@ -419,75 +408,16 @@ export default function Horarios() {
       )}
 
       {modal && (
-        <div className="superposicion" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{modal === "nuevo" ? "Nuevo horario" : "Editar horario"}</h2>
-            <div className="rejilla-2">
-              <div>
-                <label>Ficha *</label>
-                <select required value={f.id_ficha} onChange={(e) => setF({ ...f, id_ficha: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {fichas.map((x) => <option key={x.id_ficha} value={x.id_ficha}>{x.numero_ficha} · {x.programa}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Ambiente *</label>
-                <select required value={f.id_ambiente} onChange={(e) => setF({ ...f, id_ambiente: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {ambientes.map((a) => <option key={a.id_ambiente} value={a.id_ambiente}>{a.numero_ambiente} · {a.sede_centro}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="rejilla-2">
-              <div>
-                <label>Instructor *</label>
-                <select required value={f.id_instructor} onChange={(e) => setF({ ...f, id_instructor: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {instructores.map((i) => <option key={i.id_usuario} value={i.id_usuario}>{i.nombres} {i.apellidos}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Periodo *</label>
-                <select required value={f.id_periodo} onChange={(e) => setF({ ...f, id_periodo: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {periodos.map((p) => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="rejilla-2">
-              <div>
-                <label>Día de la semana *</label>
-                <select required value={f.dia_semana} onChange={(e) => setF({ ...f, dia_semana: e.target.value })}>
-                  {DIAS.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                </select>
-              </div>
-              <div className="rejilla-2">
-                <div><label>Inicio *</label><input required type="time" value={f.hora_inicio} onChange={(e) => setF({ ...f, hora_inicio: e.target.value })} /></div>
-                <div><label>Fin *</label><input required type="time" value={f.hora_fin} onChange={(e) => setF({ ...f, hora_fin: e.target.value })} /></div>
-              </div>
-            </div>
-            <div className="rejilla-2">
-              <div>
-                <label>Resultado de aprendizaje</label>
-                <select value={f.id_rap} onChange={(e) => setF({ ...f, id_rap: e.target.value, id_tematica: "" })}>
-                  <option value="">— sin asignar —</option>
-                  {raps.map((r) => <option key={r.id_rap} value={r.id_rap}>{r.codigo} · {r.nombre}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Temática</label>
-                <select value={f.id_tematica} disabled={!f.id_rap} onChange={(e) => setF({ ...f, id_tematica: e.target.value })}>
-                  <option value="">— sin asignar —</option>
-                  {tematicasDelRap.map((t) => <option key={t.id_tematica} value={t.id_tematica}>{t.nombre}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="acciones-modal">
-              <button className="boton suave" onClick={() => setModal(null)}>Cancelar</button>
-              <button className="boton" onClick={guardar}>{modal === "nuevo" ? "Guardar horario" : "Guardar cambios"}</button>
-            </div>
-          </div>
-        </div>
+        <FormularioHorario
+          horario={modal === "nuevo" ? null : modal}
+          fichas={fichas}
+          ambientes={ambientes}
+          instructores={instructores}
+          raps={raps}
+          competencias={competencias}
+          alGuardar={alGuardar}
+          alCerrar={() => setModal(null)}
+        />
       )}
     </>
   );

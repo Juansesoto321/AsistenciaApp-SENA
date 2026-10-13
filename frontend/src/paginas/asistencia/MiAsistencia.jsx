@@ -6,7 +6,7 @@ import Cargando from "../../componentes/Cargando.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import AnilloAsistencia from "../../componentes/AnilloAsistencia.jsx";
-import { mayusculaInicial } from "../../utilidades/formato";
+import { mayusculaInicial, fechaCorta } from "../../utilidades/formato";
 
 const ETIQUETA_SOPORTE = {
   pendiente: "Por cargar",
@@ -117,7 +117,7 @@ export default function MiAsistencia() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Mi justificación</h2>
             <p style={{ color: "var(--tinta-suave)", fontSize: 13.5 }}>
-              Clase del {new Date(detalleSoporte.fecha).toLocaleDateString("es-CO")}
+              Clase del {fechaCorta(detalleSoporte.fecha)}
               · {ETIQUETA_TIPO[detalleSoporte.soporte_tipo] || "Sin tipo"}
             </p>
             <label>Estado</label>

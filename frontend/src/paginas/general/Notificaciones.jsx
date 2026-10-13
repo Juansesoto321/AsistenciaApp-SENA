@@ -3,6 +3,7 @@ import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import { fechaHora, haceCuanto } from "../../utilidades/formato";
 
 export default function Notificaciones() {
   const [lista, setLista] = useState(null);
@@ -59,7 +60,7 @@ export default function Notificaciones() {
               <div>
                 <b>{n.titulo}</b>
                 <p style={{ color: "var(--tinta-suave)", fontSize: 13.5, marginTop: 4 }}>{n.mensaje}</p>
-                <small style={{ color: "var(--tinta-suave)" }}>{new Date(n.creado_en).toLocaleString("es-CO")}</small>
+                <small style={{ color: "var(--tinta-suave)" }}><span title={fechaHora(n.creado_en)}>{haceCuanto(n.creado_en)}</span></small>
               </div>
               {!n.leida && <button className="boton mini suave" onClick={() => marcarLeida(n)}>Marcar leída</button>}
             </div>

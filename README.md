@@ -114,6 +114,24 @@ tiene las mismas atribuciones del coordinador **salvo administrar usuarios**.
 Las fichas pasan automáticamente a `finalizada` cuando termina su `fecha_fin`; sus
 matrículas activas también se marcan como `finalizada`.
 
+### Plan de formación por trimestres
+
+Como en el SENA, cada ficha tiene sus trimestres (7 por defecto en un tecnólogo) y en
+cada uno se programan competencias con su instructor; la misma competencia puede
+repetirse en otro trimestre con el mismo o con otro instructor. Se arma en
+**Fichas → (ficha) → Plan por trimestres**. El trimestre en curso se calcula desde la
+fecha de inicio de la ficha (tres meses por trimestre).
+
+Cada clase (horario) pertenece a un **trimestre de la ficha** y solo se repite entre
+las fechas de ese trimestre; la competencia es obligatoria (el resultado de
+aprendizaje y la temática, opcionales). El formulario sigue el orden ficha →
+trimestre → qué se ve → quién y dónde → cuándo: las competencias del plan salen
+primero y sugieren su instructor, las horas se proponen según la jornada de la ficha
+y se pueden marcar varios días a la vez. Los cruces se revisan por instructor,
+ambiente **y ficha**, solo entre clases cuyas fechas se traslapan (la vista
+`horario_vigencia` calcula esas fechas). Los horarios creados antes de los
+trimestres siguen valiendo durante todo su periodo.
+
 ## Opción C · Nube gratuita (Render / Railway)
 
 1. Sube el repositorio a GitHub.
@@ -158,6 +176,15 @@ El backend expone dos contratos que puede consumir un dispositivo:
 
 El aprendiz se matricula en el propio dispositivo usando como PIN su número de documento; el enrolamiento biométrico en sí (capturar el dedo o el rostro) se hace directamente en el equipo, no desde esta plataforma web.
 
+**Hora de cada marca.** El lector envía con cada marca la hora en que se hizo (hora local del equipo, zona -5) y el backend usa esa hora, no la de llegada. Si el equipo pierde la red y reenvía las marcas después:
+
+- cada marca se asigna a la clase que estaba abierta en ese ambiente **a esa hora**, y presente o tardanza se calcula con esa hora;
+- si la clase ya se cerró y el aprendiz había quedado *ausente* por el cierre, pasa a presente o tardanza, se borra el enlace de justificación que aún no usó, se le avisa y el cambio queda en el historial (`cambio_asistencia`, con `cambiado_por` en NULL = el lector);
+- si alguien ya corrigió esa asistencia a mano, la marca atrasada no la cambia;
+- los reenvíos del mismo lote no duplican nada (una asistencia por aprendiz y clase).
+
+Por eso conviene que el reloj del lector esté en hora. Si va adelantado más de 5 minutos, el backend usa su propia hora.
+
 ## Seguridad y Ley 1581/2012
 
 - La huella **nunca** se guarda: solo una plantilla matemática cifrada con **AES-256-GCM** (clave fuera de la BD, en variable de entorno).
@@ -196,7 +223,7 @@ asistenciaapp/
 ├── db/
 │   ├── init.sql                 # Esquema completo + configuración inicial
 │   ├── semilla.sql
-│   └── migraciones/             # 001_logs, 002_roles, 003_competencias (idempotentes)
+│   └── migraciones/             # 001_logs … 006_cambios_del_lector (idempotentes, se aplican en orden)
 ├── backend/
 │   ├── src/
 │   │   ├── app.js               # Punto de entrada: middlewares, rutas y servidor

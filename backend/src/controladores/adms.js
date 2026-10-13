@@ -7,14 +7,15 @@ const marcacionServicio = require("../servicios/marcacion");
 // de darlo por entregado (los repetidos se descartan por la restricción UNIQUE).
 const RECHAZOS_ESPERADOS = ["sin_sesion", "no_reconocida"];
 
-async function procesarLineaAttlog(pin, idAmbiente) {
+async function procesarLineaAttlog(pin, fechaHora, idAmbiente) {
   try {
-    const resultado = await marcacionServicio.marcarPorDocumento(idAmbiente, pin);
+    const resultado = await marcacionServicio.marcarPorDocumento(idAmbiente, pin, fechaHora);
+    const atrasada = resultado.atrasada ? " (marca atrasada, clase ya cerrada)" : "";
     if (resultado.duplicada) console.log(`[ADMS] ${resultado.aprendiz.nombres}: ya tenia asistencia registrada en esta sesion`);
-    else console.log(`[ADMS] ${resultado.aprendiz.nombres} ${resultado.aprendiz.apellidos}: ${resultado.estado.toUpperCase()}`);
+    else console.log(`[ADMS] ${resultado.aprendiz.nombres} ${resultado.aprendiz.apellidos}: ${resultado.estado.toUpperCase()}${atrasada}`);
   } catch (e) {
     if (!RECHAZOS_ESPERADOS.includes(e.tipo)) throw e;
-    if (e.tipo === "sin_sesion") console.warn(`[ADMS] PIN ${pin} marco pero no hay sesion activa en ese ambiente`);
+    if (e.tipo === "sin_sesion") console.warn(`[ADMS] PIN ${pin} marco a las ${fechaHora} pero no habia sesion activa en ese ambiente`);
     else console.warn(`[ADMS] PIN ${pin} no corresponde a ningun aprendiz matriculado en la ficha de esta sesion`);
   }
 }
@@ -76,9 +77,9 @@ async function cdataPost(req, res, next) {
     console.log(`[ADMS] ${lineas.length} registro(s) de asistencia recibidos`);
 
     for (const linea of lineas) {
-      const pin = linea.split("\t")[0]?.trim();
+      const [pin, fechaHora] = linea.split("\t").map((campo) => campo?.trim());
       if (!pin) continue;
-      await procesarLineaAttlog(pin, d.id_ambiente);
+      await procesarLineaAttlog(pin, fechaHora, d.id_ambiente);
     }
 
     res.type("text/plain").send("OK");
