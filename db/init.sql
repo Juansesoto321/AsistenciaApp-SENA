@@ -149,8 +149,12 @@ CREATE TABLE IF NOT EXISTS horario (
   hora_fin      TIME NOT NULL,
   id_rap        INTEGER REFERENCES resultado_aprendizaje(id_rap),   -- qué se dicta en este bloque
   id_tematica   INTEGER REFERENCES tematica(id_tematica),
+  id_competencia INTEGER REFERENCES competencia(id_competencia),
+  trimestre     INTEGER CHECK (trimestre IS NULL OR trimestre BETWEEN 1 AND 12), -- NULL: vale todo el periodo
   CHECK (hora_fin > hora_inicio)
 );
+-- La vista horario_vigencia (fechas en que se repite cada horario) se crea en
+-- db/migraciones/005_horarios_por_trimestre.sql.
 
 CREATE TABLE IF NOT EXISTS sesion_clase (
   id_sesion     SERIAL PRIMARY KEY,

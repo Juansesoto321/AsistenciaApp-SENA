@@ -9,6 +9,20 @@ async function buscarFicha(idFicha) {
   return r.rows[0] || null;
 }
 
+/** Fechas de cada trimestre de la ficha (misma regla que la vista horario_vigencia). */
+async function fechasTrimestres(idFicha) {
+  const r = await pool.query(
+    `SELECT n AS trimestre,
+            (f.fecha_inicio + make_interval(months => (n - 1) * 3))::date AS desde,
+            (f.fecha_inicio + make_interval(months => n * 3))::date - 1 AS hasta
+     FROM ficha f CROSS JOIN generate_series(1, f.trimestres) AS n
+     WHERE f.id_ficha = $1
+     ORDER BY n`,
+    [idFicha]
+  );
+  return r.rows;
+}
+
 async function listarPorFicha(idFicha) {
   const r = await pool.query(
     `SELECT p.id_programacion, p.trimestre, p.id_competencia, p.id_instructor,
@@ -64,4 +78,4 @@ async function contarDespuesDe(idFicha, trimestre) {
   return r.rows[0].total;
 }
 
-module.exports = { buscarFicha, listarPorFicha, esInstructor, crear, eliminar, cambiarTrimestres, contarDespuesDe };
+module.exports = { buscarFicha, fechasTrimestres, listarPorFicha, esInstructor, crear, eliminar, cambiarTrimestres, contarDespuesDe };

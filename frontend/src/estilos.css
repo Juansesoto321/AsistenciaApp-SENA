@@ -475,3 +475,12 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .lista-plan b { display: block; font-size: 13.5px; line-height: 1.35; }
 .lista-plan small { display: block; color: var(--tinta-suave); font-size: 12.5px; margin-top: 3px; }
 @media (max-width: 860px) { .campos-plan { grid-template-columns: 1fr; } }
+
+/* ---------- Formulario de clase (horario) ---------- */
+.modal.modal-horario { max-width: 640px; }
+.paso-form { border: 0; border-top: 1px solid var(--borde); margin: 14px 0 0; padding: 12px 0 0; min-width: 0; }
+.paso-form:first-of-type { border-top: 0; padding-top: 0; }
+.paso-form legend { font-weight: 700; font-size: 14.5px; color: var(--violeta-700); padding: 0; }
+.paso-form .nota-estado { margin-top: 8px; }
+.dias-semana { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip.dia { width: 40px; height: 40px; padding: 0; border-radius: 50%; font-weight: 700; display: grid; place-items: center; }

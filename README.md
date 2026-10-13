@@ -120,8 +120,17 @@ Como en el SENA, cada ficha tiene sus trimestres (7 por defecto en un tecnólogo
 cada uno se programan competencias con su instructor; la misma competencia puede
 repetirse en otro trimestre con el mismo o con otro instructor. Se arma en
 **Fichas → (ficha) → Plan por trimestres**. El trimestre en curso se calcula desde la
-fecha de inicio de la ficha (tres meses por trimestre), y al crear un horario las
-competencias de ese trimestre salen primero y sugieren su instructor.
+fecha de inicio de la ficha (tres meses por trimestre).
+
+Cada clase (horario) pertenece a un **trimestre de la ficha** y solo se repite entre
+las fechas de ese trimestre; la competencia es obligatoria (el resultado de
+aprendizaje y la temática, opcionales). El formulario sigue el orden ficha →
+trimestre → qué se ve → quién y dónde → cuándo: las competencias del plan salen
+primero y sugieren su instructor, las horas se proponen según la jornada de la ficha
+y se pueden marcar varios días a la vez. Los cruces se revisan por instructor,
+ambiente **y ficha**, solo entre clases cuyas fechas se traslapan (la vista
+`horario_vigencia` calcula esas fechas). Los horarios creados antes de los
+trimestres siguen valiendo durante todo su periodo.
 
 ## Opción C · Nube gratuita (Render / Railway)
 

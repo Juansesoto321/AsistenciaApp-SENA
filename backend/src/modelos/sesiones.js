@@ -1,7 +1,8 @@
 const pool = require("../config/db");
 
 // El dia se toma de la base de datos (no del reloj del servidor Node) para que
-// coincida siempre con CURRENT_DATE de la sesion.
+// coincida siempre con CURRENT_DATE de la sesion. Solo cuentan los horarios
+// vigentes hoy (dentro de su trimestre o periodo).
 async function horariosDeHoy(usuario) {
   const filtro = usuario.rol === "instructor" ? "AND h.id_instructor = $1" : "";
   const valores = usuario.rol === "instructor" ? [usuario.id] : [];
@@ -12,10 +13,12 @@ async function horariosDeHoy(usuario) {
             s.id_sesion,
             s.estado AS estado_sesion
      FROM horario h
+     JOIN horario_vigencia v ON v.id_horario = h.id_horario
      JOIN ficha f ON f.id_ficha = h.id_ficha
      JOIN ambiente a ON a.id_ambiente = h.id_ambiente
      LEFT JOIN sesion_clase s ON s.id_horario = h.id_horario AND s.fecha = CURRENT_DATE
-     WHERE h.dia_semana = EXTRACT(DOW FROM CURRENT_DATE) AND f.estado = 'activa' ${filtro}
+     WHERE h.dia_semana = EXTRACT(DOW FROM CURRENT_DATE) AND f.estado = 'activa'
+       AND CURRENT_DATE BETWEEN v.vigente_desde AND v.vigente_hasta ${filtro}
      ORDER BY h.hora_inicio`,
     valores
   );
@@ -25,8 +28,10 @@ async function horariosDeHoy(usuario) {
 async function buscarHorarioConLector(idHorario) {
   const r = await pool.query(
     `SELECT h.*, f.numero_ficha, f.estado AS estado_ficha, d.estado AS estado_lector,
-            (h.dia_semana = EXTRACT(DOW FROM CURRENT_DATE)) AS es_hoy
+            (h.dia_semana = EXTRACT(DOW FROM CURRENT_DATE)
+             AND CURRENT_DATE BETWEEN v.vigente_desde AND v.vigente_hasta) AS es_hoy
      FROM horario h
+     JOIN horario_vigencia v ON v.id_horario = h.id_horario
      JOIN ficha f ON f.id_ficha = h.id_ficha
      LEFT JOIN dispositivo d ON d.id_ambiente = h.id_ambiente
      WHERE h.id_horario = $1`,

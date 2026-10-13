@@ -4,16 +4,13 @@ import { useAuth } from "../../contexto/AuthContext.jsx";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { aMinutos, lunesDe, mismoDia, ocurreEn, sumarDias } from "../../utilidades/fechas";
+import { aMinutos, lunesDe, mismoDia, ocurreEn, rangoCorto, sumarDias } from "../../utilidades/fechas";
 import Aviso from "../../componentes/Aviso.jsx";
+import FormularioHorario from "./FormularioHorario.jsx";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 // Orden de semana laboral (lunes a domingo), aunque dia_semana en BD sea 0=domingo
 const ORDEN_SEMANA = [1, 2, 3, 4, 5, 6, 0];
-const VACIO = {
-  id_ficha: "", id_ambiente: "", id_instructor: "", id_periodo: "",
-  dia_semana: "1", hora_inicio: "07:00", hora_fin: "13:00", id_rap: "", id_tematica: "",
-};
 
 // Paleta estable por ficha, para distinguir bloques de un vistazo
 const COLORES = ["#6d4aff", "#0e9f6e", "#d97706", "#dc2626", "#0284c7", "#7c3aed", "#be185d"];
@@ -36,8 +33,8 @@ export default function Horarios() {
   const [fichas, setFichas] = useState([]);
   const [ambientes, setAmbientes] = useState([]);
   const [instructores, setInstructores] = useState([]);
-  const [periodos, setPeriodos] = useState([]);
   const [raps, setRaps] = useState([]);
+  const [competencias, setCompetencias] = useState([]);
 
   // Instructor y aprendiz ven lo suyo sin elegir nada; los demás deben filtrar primero.
   const [tipoFiltro, setTipoFiltro] = useState(vistaPropia ? "instructor" : "");
@@ -46,7 +43,6 @@ export default function Horarios() {
 
   const [modal, setModal] = useState(null); // null | "nuevo" | horario a editar
   const [detalle, setDetalle] = useState(null);
-  const [f, setF] = useState(VACIO);
   const [mensaje, setMensaje] = useState(null);
   const [cargando, setCargando] = useState(false);
 
@@ -59,7 +55,7 @@ export default function Horarios() {
       api("/fichas").then(setFichas);
       api("/ambientes").then(setAmbientes);
       api("/instructores").then(setInstructores);
-      api("/periodos").then(setPeriodos);
+      api("/competencias").then(setCompetencias);
     }
   }, []);
 
@@ -89,47 +85,6 @@ export default function Horarios() {
     for (let m = rango.desde; m <= rango.hasta; m += 60) filas.push(m);
     return filas;
   }, [rango]);
-
-  // Plan por trimestres de la ficha elegida en el formulario: sus competencias
-  // del trimestre en curso salen primero y sugieren el instructor.
-  const [planFicha, setPlanFicha] = useState(null);
-  useEffect(() => {
-    if (!modal || !f.id_ficha) { setPlanFicha(null); return; }
-    api(`/fichas/${f.id_ficha}/programacion`).then(setPlanFicha).catch(() => setPlanFicha(null));
-  }, [modal, f.id_ficha]);
-
-  const programadasAhora = useMemo(
-    () => (planFicha ? planFicha.programacion.filter((p) => p.trimestre === planFicha.trimestre_actual) : []),
-    [planFicha]
-  );
-  const idsCompetenciasAhora = new Set(programadasAhora.map((p) => p.id_competencia));
-  const rapsDelTrimestre = raps.filter((r) => idsCompetenciasAhora.has(r.id_competencia));
-  const otrosRaps = raps.filter((r) => !idsCompetenciasAhora.has(r.id_competencia));
-
-  function elegirRap(idRap) {
-    const rap = raps.find((r) => String(r.id_rap) === String(idRap));
-    const asignados = programadasAhora.filter((p) => p.id_competencia === rap?.id_competencia);
-    setF({
-      ...f,
-      id_rap: idRap,
-      id_tematica: "",
-      // Si el plan dice quién dicta esa competencia y aún no se eligió instructor, se sugiere
-      id_instructor: f.id_instructor || (asignados.length === 1 ? String(asignados[0].id_instructor) : ""),
-    });
-  }
-
-  const pistaPlan = (() => {
-    const rap = raps.find((r) => String(r.id_rap) === String(f.id_rap));
-    if (!rap || !planFicha) return null;
-    const asignados = programadasAhora.filter((p) => p.id_competencia === rap.id_competencia);
-    if (!asignados.length) return `Esta competencia no está en el plan del trimestre ${planFicha.trimestre_actual} de la ficha.`;
-    return `Según el plan, la dicta ${asignados.map((p) => p.instructor).join(" y ")} en el trimestre ${planFicha.trimestre_actual}.`;
-  })();
-
-  const tematicasDelRap = useMemo(
-    () => raps.find((r) => String(r.id_rap) === String(f.id_rap))?.tematicas || [],
-    [raps, f.id_rap]
-  );
 
   // Fechas reales de la semana visible (lunes a domingo)
   const diasSemana = useMemo(() => {
@@ -167,31 +122,18 @@ export default function Horarios() {
   const hoy = new Date();
 
   function abrirNuevo() {
-    setF(VACIO);
     setModal("nuevo");
   }
 
   function abrirEdicion(h) {
-    setF({
-      id_ficha: h.id_ficha, id_ambiente: h.id_ambiente, id_instructor: h.id_instructor,
-      id_periodo: h.id_periodo, dia_semana: String(h.dia_semana),
-      hora_inicio: h.hora_inicio.slice(0, 5), hora_fin: h.hora_fin.slice(0, 5),
-      id_rap: h.id_rap || "", id_tematica: h.id_tematica || "",
-    });
     setDetalle(null);
     setModal(h);
   }
 
-  async function guardar() {
-    if (!f.id_ficha || !f.id_ambiente || !f.id_instructor || !f.id_periodo || !f.hora_inicio || !f.hora_fin)
-      return setMensaje({ tipo: "error", texto: "Completa todos los campos obligatorios" });
-    const cuerpo = { ...f, id_rap: f.id_rap || null, id_tematica: f.id_tematica || null };
-    try {
-      if (modal === "nuevo") await api("/horarios", { method: "POST", body: cuerpo });
-      else await api(`/horarios/${modal.id_horario}`, { method: "PUT", body: cuerpo });
-      setMensaje({ tipo: "exito", texto: modal === "nuevo" ? "Horario creado sin conflictos" : "Horario actualizado" });
-      setModal(null); setF(VACIO); cargar();
-    } catch (e) { setMensaje({ tipo: "error", texto: e.message }); }
+  function alGuardar(texto) {
+    setMensaje({ tipo: "exito", texto });
+    setModal(null);
+    cargar();
   }
 
   async function eliminar(id) {
@@ -221,7 +163,7 @@ export default function Horarios() {
               : "Vista semanal de las clases programadas. El sistema valida que no haya cruces de instructor ni de ambiente."}
           </p>
         </div>
-        {puedeEditar && <button className="boton" onClick={abrirNuevo}>+ Nuevo horario</button>}
+        {puedeEditar && <button className="boton" onClick={abrirNuevo}>+ Nueva clase</button>}
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
@@ -433,7 +375,8 @@ export default function Horarios() {
             </h2>
             <p style={{ color: "var(--tinta-suave)", marginTop: -6 }}>
               {detalle.hora_inicio.slice(0, 5)} – {detalle.hora_fin.slice(0, 5)}
-              {detalle.periodo ? ` · Periodo ${detalle.periodo}` : ""}
+              {" · "}{detalle.trimestre ? `Trimestre ${detalle.trimestre}` : `Periodo ${detalle.periodo}`}
+              {" "}({rangoCorto(detalle.vigente_desde, detalle.vigente_hasta)})
             </p>
             <table className="tabla">
               <tbody>
@@ -455,83 +398,16 @@ export default function Horarios() {
       )}
 
       {modal && (
-        <div className="superposicion" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{modal === "nuevo" ? "Nuevo horario" : "Editar horario"}</h2>
-            <div className="rejilla-2">
-              <div>
-                <label>Ficha *</label>
-                <select required value={f.id_ficha} onChange={(e) => setF({ ...f, id_ficha: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {fichas.map((x) => <option key={x.id_ficha} value={x.id_ficha}>{x.numero_ficha} · {x.programa}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Ambiente *</label>
-                <select required value={f.id_ambiente} onChange={(e) => setF({ ...f, id_ambiente: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {ambientes.map((a) => <option key={a.id_ambiente} value={a.id_ambiente}>{a.numero_ambiente} · {a.sede_centro}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="rejilla-2">
-              <div>
-                <label>Instructor *</label>
-                <select required value={f.id_instructor} onChange={(e) => setF({ ...f, id_instructor: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {instructores.map((i) => <option key={i.id_usuario} value={i.id_usuario}>{i.nombres} {i.apellidos}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Periodo *</label>
-                <select required value={f.id_periodo} onChange={(e) => setF({ ...f, id_periodo: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {periodos.map((p) => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="rejilla-2">
-              <div>
-                <label>Día de la semana *</label>
-                <select required value={f.dia_semana} onChange={(e) => setF({ ...f, dia_semana: e.target.value })}>
-                  {DIAS.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                </select>
-              </div>
-              <div className="rejilla-2">
-                <div><label>Inicio *</label><input required type="time" value={f.hora_inicio} onChange={(e) => setF({ ...f, hora_inicio: e.target.value })} /></div>
-                <div><label>Fin *</label><input required type="time" value={f.hora_fin} onChange={(e) => setF({ ...f, hora_fin: e.target.value })} /></div>
-              </div>
-            </div>
-            <div className="rejilla-2">
-              <div>
-                <label>Resultado de aprendizaje</label>
-                <select value={f.id_rap} onChange={(e) => elegirRap(e.target.value)}>
-                  <option value="">— sin asignar —</option>
-                  {rapsDelTrimestre.length > 0 && (
-                    <optgroup label={`Trimestre ${planFicha.trimestre_actual} de la ficha (en curso)`}>
-                      {rapsDelTrimestre.map((r) => <option key={r.id_rap} value={r.id_rap}>{r.codigo} · {r.nombre}</option>)}
-                    </optgroup>
-                  )}
-                  <optgroup label={rapsDelTrimestre.length ? "Otras competencias" : "Todas las competencias"}>
-                    {otrosRaps.map((r) => <option key={r.id_rap} value={r.id_rap}>{r.codigo} · {r.nombre}</option>)}
-                  </optgroup>
-                </select>
-                {pistaPlan && <p className="nota-estado">{pistaPlan}</p>}
-              </div>
-              <div>
-                <label>Temática</label>
-                <select value={f.id_tematica} disabled={!f.id_rap} onChange={(e) => setF({ ...f, id_tematica: e.target.value })}>
-                  <option value="">— sin asignar —</option>
-                  {tematicasDelRap.map((t) => <option key={t.id_tematica} value={t.id_tematica}>{t.nombre}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="acciones-modal">
-              <button className="boton suave" onClick={() => setModal(null)}>Cancelar</button>
-              <button className="boton" onClick={guardar}>{modal === "nuevo" ? "Guardar horario" : "Guardar cambios"}</button>
-            </div>
-          </div>
-        </div>
+        <FormularioHorario
+          horario={modal === "nuevo" ? null : modal}
+          fichas={fichas}
+          ambientes={ambientes}
+          instructores={instructores}
+          raps={raps}
+          competencias={competencias}
+          alGuardar={alGuardar}
+          alCerrar={() => setModal(null)}
+        />
       )}
     </>
   );

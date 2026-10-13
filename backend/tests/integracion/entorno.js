@@ -65,6 +65,21 @@ async function cargarDatos(pool) {
     "INSERT INTO ambiente (numero_ambiente, sede_centro) VALUES ('P-1', 'Sede de pruebas') RETURNING id_ambiente"
   );
   ids.ambiente = ambiente.rows[0].id_ambiente;
+  const otroAmbiente = await pool.query(
+    "INSERT INTO ambiente (numero_ambiente, sede_centro) VALUES ('P-2', 'Sede de pruebas') RETURNING id_ambiente"
+  );
+  ids.otroAmbiente = otroAmbiente.rows[0].id_ambiente;
+
+  // Estructura curricular mínima: dos competencias, cada una con un RAP
+  for (const [clave, nombre, codigo] of [["competencia", "Competencia de prueba A", "RAP-A"], ["otraCompetencia", "Competencia de prueba B", "RAP-B"]]) {
+    const c = await pool.query("INSERT INTO competencia (nombre) VALUES ($1) RETURNING id_competencia", [nombre]);
+    ids[clave] = c.rows[0].id_competencia;
+    const r = await pool.query(
+      "INSERT INTO resultado_aprendizaje (id_competencia, codigo, nombre) VALUES ($1, $2, 'Resultado de prueba') RETURNING id_rap",
+      [ids[clave], codigo]
+    );
+    ids[`rap_${clave}`] = r.rows[0].id_rap;
+  }
   await pool.query(
     `INSERT INTO dispositivo (serial, modelo, id_ambiente, clave_api)
      VALUES ('LECTOR-PRUEBA', 'Simulado', $1, 'clave-de-prueba')`,

@@ -80,7 +80,7 @@ prueba("un horario que se cruza con otro del mismo ambiente se rechaza", async (
     token: tokens.coordinador,
     cuerpo: {
       id_ficha: e.ids.ficha, id_ambiente: e.ids.ambiente, id_instructor: e.ids.otroInstructor,
-      id_periodo: e.ids.periodo, dia_semana: e.ids.diaDeHoy, hora_inicio: "08:00", hora_fin: "10:00",
+      id_competencia: e.ids.competencia, dia_semana: e.ids.diaDeHoy, hora_inicio: "08:00", hora_fin: "10:00",
     },
   });
   assert.equal(r.estado, 400);
@@ -92,11 +92,62 @@ prueba("un horario que termina antes de empezar se rechaza con un mensaje claro"
     token: tokens.coordinador,
     cuerpo: {
       id_ficha: e.ids.ficha, id_ambiente: e.ids.ambiente, id_instructor: e.ids.otroInstructor,
-      id_periodo: e.ids.periodo, dia_semana: 1, hora_inicio: "10:00", hora_fin: "08:00",
+      id_competencia: e.ids.competencia, dia_semana: 1, hora_inicio: "10:00", hora_fin: "08:00",
     },
   });
   assert.equal(r.estado, 400);
   assert.match(r.datos.mensaje, /hora de fin/);
+});
+
+const nuevoHorario = (cambios) => e.peticion("POST", "/api/horarios", {
+  token: tokens.coordinador,
+  cuerpo: {
+    id_ficha: e.ids.ficha, id_ambiente: e.ids.otroAmbiente, id_instructor: e.ids.otroInstructor,
+    id_competencia: e.ids.competencia, hora_inicio: "14:00", hora_fin: "15:00",
+    ...cambios,
+  },
+});
+const manana = () => (e.ids.diaDeHoy + 1) % 7;
+const pasado = () => (e.ids.diaDeHoy + 2) % 7;
+
+prueba("toda clase necesita una competencia, y el RAP debe ser de esa competencia", async () => {
+  const sinCompetencia = await nuevoHorario({ id_competencia: undefined, dia_semana: manana() });
+  assert.equal(sinCompetencia.estado, 400);
+  assert.match(sinCompetencia.datos.mensaje, /competencia/);
+
+  const rapAjeno = await nuevoHorario({ dia_semana: manana(), id_rap: e.ids.rap_otraCompetencia });
+  assert.equal(rapAjeno.estado, 400);
+  assert.match(rapAjeno.datos.mensaje, /no pertenece/);
+});
+
+prueba("una clase se crea en varios días a la vez, en el trimestre en curso", async () => {
+  const r = await nuevoHorario({ dias_semana: [manana(), pasado()], id_rap: e.ids.rap_competencia });
+  assert.equal(r.estado, 201);
+  assert.equal(r.datos.horarios.length, 2);
+  assert.ok(r.datos.horarios.every((h) => h.trimestre === 1 && h.id_competencia === e.ids.competencia));
+});
+
+prueba("la misma hora en otro trimestre no choca; en el mismo trimestre sí", async () => {
+  const otroTrimestre = await nuevoHorario({ dia_semana: manana(), trimestre: 2 });
+  assert.equal(otroTrimestre.estado, 201);
+  const mismoTrimestre = await nuevoHorario({ dia_semana: manana(), trimestre: 2, id_instructor: e.ids.instructor });
+  assert.equal(mismoTrimestre.estado, 400);
+});
+
+prueba("una ficha no puede tener dos clases a la misma hora aunque cambien ambiente e instructor", async () => {
+  // La ficha ya tiene clase hoy de 00:00 a 23:59 en el ambiente P-1 con el instructor titular
+  const r = await nuevoHorario({ dia_semana: e.ids.diaDeHoy, hora_inicio: "09:00", hora_fin: "10:00" });
+  assert.equal(r.estado, 400);
+  assert.match(r.datos.mensaje, /Conflicto de ficha/);
+});
+
+prueba("una clase de un trimestre futuro no aparece hoy ni se puede iniciar", async () => {
+  const futura = await nuevoHorario({ dia_semana: e.ids.diaDeHoy, trimestre: 3, hora_inicio: "09:00", hora_fin: "10:00" });
+  assert.equal(futura.estado, 201);
+  const hoy = await e.peticion("GET", "/api/sesiones/hoy", { token: tokens.otro });
+  assert.ok(!hoy.datos.some((h) => h.id_horario === futura.datos.id_horario));
+  const iniciar = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.otro, cuerpo: { id_horario: futura.datos.id_horario } });
+  assert.equal(iniciar.estado, 400);
 });
 
 prueba("el aprendiz solo ve el horario de su propia ficha (Mi horario)", async () => {

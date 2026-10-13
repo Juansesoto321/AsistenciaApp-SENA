@@ -49,6 +49,7 @@ async function obtenerPlan(idFicha, usuario) {
       trimestres: ficha.trimestres,
     },
     trimestre_actual: trimestreEnCurso(ficha.fecha_inicio, ficha.trimestres),
+    fechas_trimestres: await modelo.fechasTrimestres(idFicha),
     programacion: await modelo.listarPorFicha(idFicha),
   };
 }
