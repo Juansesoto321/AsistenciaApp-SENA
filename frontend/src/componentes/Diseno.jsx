@@ -161,6 +161,10 @@ export default function Diseno({ children }) {
             AsistenciaApp
             <small>SENA · Control de asistencia</small>
           </div>
+          <button type="button" className="boton-salir boton-compacto" onClick={alternarCompacto}
+            title={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"} aria-label={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"}>
+            <Icono nombre={compacto ? "expandir" : "contraer"} size="1.15em" />
+          </button>
           <button className="boton-menu cerrar-menu" onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú">
             <Icono nombre="cerrar" size="1.2em" />
           </button>
@@ -178,24 +182,16 @@ export default function Diseno({ children }) {
             );
           })}
         </nav>
-        <div className="herramientas-menu">
-          <button type="button" className="boton-salir boton-compacto" onClick={alternarCompacto}
-            title={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"} aria-label={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"}>
-            <Icono nombre={compacto ? "expandir" : "contraer"} size="1.15em" />
-            <span className="texto-menu">Solo íconos</span>
-          </button>
-          <button type="button" className="boton-salir" onClick={() => cambiarTema(temaActual === "oscuro" ? "claro" : "oscuro")}
-            title={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"} aria-label={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}>
-            <Icono nombre={temaActual === "oscuro" ? "sol" : "luna"} size="1.15em" />
-            <span className="texto-menu">{temaActual === "oscuro" ? "Modo claro" : "Modo oscuro"}</span>
-          </button>
-        </div>
         <div className="pie-usuario">
           <Link to="/perfil" className="avatar" title="Mi perfil" aria-label="Mi perfil">{iniciales(usuario)}</Link>
           <div className="datos-usuario">
             <b title={`${usuario.nombres} ${usuario.apellidos}`}>{usuario.nombres} {usuario.apellidos}</b>
             <span>{usuario.rol}</span>
           </div>
+          <button type="button" className="boton-salir" onClick={() => cambiarTema(temaActual === "oscuro" ? "claro" : "oscuro")}
+            title={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"} aria-label={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}>
+            <Icono nombre={temaActual === "oscuro" ? "sol" : "luna"} size="1.15em" />
+          </button>
           <button className="boton-salir" onClick={() => { cerrarSesion(); navegar("/"); }} title="Cerrar sesión" aria-label="Cerrar sesión">
             <Icono nombre="salir" size="1.15em" />
           </button>

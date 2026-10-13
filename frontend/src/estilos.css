@@ -127,18 +127,39 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
   background: var(--violeta-950); color: #cfc6ff; padding: 20px 14px;
   display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh;
 }
-.marca { display: flex; align-items: center; gap: 10px; padding: 6px 8px 18px; color: #fff; }
-.marca .icono { width: 38px; height: 38px; border-radius: 11px; background: var(--gradiente); display: grid; place-items: center; font-size: 19px; }
+.marca { display: flex; align-items: center; gap: 10px; padding: 4px 4px 14px 8px; color: #fff; }
+.marca .icono { width: 38px; height: 38px; border-radius: 11px; background: var(--gradiente); display: grid; place-items: center; font-size: 19px; flex-shrink: 0; }
 .marca small { display: block; color: #9d90da; font-size: 11px; font-weight: 500; }
-/* min-height: 0 + overflow: el menú se desplaza solo en pantallas bajas, sin empujar el pie */
-.barra-lateral nav { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.marca .boton-compacto { margin-left: auto; }
+/* min-height: 0 + overflow: el menú se desplaza solo en pantallas bajas, sin empujar el pie.
+   La barra de desplazamiento es delgada, del color del menú, y solo se nota al pasar el mouse
+   (antes era la barra blanca del sistema). */
+.barra-lateral nav {
+  display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden; margin-right: -8px; /* la barra queda en el borde, sin angostar los enlaces */
+  scrollbar-width: thin; scrollbar-color: transparent transparent; scrollbar-gutter: stable;
+}
+.barra-lateral nav:hover, .barra-lateral nav:focus-within { scrollbar-color: rgba(255,255,255,0.22) transparent; }
+.barra-lateral nav::-webkit-scrollbar { width: 6px; }
+.barra-lateral nav::-webkit-scrollbar-track { background: transparent; }
+.barra-lateral nav::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; }
+.barra-lateral nav:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); }
 .barra-lateral nav a {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px;
-  color: #cfc6ff; font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 10px;
+  color: #cfc6ff; font-size: 14px; font-weight: 500; flex-shrink: 0;
 }
 .grupo-menu {
-  margin: 14px 12px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
-  text-transform: uppercase; color: #8a80c9;
+  margin: 12px 12px 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: #8a80c9; flex-shrink: 0;
+}
+/* Pantallas bajas (portátiles de 13"): el menú se aprieta un poco para no tener que desplazarlo */
+@media (max-height: 800px) and (min-width: 861px) {
+  .barra-lateral { padding-top: 14px; padding-bottom: 14px; }
+  .barra-lateral nav a { padding-top: 6px; padding-bottom: 6px; }
+  .grupo-menu { margin-top: 8px; }
+}
+@media (max-height: 720px) and (min-width: 861px) {
+  .barra-lateral nav a { padding-top: 5px; padding-bottom: 5px; }
 }
 .barra-lateral nav a:hover { background: rgba(255,255,255,0.07); }
 .barra-lateral nav a.activo { background: var(--gradiente); color: #fff; }
@@ -163,23 +184,21 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .boton-salir { background: none; border: none; color: #b3a6ec; padding: 8px; border-radius: 9px; display: grid; place-items: center; }
 .boton-salir:hover { color: #fff; background: rgba(255,255,255,0.08); }
 
-/* Herramientas del menú: solo íconos y modo claro/oscuro */
-.herramientas-menu { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.12); }
-.herramientas-menu .boton-salir { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; padding: 8px 12px; font-size: 13.5px; }
 .pie-usuario a.avatar:hover { filter: brightness(1.12); }
+.pie-usuario .boton-salir { flex-shrink: 0; }
 
 /* Menú solo con íconos (computador). En celular el menú es un cajón y no aplica. */
 @media (min-width: 861px) {
   .aplicacion { transition: grid-template-columns .2s ease; }
   .aplicacion.compacta { grid-template-columns: 76px 1fr; }
   .compacta .barra-lateral { padding: 20px 10px; }
-  .compacta .marca { justify-content: center; padding: 6px 0 18px; }
+  .compacta .marca { flex-direction: column; justify-content: center; gap: 8px; padding: 4px 0 12px; }
+  .compacta .marca .boton-compacto { margin-left: 0; }
   .compacta .marca-texto, .compacta .texto-menu, .compacta .datos-usuario { display: none; }
   .compacta .grupo-menu { height: 1px; margin: 10px; overflow: hidden; color: transparent; background: rgba(255,255,255,0.12); }
   .compacta .barra-lateral nav a { justify-content: center; padding: 10px 0; position: relative; }
   .compacta .barra-lateral nav .contador-notif { position: absolute; top: 2px; right: 4px; min-width: 16px; height: 16px; font-size: 10px; }
-  .compacta .herramientas-menu .boton-salir { justify-content: center; padding: 8px 0; }
-  .compacta .pie-usuario { flex-direction: column; gap: 6px; }
+  .compacta .pie-usuario { flex-direction: column; gap: 4px; }
 }
 @media (max-width: 860px) { .boton-compacto { display: none !important; } }
 @media (prefers-reduced-motion: reduce) { .aplicacion { transition: none; } }

@@ -70,5 +70,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Visor web de la base de datos, SOLO LECTURA y solo en este computador.
+  # No arranca solo; se abre cuando se necesita:
+  #   docker compose --profile herramientas up -d visor-bd   ->  http://localhost:8081
+  #   docker compose --profile herramientas stop visor-bd
+  visor-bd:
+    image: sosedoff/pgweb:0.16.2
+    profiles: ["herramientas"]
+    command: ["pgweb", "--bind=0.0.0.0", "--listen=8081", "--readonly", "--url=postgres://postgres:postgres@basedatos:5432/asistenciaapp?sslmode=disable"]
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      basedatos:
+        condition: service_healthy
+
 volumes:
   datos_pg:
