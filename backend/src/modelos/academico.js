@@ -55,9 +55,10 @@ async function crearPeriodo(datos) {
 
 async function crearFicha(datos) {
   const resultado = await pool.query(
-    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [datos.numero_ficha, datos.programa, datos.jornada, datos.fecha_inicio, datos.fecha_fin, datos.id_periodo, datos.id_instructor]
+    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor, trimestres)
+     VALUES ($1,$2,$3,$4,$5,$6,$7, COALESCE($8, 7)) RETURNING *`,
+    [datos.numero_ficha, datos.programa, datos.jornada, datos.fecha_inicio, datos.fecha_fin, datos.id_periodo,
+     datos.id_instructor, datos.trimestres || null]
   );
   return resultado.rows[0];
 }

@@ -9,6 +9,7 @@ const { calcularEstado } = require("../../src/servicios/marcacion");
 const { validarContrasena, normalizarCorreo } = require("../../src/servicios/auth");
 const { validarCambios } = require("../../src/servicios/configuracion");
 const { parsearCsv } = require("../../src/servicios/competencias");
+const { trimestreEnCurso } = require("../../src/servicios/programacion");
 
 describe("calcularEstado (CU-13: presente o tardanza)", () => {
   const a = (hora, minuto) => new Date(2026, 8, 23, hora, minuto); // 23 sep 2026, hora local
@@ -70,6 +71,25 @@ describe("configuración del sistema", () => {
 
   test("rechaza claves desconocidas", () => {
     assert.throws(() => validarCambios({ clave_inventada: "1" }), /desconocido/);
+  });
+});
+
+describe("trimestre en curso de una ficha", () => {
+  const inicio = "2026-07-01T00:00:00";
+
+  test("los tres primeros meses son el trimestre 1", () => {
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 6, 1)), 1);
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 8, 30)), 1);
+  });
+
+  test("después avanza cada tres meses", () => {
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 9, 13)), 2);
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2027, 0, 5)), 3);
+  });
+
+  test("antes de empezar es 0 y nunca pasa del total de trimestres", () => {
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2026, 5, 20)), 0);
+    assert.equal(trimestreEnCurso(inicio, 7, new Date(2030, 0, 1)), 7);
   });
 });
 

@@ -114,6 +114,15 @@ tiene las mismas atribuciones del coordinador **salvo administrar usuarios**.
 Las fichas pasan automáticamente a `finalizada` cuando termina su `fecha_fin`; sus
 matrículas activas también se marcan como `finalizada`.
 
+### Plan de formación por trimestres
+
+Como en el SENA, cada ficha tiene sus trimestres (7 por defecto en un tecnólogo) y en
+cada uno se programan competencias con su instructor; la misma competencia puede
+repetirse en otro trimestre con el mismo o con otro instructor. Se arma en
+**Fichas → (ficha) → Plan por trimestres**. El trimestre en curso se calcula desde la
+fecha de inicio de la ficha (tres meses por trimestre), y al crear un horario las
+competencias de ese trimestre salen primero y sugieren su instructor.
+
 ## Opción C · Nube gratuita (Render / Railway)
 
 1. Sube el repositorio a GitHub.
@@ -196,7 +205,7 @@ asistenciaapp/
 ├── db/
 │   ├── init.sql                 # Esquema completo + configuración inicial
 │   ├── semilla.sql
-│   └── migraciones/             # 001_logs, 002_roles, 003_competencias (idempotentes)
+│   └── migraciones/             # 001_logs, 002_roles, 003_competencias, 004_programacion_trimestral (idempotentes)
 ├── backend/
 │   ├── src/
 │   │   ├── app.js               # Punto de entrada: middlewares, rutas y servidor

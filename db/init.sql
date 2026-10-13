@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS ficha (
   id_periodo    INTEGER NOT NULL REFERENCES periodo(id_periodo),
   id_instructor INTEGER NOT NULL REFERENCES usuario(id_usuario), -- instructor titular (regla CU-05)
   estado        VARCHAR(20) NOT NULL DEFAULT 'activa' CHECK (estado IN ('activa','finalizada')),
+  trimestres    INTEGER NOT NULL DEFAULT 7 CHECK (trimestres BETWEEN 1 AND 12), -- ADSO: 6 lectivos + productiva
   CHECK (fecha_fin > fecha_inicio)
 );
 
@@ -120,6 +121,20 @@ CREATE TABLE IF NOT EXISTS tematica (
   nombre      VARCHAR(200) NOT NULL,
   UNIQUE (id_rap, nombre)
 );
+
+-- Plan de formación por trimestre: qué competencias ve cada ficha en cada uno
+-- de sus trimestres y con qué instructor. La misma competencia puede repetirse
+-- en otro trimestre, con el mismo o con otro instructor.
+CREATE TABLE IF NOT EXISTS programacion_trimestre (
+  id_programacion SERIAL PRIMARY KEY,
+  id_ficha        INTEGER NOT NULL REFERENCES ficha(id_ficha) ON DELETE CASCADE,
+  trimestre       INTEGER NOT NULL CHECK (trimestre BETWEEN 1 AND 12),
+  id_competencia  INTEGER NOT NULL REFERENCES competencia(id_competencia) ON DELETE CASCADE,
+  id_instructor   INTEGER NOT NULL REFERENCES usuario(id_usuario),
+  creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (id_ficha, trimestre, id_competencia, id_instructor)
+);
+CREATE INDEX IF NOT EXISTS idx_programacion_ficha ON programacion_trimestre(id_ficha, trimestre);
 
 -- ---------- HORARIOS Y SESIONES (CU-08, CU-12) ----------
 

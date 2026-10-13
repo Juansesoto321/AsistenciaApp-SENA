@@ -380,3 +380,98 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
   .cabecera-pagina h1 { font-size: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .giro { animation-duration: 2s; } }
+
+/* ---------- Panel lateral deslizable (registro manual) ---------- */
+.fondo-panel {
+  position: fixed; inset: 0; z-index: 55; background: rgba(23,18,58,.45);
+  animation: aparecer-fondo .2s ease-out;
+}
+.panel-lateral {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 56; width: min(440px, 100vw);
+  background: var(--blanco); display: flex; flex-direction: column;
+  box-shadow: -14px 0 40px rgba(23,18,58,.25); animation: entrar-derecha .26s ease-out;
+}
+.panel-lateral header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 20px 22px 16px; border-bottom: 1px solid var(--borde);
+}
+.panel-lateral header small { color: var(--violeta-600); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.panel-lateral header h2 { font-size: 19px; margin: 2px 0 4px; }
+.panel-lateral header p { color: var(--tinta-suave); font-size: 13px; }
+.boton-cerrar-panel { background: none; border: 0; color: var(--tinta-suave); padding: 6px; border-radius: 9px; display: grid; }
+.boton-cerrar-panel:hover { background: var(--violeta-50); color: var(--tinta); }
+.cuerpo-panel { flex: 1; overflow-y: auto; padding: 6px 22px 20px; }
+.panel-lateral footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--borde); }
+.titulo-campo { font-size: 14px; color: var(--tinta); margin: 18px 0 10px; }
+.titulo-campo span { color: var(--tinta-suave); font-weight: 500; font-size: 12.5px; }
+.nota-estado { font-size: 13px; color: var(--tinta-suave); margin-top: 10px; display: flex; gap: 6px; align-items: flex-start; }
+.nota-estado.alerta { color: var(--rojo); }
+@keyframes entrar-derecha { from { transform: translateX(100%); } }
+@keyframes aparecer-fondo { from { opacity: 0; } }
+
+/* Barra deslizante: el pulgar de color se desliza sobre la opción elegida */
+.barra-deslizante {
+  position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr);
+  background: var(--violeta-50); border: 1.5px solid var(--borde); border-radius: 999px; padding: 4px;
+  cursor: pointer; touch-action: none; user-select: none;
+}
+.barra-deslizante:focus-visible { outline: 2px solid var(--violeta-500); outline-offset: 3px; }
+.barra-deslizante .pulgar {
+  position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n));
+  transform: translateX(calc(100% * var(--i))); background: var(--color); border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(23,18,58,.18); transition: transform .24s cubic-bezier(.3,.7,.3,1), background .24s;
+}
+.barra-deslizante .segmento {
+  position: relative; z-index: 1; text-align: center; padding: 11px 4px; font-size: 13.5px; font-weight: 700;
+  color: var(--tinta-suave); transition: color .2s; white-space: nowrap;
+}
+.barra-deslizante .segmento.activo { color: #fff; }
+
+/* Opciones de un toque (motivo del registro) */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1.5px solid var(--borde); background: var(--blanco); color: var(--tinta);
+  border-radius: 999px; padding: 7px 13px; font-size: 13px; transition: border-color .15s, background .15s;
+}
+.chip:hover { border-color: var(--violeta-500); }
+.chip[aria-pressed="true"] { border-color: var(--violeta-600); background: var(--violeta-100); color: var(--violeta-700); font-weight: 600; }
+
+@media (max-width: 600px) {
+  .barra-deslizante .segmento { font-size: 12px; padding: 10px 2px; }
+  .panel-lateral header, .cuerpo-panel, .panel-lateral footer { padding-left: 16px; padding-right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-lateral, .fondo-panel { animation: none; }
+  .barra-deslizante .pulgar { transition: none; }
+}
+
+/* ---------- Pestañas ---------- */
+.pestanas { display: flex; gap: 4px; border-bottom: 1.5px solid var(--borde); margin-bottom: 18px; overflow-x: auto; }
+.pestanas button {
+  background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1.5px;
+  padding: 10px 14px; font-weight: 600; color: var(--tinta-suave); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.pestanas button:hover { color: var(--tinta); }
+.pestanas button[aria-selected="true"] { color: var(--violeta-700); border-bottom-color: var(--violeta-600); }
+
+/* ---------- Plan por trimestres ---------- */
+.resumen-plan { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.resumen-plan p { color: var(--tinta-suave); font-size: 13px; margin-top: 3px; }
+.total-trimestres { margin: 0; display: flex; align-items: center; gap: 10px; color: var(--tinta-suave); }
+.total-trimestres select { width: auto; }
+.agregar-plan { margin-bottom: 14px; }
+.agregar-plan h3 { font-size: 15px; }
+.campos-plan { display: grid; grid-template-columns: 150px 1fr 220px auto; gap: 12px; align-items: end; }
+.rejilla-trimestres { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+.trimestre { padding: 16px 18px; }
+.trimestre.en-curso { border: 2px solid var(--violeta-500); }
+.trimestre.terminado { background: #fbfaff; }
+.titulo-trimestre { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.titulo-trimestre h3 { font-size: 15.5px; }
+.sin-programar { color: var(--tinta-suave); font-size: 13px; padding: 10px 0; }
+.lista-plan { list-style: none; padding: 0; margin: 0; }
+.lista-plan li { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 10px 0; border-top: 1px solid var(--borde); }
+.lista-plan li:first-child { border-top: 0; }
+.lista-plan b { display: block; font-size: 13.5px; line-height: 1.35; }
+.lista-plan small { display: block; color: var(--tinta-suave); font-size: 12.5px; margin-top: 3px; }
+@media (max-width: 860px) { .campos-plan { grid-template-columns: 1fr; } }

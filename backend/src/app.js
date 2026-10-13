@@ -45,6 +45,7 @@ app.use("/api/configuracion", require("./rutas/configuracion"));
 app.use("/api/logs", require("./rutas/logs"));
 app.use("/api/competencias", require("./rutas/competencias"));
 // Routers montados en /api (requieren token): SIEMPRE al final
+app.use("/api", require("./rutas/programacion"));
 app.use("/api", require("./rutas/academico"));
 
 // Protocolo real ZKTeco PUSH/ADMS (lectores fisicos como el SenseFace 2A).

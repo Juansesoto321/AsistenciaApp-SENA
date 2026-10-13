@@ -90,6 +90,42 @@ export default function Horarios() {
     return filas;
   }, [rango]);
 
+  // Plan por trimestres de la ficha elegida en el formulario: sus competencias
+  // del trimestre en curso salen primero y sugieren el instructor.
+  const [planFicha, setPlanFicha] = useState(null);
+  useEffect(() => {
+    if (!modal || !f.id_ficha) { setPlanFicha(null); return; }
+    api(`/fichas/${f.id_ficha}/programacion`).then(setPlanFicha).catch(() => setPlanFicha(null));
+  }, [modal, f.id_ficha]);
+
+  const programadasAhora = useMemo(
+    () => (planFicha ? planFicha.programacion.filter((p) => p.trimestre === planFicha.trimestre_actual) : []),
+    [planFicha]
+  );
+  const idsCompetenciasAhora = new Set(programadasAhora.map((p) => p.id_competencia));
+  const rapsDelTrimestre = raps.filter((r) => idsCompetenciasAhora.has(r.id_competencia));
+  const otrosRaps = raps.filter((r) => !idsCompetenciasAhora.has(r.id_competencia));
+
+  function elegirRap(idRap) {
+    const rap = raps.find((r) => String(r.id_rap) === String(idRap));
+    const asignados = programadasAhora.filter((p) => p.id_competencia === rap?.id_competencia);
+    setF({
+      ...f,
+      id_rap: idRap,
+      id_tematica: "",
+      // Si el plan dice quién dicta esa competencia y aún no se eligió instructor, se sugiere
+      id_instructor: f.id_instructor || (asignados.length === 1 ? String(asignados[0].id_instructor) : ""),
+    });
+  }
+
+  const pistaPlan = (() => {
+    const rap = raps.find((r) => String(r.id_rap) === String(f.id_rap));
+    if (!rap || !planFicha) return null;
+    const asignados = programadasAhora.filter((p) => p.id_competencia === rap.id_competencia);
+    if (!asignados.length) return `Esta competencia no está en el plan del trimestre ${planFicha.trimestre_actual} de la ficha.`;
+    return `Según el plan, la dicta ${asignados.map((p) => p.instructor).join(" y ")} en el trimestre ${planFicha.trimestre_actual}.`;
+  })();
+
   const tematicasDelRap = useMemo(
     () => raps.find((r) => String(r.id_rap) === String(f.id_rap))?.tematicas || [],
     [raps, f.id_rap]
@@ -469,10 +505,18 @@ export default function Horarios() {
             <div className="rejilla-2">
               <div>
                 <label>Resultado de aprendizaje</label>
-                <select value={f.id_rap} onChange={(e) => setF({ ...f, id_rap: e.target.value, id_tematica: "" })}>
+                <select value={f.id_rap} onChange={(e) => elegirRap(e.target.value)}>
                   <option value="">— sin asignar —</option>
-                  {raps.map((r) => <option key={r.id_rap} value={r.id_rap}>{r.codigo} · {r.nombre}</option>)}
+                  {rapsDelTrimestre.length > 0 && (
+                    <optgroup label={`Trimestre ${planFicha.trimestre_actual} de la ficha (en curso)`}>
+                      {rapsDelTrimestre.map((r) => <option key={r.id_rap} value={r.id_rap}>{r.codigo} · {r.nombre}</option>)}
+                    </optgroup>
+                  )}
+                  <optgroup label={rapsDelTrimestre.length ? "Otras competencias" : "Todas las competencias"}>
+                    {otrosRaps.map((r) => <option key={r.id_rap} value={r.id_rap}>{r.codigo} · {r.nombre}</option>)}
+                  </optgroup>
                 </select>
+                {pistaPlan && <p className="nota-estado">{pistaPlan}</p>}
               </div>
               <div>
                 <label>Temática</label>

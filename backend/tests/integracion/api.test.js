@@ -256,3 +256,56 @@ prueba("el coordinador no puede desactivar su propia cuenta", async () => {
   });
   assert.equal(r.estado, 400);
 });
+
+// ---------- Plan de formación por trimestre ----------
+
+prueba("la misma competencia se programa en dos trimestres, con el mismo u otro instructor", async () => {
+  const competencia = await e.peticion("POST", "/api/competencias", {
+    token: tokens.coordinador, cuerpo: { nombre: "Desarrollar la solución de software (prueba)" },
+  });
+  assert.equal(competencia.estado, 201);
+  const idCompetencia = competencia.datos.id_competencia;
+  const programar = (trimestre, idInstructor) => e.peticion("POST", `/api/fichas/${e.ids.ficha}/programacion`, {
+    token: tokens.coordinador, cuerpo: { trimestre, id_competencia: idCompetencia, id_instructor: idInstructor },
+  });
+
+  assert.equal((await programar(1, e.ids.instructor)).estado, 201);
+  assert.equal((await programar(2, e.ids.otroInstructor)).estado, 201); // otro instructor
+  assert.equal((await programar(3, e.ids.instructor)).estado, 201);     // el mismo, otro trimestre
+
+  const repetida = await programar(1, e.ids.instructor);
+  assert.equal(repetida.estado, 400);
+  assert.match(repetida.datos.mensaje, /ya está asignada/);
+
+  const fueraDeRango = await programar(9, e.ids.instructor);
+  assert.equal(fueraDeRango.estado, 400);
+
+  const noInstructor = await programar(2, e.ids.aprendiz);
+  assert.equal(noInstructor.estado, 400);
+
+  const plan = await e.peticion("GET", `/api/fichas/${e.ids.ficha}/programacion`, { token: tokens.instructor });
+  assert.equal(plan.estado, 200);
+  assert.deepEqual(plan.datos.programacion.map((p) => p.trimestre), [1, 2, 3]);
+  assert.ok(plan.datos.trimestre_actual >= 1);
+});
+
+prueba("solo la coordinación arma el plan; un aprendiz ni siquiera lo ve", async () => {
+  const intento = await e.peticion("POST", `/api/fichas/${e.ids.ficha}/programacion`, {
+    token: tokens.instructor, cuerpo: { trimestre: 1, id_competencia: 1, id_instructor: e.ids.instructor },
+  });
+  assert.equal(intento.estado, 403);
+  assert.equal((await e.peticion("GET", `/api/fichas/${e.ids.ficha}/programacion`, { token: tokens.ana })).estado, 403);
+});
+
+prueba("no se puede reducir los trimestres si quedarían competencias por fuera", async () => {
+  const reducir = await e.peticion("PATCH", `/api/fichas/${e.ids.ficha}/trimestres`, {
+    token: tokens.coordinador, cuerpo: { trimestres: 2 },
+  });
+  assert.equal(reducir.estado, 400);
+  assert.match(reducir.datos.mensaje, /después del trimestre 2/);
+
+  const ampliar = await e.peticion("PATCH", `/api/fichas/${e.ids.ficha}/trimestres`, {
+    token: tokens.coordinador, cuerpo: { trimestres: 8 },
+  });
+  assert.equal(ampliar.estado, 200);
+});

@@ -6,7 +6,7 @@ import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 
-const VACIA = { numero_ficha: "", programa: "", jornada: "mañana", fecha_inicio: "", fecha_fin: "", id_periodo: "", id_instructor: "" };
+const VACIA = { numero_ficha: "", programa: "", jornada: "mañana", fecha_inicio: "", fecha_fin: "", id_periodo: "", id_instructor: "", trimestres: "7" };
 
 export default function Fichas() {
   const { sesion } = useAuth();
@@ -81,8 +81,20 @@ export default function Fichas() {
                 </select>
               </div>
             </div>
-            <label>Programa de formación *</label>
-            <input required value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+            <div className="rejilla-2">
+              <div>
+                <label>Programa de formación *</label>
+                <input required value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+              </div>
+              <div>
+                <label>Trimestres</label>
+                <select value={f.trimestres} onChange={(e) => setF({ ...f, trimestres: e.target.value })}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>{n}{n === 7 ? " (tecnólogo)" : n === 4 ? " (técnico)" : ""}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div className="rejilla-2">
               <div><label>Fecha inicio *</label><input required type="date" value={f.fecha_inicio} onChange={(e) => setF({ ...f, fecha_inicio: e.target.value })} /></div>
               <div><label>Fecha fin *</label><input required type="date" value={f.fecha_fin} onChange={(e) => setF({ ...f, fecha_fin: e.target.value })} /></div>
