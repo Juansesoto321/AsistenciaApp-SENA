@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
 import Icono from "../../componentes/Iconos.jsx";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
@@ -8,6 +9,7 @@ import Cargando from "../../componentes/Cargando.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 import { colorAsistencia } from "../../componentes/AnilloAsistencia.jsx";
 import { fechaCorta } from "../../utilidades/formato";
+import { descargarPdf } from "../../utilidades/pdf";
 
 const VACIO = { nombre: "", id_ficha: "", estado: "", fecha_inicio: "", fecha_fin: "" };
 
@@ -47,10 +49,13 @@ export default function Reportes() {
   const [resultados, setResultados] = useState(null);
   const [guardadas, setGuardadas] = useState([]);
   const [mensaje, setMensaje] = useState(null);
+  const [institucion, setInstitucion] = useState("SENA");
+  const tabla = useTabla(resultados, { porPagina: 25, valores: { fecha: (r) => new Date(r.fecha) } });
 
   useEffect(() => {
     api("/fichas").then(setFichas).catch(() => {});
     api("/reportes/busquedas-guardadas").then(setGuardadas).catch(() => {});
+    api("/configuracion").then((c) => c.nombre_institucion && setInstitucion(c.nombre_institucion)).catch(() => {});
     api("/reportes/resumen").then(setResumen).catch((e) => { setResumen({ por_ficha: [], mas_faltas: [], bajo_minimo: [], minimo: 80 }); setMensaje({ tipo: "error", texto: e.message }); });
   }, []);
 
@@ -81,30 +86,56 @@ export default function Reportes() {
     a.click();
   }
 
-  async function exportarBusqueda() {
-    try {
-      await descargarExcel([["Asistencia", resultados.map((r) => ({
-        Fecha: fechaParaExcel(r.fecha), Aprendiz: r.aprendiz, Documento: r.documento, Ficha: r.numero_ficha,
-        Estado: r.estado, Hora: r.hora || "", Método: r.metodo, Observación: r.observacion || "",
-      }))]], "reporte_asistencia.xlsx");
-    } catch { setMensaje({ tipo: "error", texto: "No se pudo generar el archivo de Excel" }); }
+  // Lo que lleva cada exportación, igual en Excel y en PDF: [título, columnas, filas]
+  const COLUMNAS_APRENDIZ = ["Aprendiz", "Documento", "Ficha", "Clases", "Ausencias", "Asistencia (%)"];
+  const filaAprendiz = (a) => [a.aprendiz, a.documento, a.numero_ficha, a.clases, a.ausencias, a.porcentaje];
+  function hojas(contenido) {
+    if (contenido === "resumen") return [
+      ["Asistencia por ficha", ["Ficha", "Programa", "Clases", "Presentes", "Tardanzas", "Justificadas", "Ausencias", "Asistencia (%)"],
+        resumen.por_ficha.map((f) => [f.numero_ficha, f.programa, f.clases, f.presentes, f.tardanzas, f.justificadas, f.ausencias, f.porcentaje])],
+      ["Más faltas sin justificar", COLUMNAS_APRENDIZ, resumen.mas_faltas.map(filaAprendiz)],
+      [`Bajo el mínimo (${resumen.minimo} %)`, COLUMNAS_APRENDIZ, resumen.bajo_minimo.map(filaAprendiz)],
+    ];
+    return [["Asistencia clase por clase", ["Fecha", "Aprendiz", "Documento", "Ficha", "Estado", "Hora", "Método", "Observación"],
+      resultados.map((r) => [fechaParaExcel(r.fecha), r.aprendiz, r.documento, r.numero_ficha, r.estado, r.hora || "", r.metodo, r.observacion || ""])]];
   }
 
-  async function exportarResumen() {
+  /** Los filtros de la búsqueda en palabras, para el encabezado del PDF. */
+  function describirFiltros() {
+    const partes = [];
+    if (filtros.nombre) partes.push(`aprendiz "${filtros.nombre}"`);
+    if (filtros.id_ficha) partes.push(`ficha ${fichas.find((x) => String(x.id_ficha) === String(filtros.id_ficha))?.numero_ficha || filtros.id_ficha}`);
+    if (filtros.estado) partes.push(`estado ${filtros.estado}`);
+    if (filtros.fecha_inicio) partes.push(`desde ${filtros.fecha_inicio}`);
+    if (filtros.fecha_fin) partes.push(`hasta ${filtros.fecha_fin}`);
+    return partes.length ? `Filtros: ${partes.join(" · ")}` : "Sin filtros: todas las clases";
+  }
+
+  async function exportar(formato, contenido) {
+    const contenidoHojas = hojas(contenido);
+    const nombre = `${contenido === "resumen" ? "resumen" : "reporte"}_asistencia_${fechaParaExcel(new Date())}`;
     try {
-      await descargarExcel([
-        ["Por ficha", resumen.por_ficha.map((f) => ({
-          Ficha: f.numero_ficha, Programa: f.programa, Clases: f.clases, Presentes: f.presentes, Tardanzas: f.tardanzas,
-          Justificadas: f.justificadas, Ausencias: f.ausencias, "Asistencia (%)": f.porcentaje,
-        }))],
-        ["Más faltas", resumen.mas_faltas.map((a) => ({
-          Aprendiz: a.aprendiz, Documento: a.documento, Ficha: a.numero_ficha, Clases: a.clases, Ausencias: a.ausencias, "Asistencia (%)": a.porcentaje,
-        }))],
-        ["Bajo el mínimo", resumen.bajo_minimo.map((a) => ({
-          Aprendiz: a.aprendiz, Documento: a.documento, Ficha: a.numero_ficha, Clases: a.clases, Ausencias: a.ausencias, "Asistencia (%)": a.porcentaje,
-        }))],
-      ], `resumen_asistencia_${fechaParaExcel(new Date())}.xlsx`);
-    } catch { setMensaje({ tipo: "error", texto: "No se pudo generar el archivo de Excel" }); }
+      if (formato === "excel") {
+        await descargarExcel(
+          contenidoHojas.map(([titulo, columnas, filas]) => [titulo.slice(0, 31), filas.map((f) => Object.fromEntries(columnas.map((c, i) => [c, f[i]])))]),
+          `${nombre}.xlsx`
+        );
+      } else {
+        await descargarPdf({
+          titulo: contenido === "resumen" ? "Resumen de asistencia" : "Asistencia clase por clase",
+          subtitulo: contenido === "resumen" ? `Solo clases cerradas · mínimo institucional ${minimo} %` : describirFiltros(),
+          institucion,
+          generadoPor: `${sesion.usuario.nombres} ${sesion.usuario.apellidos}`,
+          secciones: contenidoHojas.map(([titulo, columnas, filas]) => ({ titulo, columnas, filas })),
+          archivo: `${nombre}.pdf`,
+        });
+      }
+      // Queda en la auditoría quién exportó qué (el archivo se armó en este navegador)
+      const filas = contenidoHojas.reduce((total, [, , f]) => total + f.length, 0);
+      api("/reportes/exportaciones", { method: "POST", body: { formato, contenido, filas, filtros: contenido === "busqueda" ? filtros : {} } }).catch(() => {});
+    } catch {
+      setMensaje({ tipo: "error", texto: `No se pudo generar el archivo ${formato === "excel" ? "de Excel" : "PDF"}` });
+    }
   }
 
   async function guardar() {
@@ -130,7 +161,10 @@ export default function Reportes() {
         <div><h1>Reportes</h1>
         <p>Cómo va cada ficha y quién necesita seguimiento (cuentan las clases ya cerradas). Abajo, la búsqueda clase por clase.</p></div>
         {resumen?.por_ficha.length > 0 && (
-          <button className="boton exito" onClick={exportarResumen}><Icono nombre="reportes" /> Descargar resumen en Excel</button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="boton exito" onClick={() => exportar("excel", "resumen")}><Icono nombre="reportes" /> Resumen en Excel</button>
+            <button className="boton suave" onClick={() => exportar("pdf", "resumen")}><Icono nombre="pdf" /> Resumen en PDF</button>
+          </div>
         )}
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
@@ -217,8 +251,11 @@ export default function Reportes() {
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
           <button className="boton" onClick={() => buscar()}><Icono nombre="reportes" /> Buscar</button>
           <button className="boton suave" onClick={guardar}>Guardar búsqueda</button>
-          {resultados?.length > 0 && <button className="boton exito" onClick={exportarBusqueda}>Exportar a Excel</button>}
-          {resultados?.length > 0 && <button className="boton suave" onClick={exportarCsv}>Exportar CSV</button>}
+          {resultados?.length > 0 && (<>
+            <button className="boton exito" onClick={() => exportar("excel", "busqueda")}>Exportar a Excel</button>
+            <button className="boton suave" onClick={() => exportar("pdf", "busqueda")}><Icono nombre="pdf" /> PDF</button>
+            <button className="boton suave" onClick={exportarCsv}>CSV</button>
+          </>)}
           {guardadas.length > 0 && (
             <select style={{ maxWidth: 240 }} aria-label="Cargar búsqueda guardada" onChange={(e) => {
               const g = guardadas.find((x) => x.id_busqueda === Number(e.target.value));
@@ -234,9 +271,9 @@ export default function Reportes() {
       {resultados && (
         <div className="tabla-desplazable">
         <table className="tabla">
-          <thead><tr><th>Fecha</th><th>Aprendiz</th><th>Documento</th><th>Ficha</th><th>Estado</th><th>Hora</th><th>Método</th></tr></thead>
+          <thead><tr>{tabla.encabezado("fecha", "Fecha")}{tabla.encabezado("aprendiz", "Aprendiz")}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("estado", "Estado")}{tabla.encabezado("hora", "Hora")}{tabla.encabezado("metodo", "Método")}</tr></thead>
           <tbody>
-            {resultados.map((r) => (
+            {tabla.visibles.map((r) => (
               <tr key={r.id_asistencia}>
                 <td>{fechaCorta(r.fecha)}</td>
                 <td>{r.aprendiz}</td><td>{r.documento}</td><td>{r.numero_ficha}</td>
@@ -250,6 +287,7 @@ export default function Reportes() {
         </table>
         </div>
       )}
+      {resultados && tabla.paginacion}
     </>
   );
 }

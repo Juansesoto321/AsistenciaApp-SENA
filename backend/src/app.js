@@ -43,6 +43,7 @@ app.use("/api/notificaciones", require("./rutas/notificaciones"));
 app.use("/api/soporte", require("./rutas/soporte"));
 app.use("/api/configuracion", require("./rutas/configuracion"));
 app.use("/api/logs", require("./rutas/logs"));
+app.use("/api/auditoria", require("./rutas/auditoria"));
 app.use("/api/competencias", require("./rutas/competencias"));
 // Routers montados en /api (requieren token): SIEMPRE al final
 app.use("/api", require("./rutas/programacion"));

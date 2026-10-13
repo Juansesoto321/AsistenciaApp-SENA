@@ -13,6 +13,7 @@ const MAX_INTENTOS = 5; // regla CU-01: bloqueo tras 5 intentos fallidos
 const MAX_CORREOS_RECUPERACION_POR_HORA = 3;
 const ROLES_AUTOREGISTRO = ["aprendiz", "instructor", "programador"];
 const ESTADOS_SIN_ACCESO = ["pendiente", "inactivo"];
+const DURACION_SESION = "8h";
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const validarContrasena = (c) =>
@@ -46,16 +47,32 @@ async function login(correo, contrasena) {
   }
 
   await modelo.resetearIntentos(u.id_usuario);
+  await auditar(u.id_usuario, "login");
+  return emitirSesion(u);
+}
+
+/** Token de 8 horas con el rol y el nombre actuales del usuario. */
+function emitirSesion(u) {
   const token = jwt.sign(
     { id: u.id_usuario, rol: u.rol, nombres: u.nombres, apellidos: u.apellidos, correo: u.correo },
     process.env.JWT_SECRETO,
-    { expiresIn: "8h" }
+    { expiresIn: DURACION_SESION }
   );
-  await auditar(u.id_usuario, "login");
   return {
     token,
     usuario: { id: u.id_usuario, nombres: u.nombres, apellidos: u.apellidos, correo: u.correo, rol: u.rol },
   };
+}
+
+/**
+ * Renueva la sesión de quien sigue usando la app, para que no lo saque a
+ * mitad de una clase al cumplirse las 8 horas. Se vuelve a leer el usuario:
+ * si lo desactivaron o le cambiaron el rol, eso se aplica ya.
+ */
+async function renovarSesion(idUsuario) {
+  const u = await modelo.buscarPorId(idUsuario);
+  if (!u || u.estado !== "activo") throw error("Tu sesión ya no es válida. Inicia sesión de nuevo", "credenciales");
+  return emitirSesion(u);
 }
 
 // ---- CU-22: Auto-registro (queda pendiente de aprobacion) ----
@@ -132,6 +149,6 @@ async function actualizarPerfil(idUsuario, { telefono, contrasenaActual, contras
 }
 
 module.exports = {
-  login, registrar, solicitarRecuperacion, restablecerContrasena, obtenerPerfil, actualizarPerfil,
+  login, renovarSesion, registrar, solicitarRecuperacion, restablecerContrasena, obtenerPerfil, actualizarPerfil,
   validarContrasena, normalizarCorreo,
 };

@@ -46,5 +46,29 @@ services:
     depends_on:
       - backend
 
+  # Copia de seguridad de la base de datos: una al arrancar y luego una al día,
+  # en la carpeta respaldos/ del proyecto (se guardan 14 días).
+  #   Copia ya:  docker compose exec respaldos /respaldar.sh ahora
+  #   Restaurar: docker compose exec respaldos /restaurar.sh <archivo>
+  respaldos:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: basedatos
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: asistenciaapp
+      TZ: America/Bogota
+      RESPALDO_CADA_HORAS: ${RESPALDO_CADA_HORAS:-24}
+      RESPALDO_DIAS: ${RESPALDO_DIAS:-14}
+    entrypoint: ["/bin/sh", "/respaldar.sh"]
+    volumes:
+      - ./respaldos:/respaldos
+      - ./db/respaldos/respaldar.sh:/respaldar.sh:ro
+      - ./db/respaldos/restaurar.sh:/restaurar.sh:ro
+    depends_on:
+      basedatos:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   datos_pg:

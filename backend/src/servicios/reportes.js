@@ -1,6 +1,7 @@
 const modelo = require("../modelos/reportes");
 const { error } = require("../utilidades/errores");
 const { celdaCsv, fechaIso } = require("../utilidades/formato");
+const { auditar } = require("./auditoria");
 
 const BOM = String.fromCharCode(0xfeff); // Excel lo necesita para mostrar bien las tildes
 
@@ -22,7 +23,25 @@ async function exportarCSV(filtros, usuario) {
       .map(celdaCsv)
       .join(";")
   );
+  await auditar(usuario.id, "exportar_reporte", "reporte", null, { formato: "csv", contenido: "busqueda", filas: filas.length, filtros });
   return BOM + [encabezado, ...cuerpo].join("\r\n");
+}
+
+const FORMATOS_EXPORTACION = ["excel", "pdf"];
+
+/**
+ * Excel y PDF se arman en el navegador con datos que ya se consultaron: el
+ * navegador avisa aquí para que la exportación quede en la auditoría igual que
+ * el CSV (quién sacó qué datos y cuándo).
+ */
+async function registrarExportacion(usuario, { formato, contenido, filas, filtros }) {
+  if (!FORMATOS_EXPORTACION.includes(formato)) throw error("Formato de exportación inválido", "validacion");
+  await auditar(usuario.id, "exportar_reporte", "reporte", null, {
+    formato,
+    contenido: contenido === "resumen" ? "resumen" : "busqueda",
+    filas: Number(filas) || 0,
+    filtros: filtros && typeof filtros === "object" ? filtros : {},
+  });
 }
 
 async function listarBusquedasGuardadas(idUsuario) {
@@ -92,5 +111,5 @@ async function obtenerTendencia(usuario, dias = 30) {
 
 module.exports = {
   buscar, exportarCSV, listarBusquedasGuardadas, guardarBusqueda, historialAprendiz, obtenerEstadisticas,
-  resumen, obtenerTendencia,
+  resumen, obtenerTendencia, registrarExportacion,
 };

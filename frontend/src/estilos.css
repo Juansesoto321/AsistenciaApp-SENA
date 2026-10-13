@@ -20,8 +20,43 @@
   --ambar: #b45309;  --ambar-suave: #fef3c7;
   --rojo: #b91c1c;   --rojo-suave: #fee2e2;
   --azul: #1d4ed8;   --azul-suave: #dbeafe;
+  /* Rellenos con texto blanco encima (pulgar de la barra, contadores): saturados en los dos temas */
+  --verde-solido: #15803d; --ambar-solido: #b45309; --rojo-solido: #b91c1c; --azul-solido: #1d4ed8;
+  --fila-hover: #faf9ff;
+  --ambar-borde: #fcd9a8;
+  --rojo-borde: #fecaca;
   --radio: 14px;
   --sombra: 0 8px 24px rgba(35, 24, 100, 0.08);
+  color-scheme: light;
+}
+
+/* ---- Modo oscuro ----
+   Solo se redefinen los colores: todos los componentes usan estas variables.
+   "--blanco" es la superficie de tarjetas, tablas y modales (en oscuro, un
+   violeta casi negro). El menú lateral ya era oscuro y no cambia. */
+:root[data-tema="oscuro"] {
+  --violeta-950: #0d0a20;
+  --violeta-900: #1a1440;
+  --violeta-700: #b9a8ff;
+  --violeta-600: #9f88ff;
+  --violeta-500: #8e74ff;
+  --violeta-100: #2c2463;
+  --violeta-50:  #1d1840;
+  --tinta: #ece9fb;
+  --tinta-suave: #a59fc8;
+  --borde: #302a54;
+  --fondo: #100d22;
+  --blanco: #19152f;
+  --verde: #4ade80;  --verde-suave: #10301d;
+  --ambar: #fbbf24;  --ambar-suave: #33280f;
+  --rojo: #f87171;   --rojo-suave: #3a1616;
+  --azul: #7ea6ff;   --azul-suave: #172446;
+  --verde-solido: #16a34a; --ambar-solido: #c2610c; --rojo-solido: #dc2626; --azul-solido: #2563eb;
+  --fila-hover: #201b3c;
+  --ambar-borde: #5a4314;
+  --rojo-borde: #5c2222;
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; margin: 0; }
 body {
@@ -42,7 +77,7 @@ select option { background: var(--blanco); color: var(--tinta); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--violeta-500); border-color: transparent; }
 /* Foco visible al navegar con teclado (no aparece al hacer clic) */
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--violeta-500); outline-offset: 2px; }
-label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }
+label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }
 
 /* ---- Pantallas de acceso ---- */
 .pantalla-acceso {
@@ -109,7 +144,7 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-su
 .barra-lateral nav a.activo { background: var(--gradiente); color: #fff; }
 .enlace-menu { display: inline-flex; align-items: center; gap: 10px; }
 .contador-notif {
-  background: var(--rojo); color: #fff; border-radius: 999px; min-width: 18px; height: 18px;
+  background: var(--rojo-solido); color: #fff; border-radius: 999px; min-width: 18px; height: 18px;
   font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px;
 }
 
@@ -127,6 +162,27 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-su
 .datos-usuario span { color: #9d90da; text-transform: capitalize; }
 .boton-salir { background: none; border: none; color: #b3a6ec; padding: 8px; border-radius: 9px; display: grid; place-items: center; }
 .boton-salir:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+/* Herramientas del menú: solo íconos y modo claro/oscuro */
+.herramientas-menu { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.12); }
+.herramientas-menu .boton-salir { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; padding: 8px 12px; font-size: 13.5px; }
+.pie-usuario a.avatar:hover { filter: brightness(1.12); }
+
+/* Menú solo con íconos (computador). En celular el menú es un cajón y no aplica. */
+@media (min-width: 861px) {
+  .aplicacion { transition: grid-template-columns .2s ease; }
+  .aplicacion.compacta { grid-template-columns: 76px 1fr; }
+  .compacta .barra-lateral { padding: 20px 10px; }
+  .compacta .marca { justify-content: center; padding: 6px 0 18px; }
+  .compacta .marca-texto, .compacta .texto-menu, .compacta .datos-usuario { display: none; }
+  .compacta .grupo-menu { height: 1px; margin: 10px; overflow: hidden; color: transparent; background: rgba(255,255,255,0.12); }
+  .compacta .barra-lateral nav a { justify-content: center; padding: 10px 0; position: relative; }
+  .compacta .barra-lateral nav .contador-notif { position: absolute; top: 2px; right: 4px; min-width: 16px; height: 16px; font-size: 10px; }
+  .compacta .herramientas-menu .boton-salir { justify-content: center; padding: 8px 0; }
+  .compacta .pie-usuario { flex-direction: column; gap: 6px; }
+}
+@media (max-width: 860px) { .boton-compacto { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .aplicacion { transition: none; } }
 
 /* Barra superior y menú deslizable: solo en pantallas angostas (ver @media) */
 .boton-menu {
@@ -152,10 +208,21 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-su
 .tarjeta-metrica .nombre { color: var(--tinta-suave); font-size: 13px; font-weight: 600; }
 
 table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco); border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
-.tabla th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave); background: var(--violeta-50); padding: 11px 14px; }
-.tabla td { padding: 11px 14px; border-top: 1px solid var(--borde); font-size: 14px; }
-.tabla tr:hover td { background: #faf9ff; }
+.tabla th { text-align: left; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave); background: var(--violeta-50); padding: 11px 14px; }
+.tabla td { padding: 11px 14px; border-top: 1px solid var(--borde); font-size: 14.5px; }
+.tabla tr:hover td { background: var(--fila-hover); }
 .tabla td .boton { white-space: nowrap; }
+/* Encabezados que ordenan la tabla al tocarlos */
+.orden-columna {
+  display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0;
+  font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer;
+}
+.orden-columna svg { opacity: .45; }
+.orden-columna:hover, .orden-columna.activa { color: var(--violeta-700); }
+.orden-columna.activa svg { opacity: 1; }
+.paginacion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 13.5px; color: var(--tinta-suave); }
+.paginacion div { display: flex; align-items: center; gap: 10px; }
+.paginacion b { color: var(--tinta); font-variant-numeric: tabular-nums; }
 .tabla-desplazable .tabla td:first-child { min-width: 170px; } /* nombres legibles, sin partirse en 4 líneas */
 /* Tablas anchas: se desplazan de lado dentro de su recuadro en vez de salirse
    de la página (antes se cortaba la columna de acciones en pantallas medianas) */
@@ -176,7 +243,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .mensaje.error { background: var(--rojo-suave); color: var(--rojo); }
 .mensaje.exito { background: var(--verde-suave); color: var(--verde); }
 .superposicion { position: fixed; inset: 0; background: rgba(23,18,58,.55); display: grid; place-items: center; z-index: 40; padding: 20px; }
-.modal { background: #fff; border-radius: var(--radio); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; }
+.modal { background: var(--blanco); border-radius: var(--radio); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; }
 .modal h2 { font-size: 18px; margin-bottom: 6px; }
 .acciones-modal { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .pulso { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; display: inline-block; animation: pulso 1.4s infinite; margin-right: 7px; }
@@ -246,7 +313,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 @media (max-width: 1000px) { .metricas-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .tarjeta-metrica.enlace { display: block; color: inherit; transition: border-color .15s; }
 .tarjeta-metrica.enlace:hover { border-color: var(--violeta-500); }
-.tarjeta-metrica.atencion { background: var(--ambar-suave); border-color: #fcd9a8; }
+.tarjeta-metrica.atencion { background: var(--ambar-suave); border-color: var(--ambar-borde); }
 .tarjeta-metrica.atencion .valor, .tarjeta-metrica.atencion .nombre { color: var(--ambar); }
 .dos-columnas { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; align-items: start; }
 .titulo-tarjeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin-bottom: 4px; }
@@ -273,8 +340,8 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 }
 .aviso-atencion b { font-size: 16px; }
 .aviso-atencion:hover { filter: brightness(.97); }
-.aviso-atencion.ambar { background: var(--ambar-suave); color: var(--ambar); border-color: #fcd9a8; }
-.aviso-atencion.rojo { background: var(--rojo-suave); color: var(--rojo); border-color: #fecaca; }
+.aviso-atencion.ambar { background: var(--ambar-suave); color: var(--ambar); border-color: var(--ambar-borde); }
+.aviso-atencion.rojo { background: var(--rojo-suave); color: var(--rojo); border-color: var(--rojo-borde); }
 
 /* Clases de hoy con su avance de asistencia */
 .lista-clases li.clase-hoy { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 6px 14px; }
@@ -323,6 +390,47 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .decision.aprobada { background: var(--verde-suave); color: var(--verde); }
 .decision.rechazada { background: var(--rojo-suave); color: var(--rojo); }
 .decision p { margin: 6px 0 0; color: var(--tinta); }
+
+/* Notificaciones: ícono por tipo de aviso */
+.notificacion { display: flex; align-items: center; gap: 14px; }
+.notificacion.leida { opacity: .62; }
+.icono-notificacion { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
+.icono-notificacion.rojo { background: var(--rojo-suave); color: var(--rojo); }
+.icono-notificacion.verde { background: var(--verde-suave); color: var(--verde); }
+.icono-notificacion.ambar { background: var(--ambar-suave); color: var(--ambar); }
+.icono-notificacion.violeta { background: var(--violeta-100); color: var(--violeta-700); }
+.cuerpo-notificacion { flex: 1; min-width: 0; }
+.cuerpo-notificacion p { color: var(--tinta-suave); font-size: 13.5px; margin-top: 3px; }
+.cuerpo-notificacion small { color: var(--tinta-suave); font-size: 12.5px; }
+.sin-leer { color: var(--violeta-700); font-weight: 700; }
+@media (max-width: 560px) { .notificacion { flex-wrap: wrap; } }
+
+/* Competencias: título que pliega/despliega y menú de acciones "···" */
+.titulo-plegable { background: none; border: 0; padding: 0; text-align: left; color: var(--tinta); flex: 1; min-width: 0; }
+.titulo-plegable b { display: inline-flex; align-items: center; gap: 6px; }
+.cuenta-raps { display: block; font-size: 13px; color: var(--tinta-suave); margin-top: 2px; padding-left: 22px; }
+.menu-acciones { position: relative; }
+.menu-acciones summary { list-style: none; cursor: pointer; letter-spacing: .08em; }
+.menu-acciones summary::-webkit-details-marker { display: none; }
+.menu-acciones-lista {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px; padding: 6px;
+  background: var(--blanco); border: 1px solid var(--borde); border-radius: 12px; box-shadow: var(--sombra);
+  display: grid; gap: 2px;
+}
+.menu-acciones-lista button { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 8px; color: var(--tinta); font-size: 13.5px; }
+.menu-acciones-lista button:hover { background: var(--violeta-50); }
+.menu-acciones-lista button.peligro { color: var(--rojo); }
+
+/* Soporte y registro del sistema */
+.vista-captura { display: block; margin-top: 10px; max-width: 100%; max-height: 220px; border-radius: 10px; border: 1px solid var(--borde); }
+.codigo-ruta { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; color: var(--tinta-suave); white-space: nowrap; }
+.celda-error { max-width: 520px; }
+.celda-error details { margin-top: 6px; }
+.celda-error summary { cursor: pointer; color: var(--violeta-700); font-size: 12.5px; font-weight: 600; }
+.celda-error pre {
+  margin-top: 6px; padding: 10px; border-radius: 8px; background: var(--violeta-50); color: var(--tinta);
+  font-size: 11.5px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto;
+}
 
 /* Mi perfil */
 .perfil-cabeza { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
@@ -441,8 +549,18 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .giro.grande { width: 44px; height: 44px; border-width: 4px; margin: 0 auto 16px; display: block; }
 @keyframes girar { to { transform: rotate(360deg); } }
 .cargando { display: flex; align-items: center; justify-content: center; }
+/* Esqueleto de carga (componente Cargando) */
+.esqueleto { display: grid; gap: 11px; padding: 16px 4px; width: 100%; }
+.esqueleto-linea {
+  display: block; height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--borde) 0%, var(--violeta-50) 50%, var(--borde) 100%);
+  background-size: 200% 100%; animation: brillo 1.3s ease-in-out infinite;
+}
+@keyframes brillo { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .esqueleto-linea { animation: none; } }
 
-.boton.peligro-solido { background: var(--rojo); color: #fff; }
+.boton.peligro-solido { background: var(--rojo-solido); color: #fff; }
 .modal-confirmar { max-width: 440px; }
 .texto-confirmar { color: var(--tinta-suave); font-size: 14px; line-height: 1.5; margin-top: 6px; }
 
@@ -577,7 +695,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .rejilla-trimestres { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
 .trimestre { padding: 16px 18px; }
 .trimestre.en-curso { border: 2px solid var(--violeta-500); }
-.trimestre.terminado { background: #fbfaff; }
+.trimestre.terminado { background: var(--fila-hover); }
 .titulo-trimestre { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
 .titulo-trimestre h3 { font-size: 15.5px; }
 .sin-programar { color: var(--tinta-suave); font-size: 13px; padding: 10px 0; }

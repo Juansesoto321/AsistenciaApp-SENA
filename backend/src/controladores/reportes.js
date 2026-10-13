@@ -71,4 +71,15 @@ async function tendencia(req, res, next) {
   }
 }
 
-module.exports = { buscar, exportar, listarBusquedasGuardadas, guardarBusqueda, miHistorial, estadisticas, resumen, tendencia };
+async function registrarExportacion(req, res, next) {
+  try {
+    await servicio.registrarExportacion(req.usuario, req.body);
+    res.status(201).json({ mensaje: "Exportación registrada" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  buscar, exportar, listarBusquedasGuardadas, guardarBusqueda, miHistorial, estadisticas, resumen, tendencia, registrarExportacion,
+};

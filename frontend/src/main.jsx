@@ -5,6 +5,9 @@ import App from "./App.jsx";
 import "./estilos.css";
 import { AuthProvider } from "./contexto/AuthContext.jsx";
 import { ConfirmarProvider } from "./componentes/Confirmar.jsx";
+import { aplicarTema } from "./utilidades/tema";
+
+aplicarTema(); // el script de index.html ya lo hizo; esto además escucha los cambios del sistema
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

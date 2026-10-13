@@ -132,6 +132,42 @@ ambiente **y ficha**, solo entre clases cuyas fechas se traslapan (la vista
 `horario_vigencia` calcula esas fechas). Los horarios creados antes de los
 trimestres siguen valiendo durante todo su periodo.
 
+### Copias de seguridad
+
+El servicio `respaldos` de `docker-compose.yml` copia la base de datos al arrancar y
+luego una vez al día, en la carpeta `respaldos/` del proyecto (no se sube a Git). Cada
+copia es un archivo `asistenciaapp_AAAA-MM-DD_HHMM.sql.gz` y se guardan las de los
+últimos 14 días. Se ajusta con `RESPALDO_CADA_HORAS` y `RESPALDO_DIAS` en el `.env`.
+
+```bash
+# Hacer una copia en este momento
+docker compose exec respaldos /respaldar.sh ahora
+# Ver las copias disponibles
+docker compose exec respaldos /restaurar.sh
+# Restaurar una copia (reemplaza TODOS los datos actuales)
+docker compose stop backend
+docker compose exec respaldos /restaurar.sh asistenciaapp_2026-10-13_0300.sql.gz
+docker compose start backend
+```
+
+Para no perder las copias si se daña el equipo, conviene llevar la carpeta `respaldos/`
+a otro disco o a la nube de vez en cuando.
+
+### Registro del sistema y auditoría
+
+Coordinación ve en **Administración → Registro del sistema** quién hizo qué y cuándo
+(inicios de sesión, cambios de asistencia, aprobaciones, horarios, huellas,
+configuración, exportaciones de reportes…) y los errores del servidor. Los reportes
+en Excel y PDF se arman en el navegador y avisan al servidor
+(`POST /api/reportes/exportaciones`) para que también queden registrados.
+
+### Sesión y apariencia
+
+La sesión dura 8 horas, pero se renueva sola mientras la persona sigue usando la app
+(`POST /api/auth/renovar` cuando le quedan menos de 2 horas). Al renovarse se vuelve a
+leer el usuario: si lo desactivaron, ya no entra. Cada persona elige en **Mi perfil**
+el tema claro, oscuro o el de su equipo, y en el menú puede dejar solo los íconos.
+
 ## Opción C · Nube gratuita (Render / Railway)
 
 1. Sube el repositorio a GitHub.
@@ -223,7 +259,8 @@ asistenciaapp/
 ├── db/
 │   ├── init.sql                 # Esquema completo + configuración inicial
 │   ├── semilla.sql
-│   └── migraciones/             # 001_logs … 006_cambios_del_lector (idempotentes, se aplican en orden)
+│   ├── migraciones/             # 001_logs … 007_soporte_captura (idempotentes, se aplican en orden)
+│   └── respaldos/               # respaldar.sh y restaurar.sh (servicio "respaldos" de Docker)
 ├── backend/
 │   ├── src/
 │   │   ├── app.js               # Punto de entrada: middlewares, rutas y servidor

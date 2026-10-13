@@ -3,7 +3,25 @@ import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
+import Icono from "../../componentes/Iconos.jsx";
 import { fechaHora, haceCuanto } from "../../utilidades/formato";
+
+/** Ícono y color de cada tipo de aviso, para reconocerlo de un vistazo. */
+const ESTILOS = {
+  inasistencia: ["alerta", "rojo"],
+  asistencia: ["asistencia", "verde"],
+  solicitud_registro: ["usuarios", "violeta"],
+  soporte: ["configuracion", "ambar"],
+  biometria: ["llave", "violeta"],
+};
+function estiloDe(n) {
+  if (n.tipo === "justificacion") {
+    if (/rechazada/i.test(n.titulo)) return ["justificaciones", "rojo"];
+    if (/aprobada/i.test(n.titulo)) return ["justificaciones", "verde"];
+    return ["justificaciones", "ambar"]; // nueva por revisar
+  }
+  return ESTILOS[n.tipo] || ["notificaciones", "violeta"];
+}
 
 export default function Notificaciones() {
   const [lista, setLista] = useState(null);
@@ -47,24 +65,20 @@ export default function Notificaciones() {
 
       {lista === null ? <Cargando /> : (
         <div style={{ display: "grid", gap: 10 }}>
-          {lista.map((n) => (
-            <div
-              key={n.id_notificacion}
-              className="tarjeta"
-              style={{
-                opacity: n.leida ? 0.65 : 1,
-                display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center",
-                borderLeft: n.leida ? undefined : "3px solid var(--violeta-600)",
-              }}
-            >
-              <div>
-                <b>{n.titulo}</b>
-                <p style={{ color: "var(--tinta-suave)", fontSize: 13.5, marginTop: 4 }}>{n.mensaje}</p>
-                <small style={{ color: "var(--tinta-suave)" }}><span title={fechaHora(n.creado_en)}>{haceCuanto(n.creado_en)}</span></small>
+          {lista.map((n) => {
+            const [icono, tono] = estiloDe(n);
+            return (
+              <div key={n.id_notificacion} className={`tarjeta notificacion${n.leida ? " leida" : ""}`}>
+                <span className={`icono-notificacion ${tono}`} aria-hidden="true"><Icono nombre={icono} size="1.2em" /></span>
+                <div className="cuerpo-notificacion">
+                  <b>{n.titulo}</b>
+                  <p>{n.mensaje}</p>
+                  <small><span title={fechaHora(n.creado_en)}>{haceCuanto(n.creado_en)}</span>{!n.leida && <> · <span className="sin-leer">Sin leer</span></>}</small>
+                </div>
+                {!n.leida && <button className="boton mini suave" onClick={() => marcarLeida(n)}>Marcar leída</button>}
               </div>
-              {!n.leida && <button className="boton mini suave" onClick={() => marcarLeida(n)}>Marcar leída</button>}
-            </div>
-          ))}
+            );
+          })}
           {!lista.length && <Vacio icono="notificaciones" titulo="No tienes notificaciones">Aquí te avisaremos de inasistencias, justificaciones y novedades de tu cuenta.</Vacio>}
         </div>
       )}

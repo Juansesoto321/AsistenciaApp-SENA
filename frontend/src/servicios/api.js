@@ -31,6 +31,25 @@ function obtenerSesion() {
   return sesion;
 }
 
+// Quien sigue usando la app no debe quedar por fuera a las 8 horas (p. ej. a
+// mitad de una clase): si al token le quedan menos de 2 horas, se pide uno nuevo.
+const MARGEN_RENOVACION_MS = 2 * 60 * 60 * 1000;
+let renovando = null;
+
+function renovarSiHaceFalta(sesion) {
+  if (!sesion?.token || renovando) return;
+  if (expiracionDelToken(sesion.token) * 1000 - Date.now() > MARGEN_RENOVACION_MS) return;
+  renovando = fetch("/api/auth/renovar", { method: "POST", headers: { Authorization: `Bearer ${sesion.token}` } })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((nueva) => {
+      if (!nueva?.token) return;
+      guardarSesion(nueva);
+      window.dispatchEvent(new CustomEvent("sesion-renovada", { detail: nueva })); // AuthContext toma el token nuevo
+    })
+    .catch(() => {})
+    .finally(() => { renovando = null; });
+}
+
 async function api(ruta, opciones = {}) {
   const sesion = obtenerSesion();
   const r = await fetch(`/api${ruta}`, {
@@ -45,6 +64,7 @@ async function api(ruta, opciones = {}) {
   const datos = await r.json().catch(() => ({}));
   if (r.status === 401 && sesion) { cerrarSesion(); window.location.href = "/"; }
   if (!r.ok) throw new Error(datos.mensaje || "Error de servidor");
+  renovarSiHaceFalta(sesion);
   return datos;
 }
 

@@ -265,6 +265,8 @@ CREATE TABLE IF NOT EXISTS ticket_soporte (
   descripcion TEXT NOT NULL,
   estado      VARCHAR(20) NOT NULL DEFAULT 'abierto'
               CHECK (estado IN ('abierto','en_proceso','resuelto')),
+  nombre_archivo VARCHAR(255),  -- captura de pantalla opcional (migración 007)
+  archivo_datos  TEXT,
   creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

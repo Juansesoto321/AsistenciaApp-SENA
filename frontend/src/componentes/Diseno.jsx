@@ -6,6 +6,7 @@ import { useAuth } from "../contexto/AuthContext.jsx";
 import Logo from "./Logo.jsx";
 import IconoSoporte from "./IconoSoporte.jsx";
 import Icono from "./Iconos.jsx";
+import { useTema } from "../utilidades/tema";
 
 const SOPORTE = <IconoSoporte />;
 const ico = (nombre) => <Icono nombre={nombre} />;
@@ -40,6 +41,7 @@ const MENUS = {
     "Administración",
     ["/usuarios", ico("usuarios"), "Usuarios"],
     ["/configuracion", ico("configuracion"), "Configuración"],
+    ["/registro", ico("registro"), "Registro del sistema"],
     ...CUENTA,
   ],
   instructor: [
@@ -62,6 +64,7 @@ const MENUS = {
     ...PLANEACION,
     "Administración",
     ["/configuracion", ico("configuracion"), "Configuración"],
+    ["/registro", ico("registro"), "Registro del sistema"],
     ...CUENTA,
   ],
   aprendiz: [
@@ -73,6 +76,11 @@ const MENUS = {
     ["/soporte", SOPORTE, "Soporte"],
   ],
 };
+
+const CLAVE_COMPACTO = "asistenciaapp.menu-compacto";
+function leerCompacto() {
+  try { return localStorage.getItem(CLAVE_COMPACTO) === "1"; } catch { return false; }
+}
 
 const iniciales = ({ nombres = "", apellidos = "" }) =>
   `${nombres.trim().charAt(0)}${apellidos.trim().charAt(0)}`.toUpperCase();
@@ -91,7 +99,15 @@ export default function Diseno({ children }) {
   const [notifPendientes, setNotifPendientes] = useState(0);
   const [porRevisar, setPorRevisar] = useState(0); // justificaciones que esperan respuesta
   const [menuAbierto, setMenuAbierto] = useState(false); // solo aplica en pantallas angostas
+  const [compacto, setCompacto] = useState(() => leerCompacto()); // menú solo con íconos (computador)
+  const [, cambiarTema, temaActual] = useTema();
   const revisaJustificaciones = usuario.rol !== "aprendiz";
+
+  function alternarCompacto() {
+    const nuevo = !compacto;
+    setCompacto(nuevo);
+    try { localStorage.setItem(CLAVE_COMPACTO, nuevo ? "1" : "0"); } catch { /* solo no se recuerda */ }
+  }
 
   // Numeritos del menú, actualizados en vivo: notificaciones sin leer (todos)
   // y justificaciones por revisar (instructor y coordinación).
@@ -120,7 +136,7 @@ export default function Diseno({ children }) {
   }, [menuAbierto]);
 
   return (
-    <div className="aplicacion">
+    <div className={`aplicacion${compacto ? " compacta" : ""}`}>
       {/* Barra superior: solo se ve en celulares y tabletas (ver estilos.css) */}
       <header className="barra-superior">
         <button className="boton-menu" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú" aria-expanded={menuAbierto}>
@@ -141,7 +157,7 @@ export default function Diseno({ children }) {
       <aside className={`barra-lateral ${menuAbierto ? "abierta" : ""}`} aria-label="Menú principal">
         <div className="marca">
           <div className="icono"><Logo size="1.45em" /></div>
-          <div>
+          <div className="marca-texto">
             AsistenciaApp
             <small>SENA · Control de asistencia</small>
           </div>
@@ -154,15 +170,28 @@ export default function Diseno({ children }) {
             if (typeof entrada === "string") return <p key={entrada} className="grupo-menu">{entrada}</p>;
             const [ruta, icono, nombre] = entrada;
             return (
-              <NavLink key={ruta} to={ruta} className={({ isActive }) => (isActive ? "activo" : "")}>
-                <span className="enlace-menu">{icono} {nombre}</span>
+              <NavLink key={ruta} to={ruta} className={({ isActive }) => (isActive ? "activo" : "")}
+                title={compacto ? nombre : undefined} aria-label={compacto ? nombre : undefined}>
+                <span className="enlace-menu">{icono} <span className="texto-menu">{nombre}</span></span>
                 <Contador valor={contadores[ruta]} />
               </NavLink>
             );
           })}
         </nav>
+        <div className="herramientas-menu">
+          <button type="button" className="boton-salir boton-compacto" onClick={alternarCompacto}
+            title={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"} aria-label={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"}>
+            <Icono nombre={compacto ? "expandir" : "contraer"} size="1.15em" />
+            <span className="texto-menu">Solo íconos</span>
+          </button>
+          <button type="button" className="boton-salir" onClick={() => cambiarTema(temaActual === "oscuro" ? "claro" : "oscuro")}
+            title={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"} aria-label={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}>
+            <Icono nombre={temaActual === "oscuro" ? "sol" : "luna"} size="1.15em" />
+            <span className="texto-menu">{temaActual === "oscuro" ? "Modo claro" : "Modo oscuro"}</span>
+          </button>
+        </div>
         <div className="pie-usuario">
-          <div className="avatar" aria-hidden="true">{iniciales(usuario)}</div>
+          <Link to="/perfil" className="avatar" title="Mi perfil" aria-label="Mi perfil">{iniciales(usuario)}</Link>
           <div className="datos-usuario">
             <b title={`${usuario.nombres} ${usuario.apellidos}`}>{usuario.nombres} {usuario.apellidos}</b>
             <span>{usuario.rol}</span>

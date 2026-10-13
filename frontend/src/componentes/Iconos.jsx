@@ -150,6 +150,44 @@ const TRAZOS = {
       <line x1="20" y1="12" x2="9.5" y2="12" />
     </>
   ),
+  sol: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+    </>
+  ),
+  luna: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
+  contraer: (
+    <>
+      <rect x="3.5" y="4" width="17" height="16" rx="2.5" />
+      <line x1="9.5" y1="4" x2="9.5" y2="20" />
+      <path d="m15.5 9.5-2.5 2.5 2.5 2.5" />
+    </>
+  ),
+  expandir: (
+    <>
+      <rect x="3.5" y="4" width="17" height="16" rx="2.5" />
+      <line x1="9.5" y1="4" x2="9.5" y2="20" />
+      <path d="m13 9.5 2.5 2.5-2.5 2.5" />
+    </>
+  ),
+  ordenar: <path d="m8 9 4-4 4 4M8 15l4 4 4-4" />,
+  arriba: <path d="m7 14 5-5 5 5" />,
+  abajo: <path d="m7 10 5 5 5-5" />,
+  pdf: (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 16.5h4" />
+    </>
+  ),
+  registro: (
+    <>
+      <path d="M8 4h11a1.5 1.5 0 0 1 1.5 1.5V20H8" />
+      <path d="M8 4a2.5 2.5 0 0 0-2.5 2.5V20H20.5" />
+      <path d="M11 8.5h6M11 12h6M11 15.5h4" />
+    </>
+  ),
 };
 
 export default function Icono({ nombre, size = "1.05em", style, ...props }) {
