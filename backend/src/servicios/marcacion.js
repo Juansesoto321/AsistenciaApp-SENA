@@ -58,6 +58,7 @@ async function registrarAsistencia(sesion, aprendiz, momento = new Date()) {
   if (!idAsistencia) return { duplicada: true, aprendiz, estado: null };
 
   emitirASesion(sesion.id_sesion, "marcacion", {
+    id_sesion: sesion.id_sesion, // el panel sigue varias clases a la vez
     id_aprendiz: aprendiz.id_usuario,
     nombres: aprendiz.nombres,
     apellidos: aprendiz.apellidos,

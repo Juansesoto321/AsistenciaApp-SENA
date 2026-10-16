@@ -50,6 +50,8 @@ function renovarSiHaceFalta(sesion) {
     .finally(() => { renovando = null; });
 }
 
+const SIN_CONEXION = "No se pudo conectar con el servidor. Intenta de nuevo en unos minutos";
+
 async function api(ruta, opciones = {}) {
   const sesion = obtenerSesion();
   const r = await fetch(`/api${ruta}`, {
@@ -60,10 +62,12 @@ async function api(ruta, opciones = {}) {
       ...opciones.headers,
     },
     body: opciones.body ? JSON.stringify(opciones.body) : undefined,
-  });
+  }).catch(() => { throw new Error(SIN_CONEXION); }); // sin red
   const datos = await r.json().catch(() => ({}));
   if (r.status === 401 && sesion) { cerrarSesion(); window.location.href = "/"; }
-  if (!r.ok) throw new Error(datos.mensaje || "Error de servidor");
+  // Un 5xx sin mensaje propio no viene del backend sino del proxy (Vite o nginx):
+  // el backend está apagado o reiniciándose.
+  if (!r.ok) throw new Error(datos.mensaje || (r.status >= 500 ? SIN_CONEXION : "Error de servidor"));
   renovarSiHaceFalta(sesion);
   return datos;
 }
