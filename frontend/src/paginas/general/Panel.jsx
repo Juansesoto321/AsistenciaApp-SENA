@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../../servicios/api";
 import { conectarTiempoReal } from "../../servicios/socket";
 import { useAuth } from "../../contexto/AuthContext.jsx";
@@ -10,10 +10,16 @@ import Vacio from "../../componentes/Vacio.jsx";
 import AccionSesion from "../../componentes/AccionSesion.jsx";
 import AnilloAsistencia from "../../componentes/AnilloAsistencia.jsx";
 import GraficaTendencia from "../../componentes/GraficaTendencia.jsx";
+import Tendencia from "../../componentes/Tendencia.jsx";
+import Contador from "../../componentes/Contador.jsx";
+import ClaseEnCurso from "../../componentes/ClaseEnCurso.jsx";
+import EscanerHuella, { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { horaCorta, mayusculaInicial, saludo } from "../../utilidades/formato";
 import { nombreDelDia, proximaClase } from "../../utilidades/fechas";
 
 const MAX_EN_RIESGO = 6;
+const MAX_MARCAS = 4; // marcas recientes que se muestran por clase en curso
+const RACHA_MINIMA = 3; // desde cuántas clases seguidas se celebra la racha
 const RECARGA_MS = 60_000; // clases iniciadas en otro equipo y lectores que se caen
 
 const ACCESOS = {
@@ -47,7 +53,7 @@ function Metrica({ valor, nombre, color, a, atencion }) {
   const contenido = (<>
     <div className="valor" style={color ? { color } : undefined}>
       {atencion && <span className="pulso" style={{ background: "var(--ambar)" }} />}
-      {valor ?? "—"}
+      <Contador valor={valor} />
     </div>
     <div className="nombre">{nombre}</div>
   </>);
@@ -55,11 +61,11 @@ function Metrica({ valor, nombre, color, a, atencion }) {
   return a ? <Link to={a} className={clase}>{contenido}</Link> : <div className={clase}>{contenido}</div>;
 }
 
-function Accesos({ rol }) {
+function Accesos({ rol, enFila }) {
   return (
     <div className="tarjeta">
       <h3 style={{ fontSize: 16 }}>Accesos rápidos</h3>
-      <div className="accesos">
+      <div className={`accesos${enFila ? " fila" : ""}`}>
         {(ACCESOS[rol] || []).map(([ruta, icono, texto]) => (
           <Link key={ruta} className="boton suave" to={ruta}><Icono nombre={icono} /> {texto}</Link>
         ))}
@@ -138,9 +144,27 @@ function PanelSupervision({ rol, alError }) {
   const [lectores, setLectores] = useState(null);
   const [dias, setDias] = useState(30);
   const [tendencia, setTendencia] = useState(null);
+  const [marcas, setMarcas] = useState({}); // id_sesion -> { lista, recibidas }
   const socket = useRef(null);
+  const clasesActuales = useRef([]);
 
   const cargarClases = () => api("/sesiones/hoy").then(setClases).catch(() => setClases([]));
+
+  /** Guarda la marca en su clase para la huella en vivo. */
+  function anotarMarca(m) {
+    const activas = clasesActuales.current.filter((c) => c.estado_sesion === "activa");
+    // Un backend anterior no manda id_sesion: si hay una sola clase en curso, es de esa
+    const idSesion = m.id_sesion ?? (activas.length === 1 ? activas[0].id_sesion : null);
+    if (!idSesion) return;
+    setMarcas((previas) => {
+      const actual = previas[idSesion] || { lista: [], recibidas: 0 };
+      const nueva = { ...m, clave: `${m.id_aprendiz}-${m.hora_marca}` };
+      return {
+        ...previas,
+        [idSesion]: { lista: [nueva, ...actual.lista].slice(0, MAX_MARCAS), recibidas: actual.recibidas + 1 },
+      };
+    });
+  }
 
   useEffect(() => {
     api("/reportes/estadisticas").then(setDatos).catch((e) => alError(e.message));
@@ -154,7 +178,11 @@ function PanelSupervision({ rol, alError }) {
     socket.current.on("justificaciones:actualizadas", cargarPendientes);
     // Cada marca de una clase en curso actualiza su barra (se agrupan las que llegan seguidas)
     let espera = null;
-    socket.current.on("marcacion", () => { clearTimeout(espera); espera = setTimeout(cargarClases, 700); });
+    socket.current.on("marcacion", (m) => {
+      anotarMarca(m);
+      clearTimeout(espera);
+      espera = setTimeout(cargarClases, 700);
+    });
     const reloj = setInterval(() => {
       cargarClases();
       if (!esInstructor) api("/dispositivos").then(setLectores).catch(() => {});
@@ -164,6 +192,7 @@ function PanelSupervision({ rol, alError }) {
 
   // Se une a las clases en curso para recibir sus marcas en vivo
   useEffect(() => {
+    clasesActuales.current = clases || [];
     (clases || []).filter((c) => c.estado_sesion === "activa").forEach((c) => socket.current?.emit("unirse_sesion", c.id_sesion));
   }, [clases]);
 
@@ -181,8 +210,20 @@ function PanelSupervision({ rol, alError }) {
     : (lectores || []).filter((l) => l.estado !== "en_linea").length;
   const enRiesgo = resumen?.bajo_minimo || [];
   const hayDatosTendencia = tendencia?.some((d) => d.porcentaje !== null);
+  const enCurso = (clases || []).filter((c) => c.estado_sesion === "activa");
 
   return (<>
+    {enCurso.length > 0 && (
+      <div className="en-curso-lista">
+        {enCurso.map((c) => (
+          <ClaseEnCurso
+            key={c.id_sesion} clase={c} verInstructor={!esInstructor}
+            marcas={marcas[c.id_sesion]?.lista} recibidas={marcas[c.id_sesion]?.recibidas}
+          />
+        ))}
+      </div>
+    )}
+
     <Atencion pendientes={pendientes} lectoresSinSenal={sinSenal} enRiesgo={enRiesgo.length} puedeVerLectores={!esInstructor} />
 
     <div className="resumen-panel">
@@ -199,6 +240,7 @@ function PanelSupervision({ rol, alError }) {
             <span className={`insignia ${promedio >= minimo ? "activa" : "ausente"}`} style={{ marginTop: 8 }}>
               {promedio >= minimo ? "Cumple el mínimo" : "Bajo el mínimo"}
             </span>
+            <Tendencia datos={tendencia} minimo={minimo} leyenda={`Últimos ${dias} días`} />
           </div>
         </>)}
       </div>
@@ -276,6 +318,91 @@ function PanelSupervision({ rol, alError }) {
 }
 
 // ---------- Aprendiz ----------
+
+const fechaLocal = (f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+const aMinutos = (hora) => { const [h, m] = String(hora).split(":").map(Number); return h * 60 + m; };
+const ESTADO_MARCA = { presente: "Presente", tardanza: "Tardanza", justificada: "Justificada" };
+
+/** Cuántas clases seguidas lleva sin faltar, contando desde la más reciente. */
+function rachaSinFaltar(detalle) {
+  let racha = 0;
+  for (const d of detalle) { // viene de la más reciente a la más antigua
+    if (d.estado === "ausente") break;
+    racha++;
+  }
+  return racha;
+}
+
+/** "empieza en 25 min", "empieza en 2 h 10 min" o null si la clase es otro día. */
+function cuentaRegresiva(siguiente, ahora) {
+  const [h, m] = siguiente.horario.hora_inicio.split(":").map(Number);
+  const inicio = new Date(siguiente.fecha);
+  inicio.setHours(h, m, 0, 0);
+  if (fechaLocal(inicio) !== fechaLocal(ahora)) return null;
+  const minutos = Math.ceil((inicio - ahora) / 60_000);
+  if (minutos <= 1) return "está por empezar";
+  if (minutos < 60) return `empieza en ${minutos} min`;
+  const resto = minutos % 60;
+  return `empieza en ${Math.floor(minutos / 60)} h${resto ? ` ${resto} min` : ""}`;
+}
+
+/** La marca de hoy que corresponde a esta clase, si ya la registró. */
+function marcaDeHoy(detalle, horario, ahora) {
+  const hoy = fechaLocal(ahora);
+  return detalle.find((d) => String(d.fecha).slice(0, 10) === hoy && d.hora
+    && aMinutos(d.hora) >= aMinutos(horario.hora_inicio) - 30 && aMinutos(d.hora) <= aMinutos(horario.hora_fin));
+}
+
+/** La próxima clase en grande, con cuenta regresiva y la huella del lector. */
+function ProximaClase({ horarios, detalle }) {
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (horarios === null) return <div className="tarjeta" style={{ marginBottom: 14 }}><Cargando /></div>;
+  const siguiente = proximaClase(horarios, ahora);
+  if (!siguiente) {
+    return (
+      <div className="tarjeta" style={{ marginBottom: 14 }}>
+        <Vacio icono="horarios" titulo="No tienes clases en los próximos días">Cuando te programen clases, la próxima aparecerá aquí.</Vacio>
+      </div>
+    );
+  }
+  const { horario } = siguiente;
+  const marca = siguiente.enCurso ? marcaDeHoy(detalle, horario, ahora) : null;
+  const cuando = siguiente.enCurso ? null : cuentaRegresiva(siguiente, ahora);
+
+  return (
+    <section className="proxima-clase">
+      <div className="proxima-datos">
+        <p className="proxima-etiqueta">
+          {siguiente.enCurso ? <><span className="pulso" />Tu clase está en curso</> : "Tu próxima clase"}
+        </p>
+        <p className="proxima-hora">{horaCorta(horario.hora_inicio)} – {horaCorta(horario.hora_fin)}</p>
+        <p className="proxima-cuando">
+          {mayusculaInicial(nombreDelDia(siguiente.fecha, ahora))}{cuando ? `, ${cuando}` : ""}
+        </p>
+        <p className="proxima-detalle">
+          Ambiente <b>{horario.numero_ambiente}</b>{horario.sede_centro ? `, ${horario.sede_centro}` : ""}<br />
+          Instructor: {horario.instructor}<br />
+          {horario.tematica || horario.competencia || "Tema por asignar"}
+        </p>
+        {siguiente.enCurso && (
+          <p className={`proxima-marca${marca ? " lista" : ""}`} role="status">
+            {marca ? (<>
+              Registraste tu asistencia a las {marca.hora}
+              <span className={`insignia ${marca.estado}`}>{ESTADO_MARCA[marca.estado] || marca.estado}</span>
+            </>) : "Pon tu dedo en el lector del ambiente para registrar tu asistencia."}
+          </p>
+        )}
+      </div>
+      <EscanerHuella className="proxima-huella" estado={marca ? "registrada" : "espera"} encendidas={marca ? TOTAL_CRESTAS : 0} />
+    </section>
+  );
+}
+
 function PanelAprendiz({ alError }) {
   const [historial, setHistorial] = useState(null);
   const [horarios, setHorarios] = useState(null);
@@ -283,11 +410,15 @@ function PanelAprendiz({ alError }) {
   useEffect(() => {
     api("/reportes/mi-historial").then(setHistorial).catch((e) => alError(e.message));
     api("/horarios").then(setHorarios).catch(() => setHorarios([]));
+    // Si marca con el panel abierto, su marca aparece sin recargar la página
+    const t = setInterval(() => api("/reportes/mi-historial").then(setHistorial).catch(() => {}), RECARGA_MS);
+    return () => clearInterval(t);
   }, []);
 
   if (!historial) return <Cargando />;
   const r = historial.resumen;
-  const siguiente = horarios ? proximaClase(horarios) : null;
+  const detalle = historial.detalle || [];
+  const racha = rachaSinFaltar(detalle);
 
   return (<>
     {r && r.porcentaje < r.minimo && (
@@ -300,6 +431,8 @@ function PanelAprendiz({ alError }) {
       </div>
     )}
 
+    <ProximaClase horarios={horarios} detalle={detalle} />
+
     {r ? (
       <div className="resumen-panel">
         <div className="tarjeta tarjeta-anillo">
@@ -307,6 +440,7 @@ function PanelAprendiz({ alError }) {
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Mi asistencia</div>
             <p style={{ color: "var(--tinta-suave)", fontSize: 13, margin: "4px 0 8px" }}>Mínimo institucional: {r.minimo} %</p>
+            {racha >= RACHA_MINIMA && <p className="racha">Llevas {racha} clases seguidas sin faltar</p>}
             <Link to="/mi-asistencia" style={{ fontSize: 13.5, fontWeight: 600 }}>Ver historial →</Link>
           </div>
         </div>
@@ -325,34 +459,7 @@ function PanelAprendiz({ alError }) {
       </div>
     )}
 
-    <div className="dos-columnas">
-      <div className="tarjeta">
-        <div className="titulo-tarjeta">
-          <h3>Próxima clase</h3>
-          <Link to="/horarios" style={{ fontSize: 13.5 }}>Mi horario →</Link>
-        </div>
-        {horarios === null ? <Cargando /> : !siguiente ? (
-          <Vacio icono="horarios" titulo="No tienes clases en los próximos días" />
-        ) : (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <b style={{ fontSize: 18 }}>{mayusculaInicial(nombreDelDia(siguiente.fecha))}</b>
-              {siguiente.enCurso && <span className="insignia activa"><span className="pulso" />En curso</span>}
-            </div>
-            <p className="hora-clase" style={{ color: "var(--violeta-700)", fontWeight: 700, margin: "4px 0 10px" }}>
-              {horaCorta(siguiente.horario.hora_inicio)} – {horaCorta(siguiente.horario.hora_fin)}
-            </p>
-            <p style={{ color: "var(--tinta-suave)", fontSize: 14, lineHeight: 1.6 }}>
-              Ambiente <b style={{ color: "var(--tinta)" }}>{siguiente.horario.numero_ambiente}</b>
-              {siguiente.horario.sede_centro ? ` · ${siguiente.horario.sede_centro}` : ""}<br />
-              Instructor: {siguiente.horario.instructor}<br />
-              {siguiente.horario.tematica || siguiente.horario.competencia || "Tema por asignar"}
-            </p>
-          </div>
-        )}
-      </div>
-      <Accesos rol="aprendiz" />
-    </div>
+    <Accesos rol="aprendiz" enFila />
   </>);
 }
 
@@ -361,10 +468,12 @@ export default function Panel() {
   const rol = sesion.usuario.rol;
   const [mensaje, setMensaje] = useState(null);
   const alError = (texto) => setMensaje({ tipo: "error", texto });
+  // Recién llegado del inicio de sesión: el saludo entra con una animación corta
+  const recienLlegado = useLocation().state?.recienLlegado;
 
   return (
     <>
-      <div className="cabecera-pagina">
+      <div className={`cabecera-pagina${recienLlegado ? " saludo-llegada" : ""}`}>
         <div>
           <h1>{saludo()}, {sesion.usuario.nombres}</h1>
           <p>{mayusculaInicial(new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" }))}</p>

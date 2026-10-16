@@ -136,7 +136,7 @@ async function registrarAsistenciaManual(idSesion, usuario, { id_aprendiz, estad
   const u = await modelo.buscarNombreUsuario(id_aprendiz);
   if (u) {
     emitirASesion(idSesion, "marcacion", {
-      id_aprendiz, nombres: u.nombres, apellidos: u.apellidos, estado, hora_marca: new Date(), metodo: "manual",
+      id_sesion: Number(idSesion), id_aprendiz, nombres: u.nombres, apellidos: u.apellidos, estado, hora_marca: new Date(), metodo: "manual",
     });
   }
 
