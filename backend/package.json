@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "node --watch src/app.js",
     "start": "node src/app.js",
+    "migrar": "node src/scripts/migrar.js",
     "sembrar": "node src/scripts/sembrar.js",
+    "crear-coordinador": "node src/scripts/crear-coordinador.js",
+    "nueva-clave": "node src/scripts/nueva-clave.js",
     "test": "node --test"
   },
   "dependencies": {

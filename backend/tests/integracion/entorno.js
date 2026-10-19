@@ -109,7 +109,7 @@ async function iniciar() {
   }
 
   // Se importan después de crear la base: el pool apunta a asistenciaapp_pruebas
-  const { aplicarEsquema } = require("../../src/scripts/sembrar");
+  const { aplicarEsquema } = require("../../src/scripts/migrar");
   pool = require("../../src/config/db");
   const originalLog = console.log;
   console.log = () => {}; // silencia "Creando esquema..." y las migraciones

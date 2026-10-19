@@ -63,7 +63,7 @@ psql -U postgres -c "CREATE DATABASE asistenciaapp;"
 cd backend
 cp .env.example .env        # revisar DATABASE_URL si tu contraseña no es "postgres"
 npm install
-npm run sembrar             # crea el esquema + datos de demostración
+npm run sembrar             # esquema + datos de demostración (muestra las cuentas al final)
 npm run dev                 # http://localhost:4000
 
 # 3. Frontend (otra terminal)
@@ -82,15 +82,31 @@ Requisito: Docker con el plugin Compose.
 
 ```bash
 docker compose up -d --build
-docker compose exec backend npm run sembrar   # solo la primera vez
+docker compose exec backend npm run sembrar   # solo la primera vez (datos de demostración)
 # Aplicación: http://localhost:8080
 # Simulador apuntando al despliegue:
 node simulador-lector/simulador.js http://localhost:8080
 ```
 
-Para producción define variables reales en un archivo `.env` junto al compose:
-`JWT_SECRETO`, `CLAVE_CIFRADO` (64 hex), `URL_FRONTEND` (dominio público, usado en los
-correos) y las credenciales SMTP (`CORREO_HOST`, `CORREO_USUARIO`, `CORREO_CONTRASENA`).
+### En un servidor real (producción)
+
+Un servidor real **no lleva datos de demostración**: sus cuentas tienen contraseñas
+públicas (están en el código). Crea un archivo `.env` junto al compose con
+`NODE_ENV=production`, `JWT_SECRETO` y `CLAVE_CIFRADO` propios (64 hex), `URL_FRONTEND`
+(dirección pública, usada en los correos) y las credenciales SMTP (`CORREO_HOST`,
+`CORREO_USUARIO`, `CORREO_CONTRASENA`). Con `NODE_ENV=production` el backend no arranca
+con las claves de ejemplo y `npm run sembrar` se niega a correr.
+
+```bash
+docker compose up -d --build
+docker compose exec backend npm run migrar              # esquema y migraciones, sin datos
+docker compose exec backend npm run crear-coordinador   # primera cuenta; la contraseña se muestra una vez
+```
+
+El coordinador crea después las demás cuentas desde **Usuarios**. Para dar una contraseña
+nueva y aleatoria a una cuenta (por ejemplo, si el coordinador perdió el acceso):
+`docker compose exec backend npm run nueva-clave -- correo@sena.edu.co`.
+
 Sin SMTP, los correos se imprimen en la consola del backend (útil para la demo).
 
 ### Adjuntos de justificaciones
@@ -103,10 +119,10 @@ El límite HTTP del backend es de 10 MB para permitir la codificación base64.
 
 ### Actualizar una instalación existente
 
-`npm run sembrar` aplica el esquema y **todas** las migraciones de `db/migraciones/`
+`npm run migrar` aplica el esquema y **todas** las migraciones de `db/migraciones/`
 en orden (`001_`, `002_`…). Son idempotentes, así que sirve igual para una base nueva
-que para una existente.
-Con Docker: `docker compose exec backend npm run sembrar`.
+que para una existente, y nunca crea cuentas ni datos.
+Con Docker: `docker compose exec backend npm run migrar`.
 
 Los roles son `coordinador`, `programador`, `instructor` y `aprendiz`. El programador
 tiene las mismas atribuciones del coordinador **salvo administrar usuarios**.
@@ -179,18 +195,17 @@ el tema claro, oscuro o el de su equipo, y en el menú puede dejar solo los íco
 
 ## Cuentas de demostración
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Coordinador | admin@sena.edu.co | Admin123* |
-| Programador | programador@sena.edu.co | Programador123* |
-| Instructor | cristian.buitrago@sena.edu.co | Instructor123* |
-| Aprendiz | camilap.m1230@gmail.com | Aprendiz123* |
-| Aprendiz | becerravillalobos08@gmail.com | Aprendiz123* |
-| Aprendiz | juansesoto321@gmail.com | Aprendiz123* |
-| Aprendiz | santibermudez0656@gmail.com | Aprendiz123* |
-| Aprendiz | hernandomendezlol@gmail.com | Aprendiz123* |
+`npm run sembrar` crea un coordinador, un programador, un instructor y cinco aprendices,
+y al terminar muestra sus correos y contraseñas en la terminal. Esas contraseñas son
+públicas (están en el código), así que solo sirven en tu computador:
 
-**Lector sembrado:** serial `LECTOR-001`, clave API `clave-simulador-demo`, ambiente 201, ficha 3311983.
+- `sembrar` se niega a correr con `NODE_ENV=production`.
+- Si una base con cuentas de demostración se va a usar con datos reales, primero dales
+  contraseñas nuevas: `npm run nueva-clave -- <correo>` (con Docker,
+  `docker compose exec backend npm run nueva-clave -- <correo>`).
+
+**Lector sembrado:** serial `LECTOR-001`, ambiente 201, ficha 3311983 (la clave API también
+la muestra `sembrar`).
 
 ## Guion de demostración (5 minutos)
 
@@ -231,7 +246,8 @@ Por eso conviene que el reloj del lector esté en hora. Si va adelantado más de
 - El canal de **tiempo real** (Socket.IO) exige el mismo token de la API: el rol sale del token, y solo el instructor titular o la coordinación pueden seguir una clase en vivo.
 - Pasadas **24 horas** del cierre de una sesión, solo la coordinación puede corregir la asistencia (RF-35).
 - **CORS** limitado a `URL_FRONTEND` y encabezados HTTP de seguridad en el backend y en nginx.
-- Con `NODE_ENV=production` el servidor **se niega a arrancar** si `JWT_SECRETO` o `CLAVE_CIFRADO` tienen los valores de ejemplo (son públicos: están en el repositorio).
+- Con `NODE_ENV=production` el servidor **se niega a arrancar** si `JWT_SECRETO` o `CLAVE_CIFRADO` tienen los valores de ejemplo (son públicos: están en el repositorio), y no se pueden crear las cuentas de demostración.
+- Las cuentas que se crean desde la consola (`crear-coordinador`, `nueva-clave`) reciben una contraseña **aleatoria** que se muestra una sola vez y queda en la auditoría.
 
 ## Pruebas automáticas
 
@@ -271,7 +287,7 @@ asistenciaapp/
 │   │   ├── modelos/             # Único lugar que toca la base de datos
 │   │   ├── middleware/          # autenticar, autenticarDispositivo, seguridad, manejadorErrores
 │   │   ├── utilidades/          # errores de negocio, formato (HTML de correos, CSV, fechas)
-│   │   └── scripts/sembrar.js   # npm run sembrar (esquema + migraciones + demo)
+│   │   └── scripts/             # migrar (esquema), sembrar (solo demo), crear-coordinador, nueva-clave
 │   └── tests/                   # npm test: unitarias/ e integracion/
 ├── frontend/src/
 │   ├── App.jsx                  # Rutas y permisos por rol

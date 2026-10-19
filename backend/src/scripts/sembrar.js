@@ -1,46 +1,37 @@
 /**
- * Siembra la base de datos: esquema + datos de demostracion.
+ * Datos de DEMOSTRACIÓN para un computador de desarrollo o la sustentación:
+ * esquema + migraciones + cuentas, ficha, ambiente y lector de prueba.
+ *
+ * Las contraseñas de estas cuentas son públicas (están en este archivo), así
+ * que nunca se ejecuta en producción: con NODE_ENV=production se niega. En un
+ * servidor real se usa `npm run migrar` y `npm run crear-coordinador`.
  * Uso: npm run sembrar
  */
-require("../config/entorno");
-const fs = require("fs");
-const path = require("path");
+const { produccion } = require("../config/entorno");
 const bcrypt = require("bcryptjs");
 const pool = require("../config/db");
-
-const CARPETA_DB = path.join(__dirname, "../../../db");
-const CARPETA_MIGRACIONES = path.join(CARPETA_DB, "migraciones");
-
-/**
- * Aplica el esquema y despues TODAS las migraciones (db/migraciones/*.sql, en
- * orden de numeracion: 001_, 002_...). Todas son idempotentes, asi que sirve
- * igual para una base nueva que para una existente: ejecutar `npm run sembrar`
- * la deja al dia.
- */
-async function aplicarEsquema() {
-  console.log("Creando esquema...");
-  await pool.query(fs.readFileSync(path.join(CARPETA_DB, "init.sql"), "utf8"));
-
-  const migraciones = fs.readdirSync(CARPETA_MIGRACIONES).filter((f) => f.endsWith(".sql")).sort();
-  for (const archivo of migraciones) {
-    console.log(`  migración: ${archivo}`);
-    await pool.query(fs.readFileSync(path.join(CARPETA_MIGRACIONES, archivo), "utf8"));
-  }
-}
+const { aplicarEsquema } = require("./migrar");
 
 async function main() {
+  if (produccion) {
+    console.error(
+      "NODE_ENV=production: no se crean datos de demostración (sus contraseñas son públicas).\n" +
+      "En un servidor real usa:\n" +
+      "  npm run migrar              esquema y migraciones\n" +
+      "  npm run crear-coordinador   primera cuenta, con contraseña aleatoria"
+    );
+    process.exitCode = 1;
+    return pool.end();
+  }
+
   await aplicarEsquema();
 
+  // Solo en una base vacía. Antes, sobre una base con datos, se volvía a crear
+  // la cuenta de programador con su contraseña pública: una puerta trasera que
+  // reaparecía cada vez que alguien aplicaba las migraciones.
   const hayUsuarios = await pool.query("SELECT 1 FROM usuario LIMIT 1");
   if (hayUsuarios.rows.length) {
-    const hashProgramador = await bcrypt.hash("Programador123*", 10);
-    await pool.query(
-      `INSERT INTO usuario (nombres, apellidos, documento, correo, contrasena_hash, rol)
-       VALUES ('Programador','Académico','1000000003','programador@sena.edu.co',$1,'programador')
-       ON CONFLICT (correo) DO NOTHING`,
-      [hashProgramador]
-    );
-    console.log("Ya existen datos. Se garantizó la cuenta de programador.");
+    console.log("La base ya tiene datos: no se sembró nada (el esquema y las migraciones sí quedaron al día).");
     return pool.end();
   }
 
@@ -120,7 +111,7 @@ async function main() {
   console.log(`
 Datos sembrados correctamente.
 
-CUENTAS DE DEMOSTRACIÓN
+CUENTAS DE DEMOSTRACIÓN (solo para este computador: sus contraseñas son públicas)
   Coordinador:  admin@sena.edu.co               / Admin123*
   Programador:    programador@sena.edu.co         / Programador123*
   Instructor:     cristian.buitrago@sena.edu.co   / Instructor123*
@@ -136,7 +127,4 @@ LECTOR SIMULADO
   await pool.end();
 }
 
-// `npm run sembrar` ejecuta todo; las pruebas solo reutilizan aplicarEsquema()
-if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-
-module.exports = { aplicarEsquema };
+main().catch((e) => { console.error(e); process.exit(1); });

@@ -42,12 +42,9 @@ http://localhost:8080
 
 ### Cuentas para entrar
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Coordinador | admin@sena.edu.co | Admin123* |
-| Instructor | cristian.buitrago@sena.edu.co | 
- |
-| Aprendiz | camilap.m1230@gmail.com | Aprendiz123* |
+Al terminar, el comando `sembrar` del paso 3 muestra en la terminal las cuentas de prueba
+(coordinador, instructor y aprendices) con sus contraseñas. Esas cuentas son solo para tu
+computador: no se usan en el servidor real.
 
 ## 5. Para apagarlo (cuando termines de probar)
 
