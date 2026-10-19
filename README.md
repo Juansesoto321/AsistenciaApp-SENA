@@ -195,17 +195,24 @@ el tema claro, oscuro o el de su equipo, y en el menú puede dejar solo los íco
 
 ## Cuentas de demostración
 
-`npm run sembrar` crea un coordinador, un programador, un instructor y cinco aprendices,
-y al terminar muestra sus correos y contraseñas en la terminal. Esas contraseñas son
-públicas (están en el código), así que solo sirven en tu computador:
+Las crea `npm run sembrar` (solo fuera de producción):
 
-- `sembrar` se niega a correr con `NODE_ENV=production`.
-- Si una base con cuentas de demostración se va a usar con datos reales, primero dales
-  contraseñas nuevas: `npm run nueva-clave -- <correo>` (con Docker,
-  `docker compose exec backend npm run nueva-clave -- <correo>`).
+| Rol | Correo | Contraseña |
+|---|---|---|
+| Coordinador | admin@sena.edu.co | Admin123* |
+| Programador | programador@sena.edu.co | Programador123* |
+| Instructor | cristian.buitrago@sena.edu.co | Instructor123* |
+| Aprendiz | camilap.m1230@gmail.com | Aprendiz123* |
+| Aprendiz | becerravillalobos08@gmail.com | Aprendiz123* |
+| Aprendiz | juansesoto321@gmail.com | Aprendiz123* |
+| Aprendiz | santibermudez0656@gmail.com | Aprendiz123* |
+| Aprendiz | hernandomendezlol@gmail.com | Aprendiz123* |
 
-**Lector sembrado:** serial `LECTOR-001`, ambiente 201, ficha 3311983 (la clave API también
-la muestra `sembrar`).
+**Lector sembrado:** serial `LECTOR-001`, clave API `clave-simulador-demo`, ambiente 201, ficha 3311983.
+
+En el servidor real no se siembran estas cuentas: la primera se crea con
+`npm run crear-coordinador`. Para darle una contraseña nueva a cualquier cuenta:
+`npm run nueva-clave -- <correo>`.
 
 ## Guion de demostración (5 minutos)
 
