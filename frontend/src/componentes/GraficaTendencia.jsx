@@ -22,7 +22,7 @@ function BarrasPocosDatos({ dias, total, minimo }) {
   const inicio = ANCHO / 2 - ((dias.length - 1) * paso) / 2;
   return (<>
     <svg className="grafica-tendencia" viewBox={`0 0 ${ANCHO} ${ALTO}`} role="img"
-      aria-label={`Asistencia de los ${dias.length} días con clases cerradas: ${dias.map((d) => `${diaMes(d.fecha)} ${d.porcentaje} %`).join(", ")}`}>
+      aria-label={`Asistencia ${dias.length === 1 ? "del único día" : `de los ${dias.length} días`} con clases cerradas: ${dias.map((d) => `${diaMes(d.fecha)} ${d.porcentaje} %`).join(", ")}`}>
       {[0, 50, 100].map((p) => (
         <g key={p}>
           <line className="rejilla" x1={MARGEN.izquierda} x2={ANCHO - MARGEN.derecha} y1={y(p)} y2={y(p)} />
