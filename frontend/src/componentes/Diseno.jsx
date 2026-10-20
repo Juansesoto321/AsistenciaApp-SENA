@@ -6,6 +6,7 @@ import { useAuth } from "../contexto/AuthContext.jsx";
 import Logo from "./Logo.jsx";
 import IconoSoporte from "./IconoSoporte.jsx";
 import Icono from "./Iconos.jsx";
+import Aviso from "./Aviso.jsx";
 import { useTema } from "../utilidades/tema";
 
 const SOPORTE = <IconoSoporte />;
@@ -77,6 +78,11 @@ const MENUS = {
   ],
 };
 
+// Nombre de cada página del menú (de cualquier rol), para los avisos
+const NOMBRE_PAGINA = Object.fromEntries(
+  Object.values(MENUS).flat().filter(Array.isArray).map(([ruta, , nombre]) => [ruta, nombre])
+);
+
 const CLAVE_COMPACTO = "asistenciaapp.menu-compacto";
 function leerCompacto() {
   try { return localStorage.getItem(CLAVE_COMPACTO) === "1"; } catch { return false; }
@@ -93,7 +99,8 @@ function Contador({ valor }) {
 export default function Diseno({ children }) {
   const { sesion, cerrarSesion } = useAuth();
   const navegar = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const [avisoPermiso, setAvisoPermiso] = useState(null);
   const usuario = sesion.usuario;
   const menu = MENUS[usuario.rol] || [];
   const [notifPendientes, setNotifPendientes] = useState(0);
@@ -139,6 +146,17 @@ export default function Diseno({ children }) {
     observador.observe(nav);
     return () => { nav.removeEventListener("scroll", revisar); observador.disconnect(); };
   }, [compacto]);
+
+  // Se llegó aquí porque la página pedida es de otro rol (App.jsx): decirlo, una vez
+  useEffect(() => {
+    if (!state?.sinPermiso) return;
+    const pagina = NOMBRE_PAGINA[state.sinPermiso];
+    setAvisoPermiso({
+      tipo: "error",
+      texto: `No tienes permiso para abrir ${pagina ? `«${pagina}»` : "esa página"}. Te llevamos al panel.`,
+    });
+    navegar(pathname, { replace: true, state: null }); // que no se repita al recargar
+  }, [state]);
 
   // En celular el menú se cierra al cambiar de página o con la tecla Escape
   useEffect(() => { setMenuAbierto(false); }, [pathname]);
@@ -212,6 +230,7 @@ export default function Diseno({ children }) {
         </div>
       </aside>
       <main className="contenido">{children}</main>
+      <Aviso mensaje={avisoPermiso} alCerrar={() => setAvisoPermiso(null)} />
     </div>
   );
 }

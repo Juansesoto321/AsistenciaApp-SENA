@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./contexto/AuthContext.jsx";
 import Diseno from "./componentes/Diseno.jsx";
 
@@ -35,8 +35,10 @@ const PERSONAL = [...COORDINACION, "instructor"];
 
 function Protegida({ children, roles }) {
   const { sesion } = useAuth();
+  const { pathname } = useLocation();
   if (!sesion) return <Navigate to="/" replace />;
-  if (roles && !roles.includes(sesion.usuario.rol)) return <Navigate to="/panel" replace />;
+  // Antes llevaba al panel sin decir nada: el panel muestra por qué (Diseno.jsx)
+  if (roles && !roles.includes(sesion.usuario.rol)) return <Navigate to="/panel" replace state={{ sinPermiso: pathname }} />;
   return <Diseno>{children}</Diseno>;
 }
 
