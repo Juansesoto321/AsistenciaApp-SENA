@@ -18,7 +18,7 @@ const LECTOR = { "x-serial": "LECTOR-PRUEBA", "x-clave-api": "clave-de-prueba" }
 before(async () => {
   e = await entorno.iniciar();
   if (!e) return;
-  for (const rol of ["coordinador", "instructor", "otro", "ana"]) {
+  for (const rol of ["coordinador", "instructor", "otro", "ana", "programador"]) {
     tokens[rol] = await e.iniciarSesionComo(`${rol}@prueba.co`);
   }
 });
@@ -702,4 +702,25 @@ prueba("una huella fuera del horario de la clase no cuenta, aunque la sesión es
   await e.pool.query("UPDATE horario SET hora_inicio = '00:00', hora_fin = '23:59' WHERE id_horario = $1", [ids[1]]);
   assert.equal((await enviarAttlog([linea])).datos, "OK");
   assert.equal(await contar(), 1);
+});
+
+// ---------- Permisos del programador ----------
+
+prueba("el programador consulta clases y justificaciones, pero no las inicia, cierra ni decide", async () => {
+  const token = tokens.programador;
+  assert.equal((await e.peticion("GET", "/api/sesiones/hoy", { token })).estado, 200);
+  assert.equal((await e.peticion("GET", `/api/sesiones/${idSesion}`, { token })).estado, 200);
+  const bandeja = await e.peticion("GET", "/api/justificaciones", { token });
+  assert.equal(bandeja.estado, 200);
+
+  const idJustificacion = bandeja.datos[0]?.id_justificacion ?? 1;
+  const decidir = await e.peticion("PATCH", `/api/justificaciones/${idJustificacion}`, { token, cuerpo: { estado: "aprobada" } });
+  assert.equal(decidir.estado, 403);
+  assert.equal((await e.peticion("POST", "/api/sesiones/iniciar", { token, cuerpo: { id_horario: e.ids.horario } })).estado, 403);
+  assert.equal((await e.peticion("POST", `/api/sesiones/${idSesion}/cerrar`, { token })).estado, 403);
+  const manual = await e.peticion("POST", `/api/sesiones/${idSesion}/asistencia-manual`, {
+    token, cuerpo: { id_aprendiz: e.ids.aprendiz, estado: "presente", motivo: "Prueba" },
+  });
+  assert.equal(manual.estado, 403);
+  assert.equal((await e.peticion("DELETE", `/api/sesiones/${idSesion}`, { token })).estado, 403);
 });

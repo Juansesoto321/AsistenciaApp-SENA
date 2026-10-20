@@ -58,7 +58,8 @@ const MENUS = {
     ...CUENTA,
   ],
   // Mismas opciones del coordinador salvo "Usuarios": el programador apoya la
-  // planeacion academica pero no administra cuentas.
+  // planeacion academica pero no administra cuentas. Las clases y las
+  // justificaciones las consulta, sin iniciarlas ni decidirlas.
   programador: [
     ["/panel", ico("panel"), "Panel"],
     ...DIA_A_DIA,
@@ -110,7 +111,7 @@ export default function Diseno({ children }) {
   const [hayMas, setHayMas] = useState(false); // quedan opciones del menú más abajo
   const menuRef = useRef(null);
   const [, cambiarTema, temaActual] = useTema();
-  const revisaJustificaciones = usuario.rol !== "aprendiz";
+  const revisaJustificaciones = ["instructor", "coordinador"].includes(usuario.rol); // el programador solo las consulta
 
   function alternarCompacto() {
     const nuevo = !compacto;

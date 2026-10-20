@@ -21,6 +21,7 @@ export default function SesionEnVivo() {
   const { confirmar } = useConfirmar();
   const { sesion: sesionUsuario } = useAuth();
   const rol = sesionUsuario.usuario.rol;
+  const soloConsulta = rol === "programador"; // ve la clase en vivo, pero no la cierra ni corrige
 
   const [sesion, setSesion] = useState(null);
   const [alerta, setAlerta] = useState(null);
@@ -164,7 +165,7 @@ export default function SesionEnVivo() {
 
   const marcados = sesion.aprendices.filter((a) => a.estado).length;
   // Pasadas 24 h del cierre solo la coordinación corrige (el backend lo vuelve a validar)
-  const soloCoordinacion = sesion.estado === "cerrada" && !["coordinador", "programador"].includes(rol)
+  const soloCoordinacion = sesion.estado === "cerrada" && rol !== "coordinador"
     && Date.now() - new Date(sesion.hora_cierre) > 24 * 3600 * 1000;
   // Clase iniciada antes de tiempo: las huellas aún no cuentan
   const desdeCuandoMarca = new Date(sesion.fecha);
@@ -188,14 +189,14 @@ export default function SesionEnVivo() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {sesion.estado === "activa" ? (
+          {sesion.estado === "activa" && !soloConsulta && (
             <button className="boton peligro" onClick={cerrar} disabled={cerrando}>
               {cerrando ? "Cerrando…" : "Cerrar sesión de clase"}
             </button>
-          ) : (
-            <span className="insignia cerrada">Sesión cerrada</span>
           )}
-          {["coordinador", "programador"].includes(rol) && (
+          {sesion.estado === "activa" && soloConsulta && <span className="insignia activa">En curso</span>}
+          {sesion.estado !== "activa" && <span className="insignia cerrada">Sesión cerrada</span>}
+          {rol === "coordinador" && (
             <button className="boton mini suave" onClick={eliminar} title="Borra la sesión y su asistencia permanentemente">
               Eliminar sesión
             </button>
@@ -248,14 +249,14 @@ export default function SesionEnVivo() {
               </td>
               <td data-etiqueta="Método">{a.metodo ? <span className={`insignia ${a.metodo}`}>{a.metodo}</span> : "—"}</td>
               <td>
-                <button
+                {!soloConsulta && <button
                   className="boton mini suave"
                   disabled={cerrando || soloCoordinacion}
                   title={soloCoordinacion ? "Pasadas 24 horas del cierre, solo la coordinación puede corregir" : undefined}
                   onClick={() => abrirRegistro(a)}
                 >
                   {sesion.estado === "cerrada" ? "Corregir" : "Registro manual"}
-                </button>
+                </button>}
               </td>
             </tr>
           ))}

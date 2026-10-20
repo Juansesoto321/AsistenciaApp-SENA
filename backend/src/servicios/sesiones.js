@@ -14,7 +14,7 @@ const { escaparHtml, fechaLarga, textoPlazo } = require("../utilidades/formato")
 
 const ESTADOS_VALIDOS = ["presente", "tardanza", "ausente", "justificada"];
 // Regla RF-35: pasadas 24 h del cierre, solo la coordinación corrige asistencia
-const ROLES_SIN_LIMITE_DE_TIEMPO = ["coordinador", "programador"];
+const ROLES_SIN_LIMITE_DE_TIEMPO = ["coordinador"];
 
 function verificarTitular(usuario, idInstructor, accion) {
   if (usuario.rol === "instructor" && idInstructor !== usuario.id)

@@ -5,11 +5,13 @@ import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 import AccionSesion from "../../componentes/AccionSesion.jsx";
 import { horaCorta } from "../../utilidades/formato";
+import { useAuth } from "../../contexto/AuthContext.jsx";
 
 export default function Sesiones() {
   const [horarios, setHorarios] = useState(null);
   const [mensaje, setMensaje] = useState(null);
   const alError = (texto) => setMensaje({ tipo: "error", texto });
+  const soloConsulta = useAuth().sesion.usuario.rol === "programador";
 
   useEffect(() => {
     api("/sesiones/hoy")
@@ -22,7 +24,11 @@ export default function Sesiones() {
       <div className="cabecera-pagina">
         <div>
           <h1>Sesiones de hoy</h1>
-          <p>Inicia la sesión para activar el lector del ambiente y supervisar la asistencia en tiempo real.</p>
+          <p>
+            {soloConsulta
+              ? "Consulta las clases de hoy y su asistencia en tiempo real. Las inicia y las cierra el instructor o la coordinación."
+              : "Inicia la sesión para activar el lector del ambiente y supervisar la asistencia en tiempo real."}
+          </p>
         </div>
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />

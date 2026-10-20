@@ -9,13 +9,16 @@ const controlador = require("../controladores/sesiones");
 const router = express.Router();
 router.use(autenticar);
 
+// El programador consulta las clases; iniciarlas, cerrarlas y tocar la
+// asistencia es del instructor y la coordinación
 const SUPERVISION = ["instructor", "coordinador", "programador"];
+const GESTION = ["instructor", "coordinador"];
 
 router.get("/hoy", autorizar(...SUPERVISION), controlador.horariosDeHoy);
-router.post("/iniciar", autorizar(...SUPERVISION), controlador.iniciarSesion);
+router.post("/iniciar", autorizar(...GESTION), controlador.iniciarSesion);
 router.get("/:id", autorizar(...SUPERVISION), controlador.verDetalle);
-router.post("/:id/asistencia-manual", autorizar(...SUPERVISION), controlador.registrarAsistenciaManual);
-router.post("/:id/cerrar", autorizar(...SUPERVISION), controlador.cerrarSesion);
-router.delete("/:id", autorizar("coordinador", "programador"), controlador.eliminarSesion);
+router.post("/:id/asistencia-manual", autorizar(...GESTION), controlador.registrarAsistenciaManual);
+router.post("/:id/cerrar", autorizar(...GESTION), controlador.cerrarSesion);
+router.delete("/:id", autorizar("coordinador"), controlador.eliminarSesion);
 
 module.exports = router;

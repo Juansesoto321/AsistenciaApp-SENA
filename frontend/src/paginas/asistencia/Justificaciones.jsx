@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
+import { useAuth } from "../../contexto/AuthContext.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
@@ -43,6 +44,7 @@ async function enlaceDeSoporte(dataUri) {
 }
 
 export default function Justificaciones() {
+  const soloConsulta = useAuth().sesion.usuario.rol === "programador"; // decide el instructor o la coordinación
   const [lista, setLista] = useState(null);
   const [filtro, setFiltro] = useState("enviada");
   const [detalle, setDetalle] = useState(null);
@@ -132,8 +134,10 @@ export default function Justificaciones() {
         <div>
           <h1>Justificaciones de inasistencia</h1>
           <p>
-            Los aprendices tienen {textoPlazo(plazo)} para cargar su excusa con el enlace que les llega al correo.
-            Revisa el soporte y apruébala o recházala: el aprendiz recibe la respuesta por correo.
+            Los aprendices tienen {textoPlazo(plazo)} para cargar su excusa con el enlace que les llega al correo.{" "}
+            {soloConsulta
+              ? "Puedes consultarlas; las aprueba o rechaza el instructor o la coordinación."
+              : "Revisa el soporte y apruébala o recházala: el aprendiz recibe la respuesta por correo."}
           </p>
         </div>
       </div>
@@ -180,8 +184,8 @@ export default function Justificaciones() {
                 <td data-etiqueta="Revisó">{j.revisada_por || "—"}</td>
                 <td>
                   {["pendiente", "vencida"].includes(j.estado) ? null : (
-                    <button className={`boton mini ${j.estado === "enviada" ? "" : "suave"}`} onClick={() => abrir(j)}>
-                      {j.estado === "enviada" ? "Revisar" : "Ver"}
+                    <button className={`boton mini ${j.estado === "enviada" && !soloConsulta ? "" : "suave"}`} onClick={() => abrir(j)}>
+                      {j.estado === "enviada" && !soloConsulta ? "Revisar" : "Ver"}
                     </button>
                   )}
                 </td>
@@ -240,7 +244,16 @@ export default function Justificaciones() {
               </div>
             )}
 
-            {detalle.estado === "enviada" && !rechazando && (
+            {detalle.estado === "enviada" && soloConsulta && (
+              <>
+                <p className="nota-estado">Espera la revisión del instructor o de la coordinación.</p>
+                <div className="acciones-modal" style={{ marginTop: 18 }}>
+                  <button className="boton suave" onClick={cerrar}>Cerrar</button>
+                </div>
+              </>
+            )}
+
+            {detalle.estado === "enviada" && !soloConsulta && !rechazando && (
               <div className="acciones-modal" style={{ marginTop: 18 }}>
                 <button className="boton suave" disabled={procesando} onClick={cerrar}>Cerrar</button>
                 <button className="boton peligro" disabled={procesando} onClick={() => { setRechazando(true); setObservacion(""); }}>
@@ -252,7 +265,7 @@ export default function Justificaciones() {
               </div>
             )}
 
-            {detalle.estado === "enviada" && rechazando && (
+            {detalle.estado === "enviada" && !soloConsulta && rechazando && (
               <>
                 <label style={{ marginTop: 14 }} htmlFor="motivo-rechazo">
                   Explica por qué se rechaza
