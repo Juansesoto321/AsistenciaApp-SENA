@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
 import { useAuth } from "../../contexto/AuthContext.jsx";
@@ -46,7 +47,12 @@ async function enlaceDeSoporte(dataUri) {
 export default function Justificaciones() {
   const soloConsulta = useAuth().sesion.usuario.rol === "programador"; // decide el instructor o la coordinación
   const [lista, setLista] = useState(null);
-  const [filtro, setFiltro] = useState("enviada");
+  const [parametros] = useSearchParams();
+  // El panel enlaza directo a una pestaña (p. ej. ?estado=vencida)
+  const [filtro, setFiltro] = useState(() => {
+    const pedido = parametros.get("estado");
+    return FILTROS.some(([valor]) => valor === pedido) ? pedido : "enviada";
+  });
   const [detalle, setDetalle] = useState(null);
   const [soporte, setSoporte] = useState(null); // { url, esImagen, esPdf, nombre } | "cargando" | "error"
   const [mensaje, setMensaje] = useState(null);

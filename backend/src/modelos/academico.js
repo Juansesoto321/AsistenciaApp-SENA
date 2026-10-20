@@ -35,6 +35,7 @@ async function listarFichas(usuario) {
     `SELECT f.*, p.nombre AS periodo,
             u.nombres || ' ' || u.apellidos AS instructor,
             (SELECT COUNT(*) FROM matricula m WHERE m.id_ficha = f.id_ficha AND m.estado = 'activa') AS total_aprendices,
+            (SELECT COUNT(*)::int FROM horario h WHERE h.id_ficha = f.id_ficha) AS total_clases,
             -- Porcentaje de asistencia de la ficha en sus clases cerradas; NULL si aún no hay
             (SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE a.estado IN ('presente','tardanza','justificada')) / NULLIF(COUNT(*), 0))
                FROM asistencia a
@@ -114,6 +115,21 @@ async function listarHorarios(usuario, filtros = {}) {
 }
 
 /**
+ * Fechas de una clase aún sin guardar: la misma regla de la vista
+ * horario_vigencia (trimestre o periodo, recortado por el rango de la serie).
+ * Recibe los nombres de los parámetros: trimestre, ficha, periodo, desde, hasta.
+ */
+const VIGENCIA_NUEVA = (trimestre, ficha, periodo, desde, hasta) => `
+       SELECT GREATEST(CASE WHEN ${trimestre}::int IS NULL THEN p.fecha_inicio
+                            ELSE (f.fecha_inicio + make_interval(months => (${trimestre}::int - 1) * 3))::date END,
+                       ${desde}::date) AS desde,
+              LEAST(CASE WHEN ${trimestre}::int IS NULL THEN p.fecha_fin
+                         ELSE (f.fecha_inicio + make_interval(months => ${trimestre}::int * 3))::date - 1 END,
+                    ${hasta}::date) AS hasta
+       FROM ficha f, periodo p
+       WHERE f.id_ficha = ${ficha} AND p.id_periodo = ${periodo}`;
+
+/**
  * Busca un horario que choque con el nuevo: mismo día, horas que se cruzan,
  * fechas de vigencia que se traslapan (dos trimestres distintos no chocan) y
  * el mismo instructor, el mismo ambiente o la misma ficha.
@@ -122,14 +138,7 @@ async function listarHorarios(usuario, filtros = {}) {
  */
 async function buscarConflictoHorario(datos, idExcluir = null, cliente = pool) {
   const resultado = await cliente.query(
-    `WITH nuevo AS (
-       SELECT CASE WHEN $7::int IS NULL THEN p.fecha_inicio
-                   ELSE (f.fecha_inicio + make_interval(months => ($7::int - 1) * 3))::date END AS desde,
-              CASE WHEN $7::int IS NULL THEN p.fecha_fin
-                   ELSE (f.fecha_inicio + make_interval(months => $7::int * 3))::date - 1 END AS hasta
-       FROM ficha f, periodo p
-       WHERE f.id_ficha = $8 AND p.id_periodo = $9
-     )
+    `WITH nuevo AS (${VIGENCIA_NUEVA("$7", "$8", "$9", "$10", "$11")})
      SELECT h.id_horario, fh.numero_ficha,
             CASE WHEN h.id_instructor = $1 THEN 'instructor'
                  WHEN h.id_ambiente = $2 THEN 'ambiente'
@@ -145,9 +154,18 @@ async function buscarConflictoHorario(datos, idExcluir = null, cliente = pool) {
        AND ($6::int IS NULL OR h.id_horario <> $6)
      LIMIT 1`,
     [datos.id_instructor, datos.id_ambiente, datos.dia_semana, datos.hora_inicio, datos.hora_fin, idExcluir,
-     datos.trimestre ?? null, datos.id_ficha, datos.id_periodo]
+     datos.trimestre ?? null, datos.id_ficha, datos.id_periodo, datos.fecha_desde ?? null, datos.fecha_hasta ?? null]
   );
   return resultado.rows[0];
+}
+
+/** Entre qué fechas se repetiría una clase aún sin guardar ({ desde, hasta }). */
+async function calcularVigencia(datos, cliente = pool) {
+  const r = await cliente.query(
+    VIGENCIA_NUEVA("$1", "$2", "$3", "$4", "$5"),
+    [datos.trimestre ?? null, datos.id_ficha, datos.id_periodo, datos.fecha_desde ?? null, datos.fecha_hasta ?? null]
+  );
+  return r.rows[0] || null;
 }
 
 async function buscarHorario(id) {
@@ -177,11 +195,13 @@ async function editarHorario(id, datos, cliente = pool) {
   const resultado = await cliente.query(
     `UPDATE horario SET id_ficha = $1, id_ambiente = $2, id_instructor = $3,
             id_periodo = $4, dia_semana = $5, hora_inicio = $6, hora_fin = $7,
-            id_rap = $8, id_tematica = $9, id_competencia = $10, trimestre = $11
-     WHERE id_horario = $12 RETURNING *`,
+            id_rap = $8, id_tematica = $9, id_competencia = $10, trimestre = $11,
+            fecha_desde = $12, fecha_hasta = $13, excluir_festivos = $14
+     WHERE id_horario = $15 RETURNING *`,
     [datos.id_ficha, datos.id_ambiente, datos.id_instructor, datos.id_periodo,
      datos.dia_semana, datos.hora_inicio, datos.hora_fin,
-     datos.id_rap || null, datos.id_tematica || null, datos.id_competencia, datos.trimestre ?? null, id]
+     datos.id_rap || null, datos.id_tematica || null, datos.id_competencia, datos.trimestre ?? null,
+     datos.fecha_desde ?? null, datos.fecha_hasta ?? null, datos.excluir_festivos !== false, id]
   );
   return resultado.rows[0] || null;
 }
@@ -199,11 +219,13 @@ async function bloquearHorarios(cliente) {
 async function crearHorario(datos, cliente = pool) {
   const resultado = await cliente.query(
     `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana,
-                          hora_inicio, hora_fin, id_rap, id_tematica, id_competencia, trimestre)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+                          hora_inicio, hora_fin, id_rap, id_tematica, id_competencia, trimestre,
+                          fecha_desde, fecha_hasta, excluir_festivos)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
     [datos.id_ficha, datos.id_ambiente, datos.id_instructor, datos.id_periodo, datos.dia_semana,
      datos.hora_inicio, datos.hora_fin, datos.id_rap || null, datos.id_tematica || null,
-     datos.id_competencia, datos.trimestre ?? null]
+     datos.id_competencia, datos.trimestre ?? null,
+     datos.fecha_desde ?? null, datos.fecha_hasta ?? null, datos.excluir_festivos !== false]
   );
   return resultado.rows[0];
 }
@@ -308,6 +330,7 @@ module.exports = {
   crearFicha,
   listarHorarios,
   buscarConflictoHorario,
+  calcularVigencia,
   bloquearHorarios,
   buscarHorario,
   buscarFichaParaHorario,

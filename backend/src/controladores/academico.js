@@ -1,4 +1,5 @@
 const servicio = require("../servicios/academico");
+const { festivosDelAnio } = require("../utilidades/festivos");
 const { traducirCodigos } = require("../middleware/manejadorErrores");
 
 const FECHAS_INVALIDAS = { 23514: "La fecha fin debe ser posterior a la fecha inicio" };
@@ -140,7 +141,15 @@ async function listarDispositivos(_req, res, next) {
   }
 }
 
+// Festivos de Colombia del año pedido, del anterior y del siguiente (calendario)
+function listarFestivos(req, res) {
+  const pedido = Number(req.query.anio);
+  const anio = Number.isInteger(pedido) && pedido >= 2000 && pedido <= 2100 ? pedido : new Date().getFullYear();
+  res.json([anio - 1, anio, anio + 1].flatMap(festivosDelAnio));
+}
+
 module.exports = {
+  listarFestivos,
   listarPeriodos,
   listarInstructores,
   crearPeriodo,

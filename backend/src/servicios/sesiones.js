@@ -11,6 +11,7 @@ const { auditar } = require("./auditoria");
 const { emitirASesion, emitirNotificacionNueva } = require("./tiempoReal");
 const { error } = require("../utilidades/errores");
 const { escaparHtml, fechaLarga, textoPlazo } = require("../utilidades/formato");
+const { festivoEn } = require("../utilidades/festivos");
 
 const ESTADOS_VALIDOS = ["presente", "tardanza", "ausente", "justificada"];
 // Regla RF-35: pasadas 24 h del cierre, solo la coordinación corrige asistencia
@@ -58,7 +59,10 @@ async function enviarAvisosDeInasistencia(avisos) {
 }
 
 async function horariosDeHoy(usuario) {
-  return modelo.horariosDeHoy(usuario);
+  const clases = await modelo.horariosDeHoy(usuario);
+  if (!festivoEn(new Date())) return clases;
+  // En festivo solo quedan las clases que se dictan igual, o las ya iniciadas
+  return clases.filter((c) => c.excluir_festivos === false || c.id_sesion);
 }
 
 // CU-12: iniciar (o reanudar) la sesion de hoy
@@ -69,6 +73,12 @@ async function iniciarSesion(idHorario, usuario) {
   // Regla CU-12: solo el instructor titular (o un coordinador)
   verificarTitular(usuario, h.id_instructor, "iniciar esta sesión");
   if (!h.es_hoy) throw error("Este horario no corresponde al día de hoy", "validacion");
+  const festivo = festivoEn(new Date());
+  if (festivo && h.excluir_festivos !== false)
+    throw error(
+      `Hoy es festivo (${festivo}) y esta clase no se dicta en festivos. Si sí hay clase, edita el horario y desmarca «No dictar en festivos»`,
+      "validacion"
+    );
   if (h.estado_ficha !== "activa") throw error("La ficha de este horario ya finalizó", "validacion");
   const cruzada = await modelo.buscarSesionCruzadaHoy(idHorario);
   if (cruzada)

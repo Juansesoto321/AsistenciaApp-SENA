@@ -8,7 +8,7 @@ async function horariosDeHoy(usuario) {
   const filtro = usuario.rol === "instructor" ? "AND h.id_instructor = $1" : "";
   const valores = usuario.rol === "instructor" ? [usuario.id] : [];
   const r = await pool.query(
-    `SELECT h.id_horario, h.hora_inicio, h.hora_fin,
+    `SELECT h.id_horario, h.hora_inicio, h.hora_fin, h.excluir_festivos,
             f.numero_ficha, f.programa,
             a.numero_ambiente,
             u.nombres || ' ' || u.apellidos AS instructor,

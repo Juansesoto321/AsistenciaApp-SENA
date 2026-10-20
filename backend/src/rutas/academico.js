@@ -41,6 +41,7 @@ router.get("/dispositivos", autorizar(...PLANEACION), controlador.listarDisposit
 
 // ---------- HORARIOS (CU-08) ----------
 router.get("/horarios", controlador.listarHorarios);
+router.get("/festivos", controlador.listarFestivos);
 router.post("/horarios", autorizar(...PLANEACION), controlador.crearHorario);
 router.put("/horarios/:id", autorizar(...PLANEACION), controlador.editarHorario);
 router.delete("/horarios/:id", autorizar(...PLANEACION), controlador.eliminarHorario);

@@ -724,3 +724,84 @@ prueba("el programador consulta clases y justificaciones, pero no las inicia, ci
   assert.equal(manual.estado, 403);
   assert.equal((await e.peticion("DELETE", `/api/sesiones/${idSesion}`, { token })).estado, 403);
 });
+
+// ---------- Rango de la serie, festivos, panel y lectores (revisión, punto 13) ----------
+
+const enDias = (n) => {
+  const f = new Date();
+  f.setDate(f.getDate() + n);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+};
+
+prueba("una clase puede repetirse solo entre dos fechas, y dos series que no se tocan no chocan", async () => {
+  const serie = await nuevoHorario({ dia_semana: pasado(), hora_inicio: "16:00", hora_fin: "17:00", fecha_desde: enDias(1), fecha_hasta: enDias(20) });
+  assert.equal(serie.estado, 201);
+  assert.equal(serie.datos.excluir_festivos, true); // por defecto no se dicta en festivos
+  const lista = await e.peticion("GET", `/api/horarios?id_ficha=${e.ids.ficha}`, { token: tokens.coordinador });
+  const creada = lista.datos.find((h) => h.id_horario === serie.datos.id_horario);
+  assert.equal(new Date(creada.vigente_desde).getTime(), new Date(`${enDias(1)}T00:00:00`).getTime());
+  assert.equal(new Date(creada.vigente_hasta).getTime(), new Date(`${enDias(20)}T00:00:00`).getTime());
+
+  // Otra ficha, mismo ambiente e instructor, a la misma hora pero después de la serie: no choca
+  const otra = await e.pool.query(
+    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor)
+     VALUES ('777777', 'Rango', 'tarde', CURRENT_DATE - 30, CURRENT_DATE + 30, $1, $2) RETURNING id_ficha`,
+    [e.ids.periodo, e.ids.instructor]
+  );
+  const despues = { id_ficha: otra.rows[0].id_ficha, dia_semana: pasado(), hora_inicio: "16:00", hora_fin: "17:00" };
+  assert.equal((await nuevoHorario({ ...despues, fecha_desde: enDias(21), fecha_hasta: enDias(40) })).estado, 201);
+  const encima = await nuevoHorario({ ...despues, hora_inicio: "16:30", hora_fin: "17:30", fecha_desde: enDias(10), fecha_hasta: enDias(12) });
+  assert.equal(encima.estado, 400);
+
+  // Fechas al revés o fuera del trimestre se rechazan con un mensaje claro
+  const alReves = await nuevoHorario({ dia_semana: pasado(), hora_inicio: "18:00", hora_fin: "19:00", fecha_desde: enDias(9), fecha_hasta: enDias(3) });
+  assert.equal(alReves.estado, 400);
+  assert.match(alReves.datos.mensaje, /posterior/);
+  const fuera = await nuevoHorario({ dia_semana: pasado(), hora_inicio: "18:00", hora_fin: "19:00", fecha_desde: enDias(200) });
+  assert.equal(fuera.estado, 400);
+  assert.match(fuera.datos.mensaje, /fuera del trimestre/);
+});
+
+prueba("los festivos de Colombia salen calculados para el calendario", async () => {
+  const r = await e.peticion("GET", "/api/festivos?anio=2026", { token: tokens.ana });
+  assert.equal(r.estado, 200);
+  assert.ok(r.datos.some((f) => f.fecha === "2026-10-12" && f.nombre === "Día de la Raza"));
+  assert.ok(r.datos.some((f) => f.fecha.startsWith("2027-")) && r.datos.some((f) => f.fecha.startsWith("2025-")));
+});
+
+prueba("el panel cuenta huellas sin registrar y justificaciones vencidas", async () => {
+  const contar = async () => (await e.peticion("GET", "/api/reportes/estadisticas", { token: tokens.coordinador })).datos;
+  const antes = await contar();
+
+  // Dora entra a una ficha sin huella en la app ni marcas del lector, y deja vencer una justificación
+  const ficha = await e.pool.query("SELECT id_ficha FROM ficha WHERE numero_ficha = '777777'");
+  await e.pool.query("INSERT INTO matricula (id_aprendiz, id_ficha) VALUES ($1, $2)", [e.ids.bloqueable, ficha.rows[0].id_ficha]);
+  const ausencia = await e.pool.query(
+    "INSERT INTO asistencia (id_sesion, id_aprendiz, estado, metodo) VALUES ($1, $2, 'ausente', 'sistema') RETURNING id_asistencia",
+    [idSesion, e.ids.bloqueable]
+  );
+  await e.pool.query(
+    "INSERT INTO justificacion (id_asistencia, token, expira_en) VALUES ($1, 'token-vencido-panel', NOW() - INTERVAL '1 hour')",
+    [ausencia.rows[0].id_asistencia]
+  );
+
+  const despues = await contar();
+  assert.equal(despues.huellas_sin_registrar, antes.huellas_sin_registrar + 1);
+  assert.equal(despues.justificaciones_vencidas, antes.justificaciones_vencidas + 1);
+});
+
+prueba("un lector que pasa 3 minutos sin señal avisa una sola vez a la coordinación", async () => {
+  const dispositivo = require("../../src/modelos/dispositivo");
+  const { avisarLectoresCaidos } = require("../../src/servicios/tareasProgramadas");
+  await e.pool.query(
+    "UPDATE dispositivo SET estado = 'en_linea', ultimo_heartbeat = NOW() - INTERVAL '4 minutes' WHERE serial = 'LECTOR-PRUEBA'"
+  );
+  await avisarLectoresCaidos(await dispositivo.marcarFueraDeLineaSinHeartbeat());
+  await avisarLectoresCaidos(await dispositivo.marcarFueraDeLineaSinHeartbeat()); // el minuto siguiente ya no avisa
+
+  const avisos = await e.pool.query(
+    "SELECT mensaje FROM notificacion WHERE id_usuario = $1 AND titulo = 'Lector sin señal'", [e.ids.coordinador]
+  );
+  assert.equal(avisos.rows.length, 1);
+  assert.match(avisos.rows[0].mensaje, /LECTOR-PRUEBA del ambiente P-1/);
+});
