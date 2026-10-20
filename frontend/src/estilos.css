@@ -377,8 +377,8 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .tarjeta-metrica .nombre { color: var(--tinta-suave); font-size: 13px; font-weight: 600; }
 
 table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco); border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
-.tabla th { text-align: left; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave); background: var(--violeta-50); padding: 11px 14px; }
-.tabla td { padding: 11px 14px; border-top: 1px solid var(--borde); font-size: 14.5px; }
+.tabla th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--tinta-suave); background: var(--violeta-50); padding: 10px 12px; }
+.tabla td { padding: 10px 12px; border-top: 1px solid var(--borde); font-size: 14.5px; }
 .tabla tr:hover td { background: var(--fila-hover); }
 .tabla td .boton { white-space: nowrap; }
 /* Encabezados que ordenan la tabla al tocarlos */
@@ -392,11 +392,24 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .paginacion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 13.5px; color: var(--tinta-suave); }
 .paginacion div { display: flex; align-items: center; gap: 10px; }
 .paginacion b { color: var(--tinta); font-variant-numeric: tabular-nums; }
-.tabla-desplazable .tabla td:first-child { min-width: 170px; } /* nombres legibles, sin partirse en 4 líneas */
+/* Anchos: los nombres no se parten en 4 líneas, los correos se cortan donde haga falta
+   y lo secundario se esconde en pantallas medianas, para que en ~880 px de ancho útil
+   se vea todo sin desplazar la tabla de lado. */
+.tabla .col-nombre { min-width: 150px; }
+.tabla .col-correo { max-width: 190px; overflow-wrap: anywhere; }
+@media (max-width: 1200px) { .tabla .col-secundaria { display: none; } }
+/* Columna de acciones fija a la derecha: se ve aunque la tabla se desplace de lado */
+.tabla .col-acciones {
+  position: sticky; right: 0; z-index: 1; white-space: nowrap;
+  background: var(--blanco); box-shadow: inset 1px 0 0 var(--borde);
+}
+.tabla th.col-acciones { background: var(--violeta-50); }
+.tabla tr:hover td.col-acciones { background: var(--fila-hover); }
+.acciones-celda { display: flex; gap: 6px; }
 /* Tablas anchas: se desplazan de lado dentro de su recuadro en vez de salirse
    de la página (antes se cortaba la columna de acciones en pantallas medianas) */
 .tabla-desplazable { overflow-x: auto; border-radius: var(--radio); box-shadow: var(--sombra); background: var(--blanco); }
-.tabla-desplazable > table.tabla { box-shadow: none; border-radius: 0; }
+.tabla-desplazable > table.tabla { box-shadow: none; border-radius: 0; overflow: visible; } /* con overflow hidden la columna fija no se pega */
 
 /* ---- Insignias de estado ---- */
 .insignia { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
@@ -620,7 +633,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .dos-columnas.iguales { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 860px) { .dos-columnas.iguales { grid-template-columns: 1fr; } }
 .porcentaje-celda { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
-.mini-barra { width: 70px; height: 6px; border-radius: 99px; background: var(--borde); overflow: hidden; display: inline-block; }
+.mini-barra { width: 56px; height: 6px; border-radius: 99px; background: var(--borde); overflow: hidden; display: inline-block; }
 .mini-barra span { display: block; height: 100%; border-radius: 99px; }
 .ranking { list-style: none; padding: 0; margin: 8px 0 0; counter-reset: puesto; }
 .ranking li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--borde); counter-increment: puesto; }

@@ -74,20 +74,20 @@ export default function Fichas() {
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr>{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("programa", "Programa")}{tabla.encabezado("jornada", "Jornada")}{tabla.encabezado("instructor", "Instructor")}{tabla.encabezado("total_aprendices", "Aprendices")}{tabla.encabezado("porcentaje_asistencia", "Asistencia")}{tabla.encabezado("estado", "Estado")}<th></th></tr></thead>
+        <thead><tr>{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("programa", "Programa")}{tabla.encabezado("jornada", "Jornada", { className: "col-secundaria" })}{tabla.encabezado("instructor", "Instructor")}{tabla.encabezado("total_aprendices", "Aprendices")}{tabla.encabezado("porcentaje_asistencia", "Asistencia")}{tabla.encabezado("estado", "Estado")}<th className="col-acciones"><span className="sr-only">Acciones</span></th></tr></thead>
         <tbody>
           {tabla.visibles.map((x) => (
             <tr key={x.id_ficha}>
               <td><b>{x.numero_ficha}</b></td>
               <td>{x.programa}</td>
-              <td style={{ textTransform: "capitalize" }}>{x.jornada}</td>
+              <td className="col-secundaria" style={{ textTransform: "capitalize" }}>{x.jornada}</td>
               <td>{x.instructor}</td>
               <td>{x.total_aprendices}</td>
               <td>{x.porcentaje_asistencia === null
                 ? <span className="texto-suave">Sin clases</span>
                 : <b style={{ color: colorAsistencia(x.porcentaje_asistencia) }}>{x.porcentaje_asistencia} %</b>}</td>
               <td><span className={`insignia ${x.estado}`}>{x.estado}</span></td>
-              <td><Link className="boton mini suave" to={`/fichas/${x.id_ficha}`}>Ver detalles →</Link></td>
+              <td className="col-acciones"><Link className="boton mini suave" to={`/fichas/${x.id_ficha}`}>Ver detalles →</Link></td>
             </tr>
           ))}
           {fichas === null && <tr><td colSpan={8}><Cargando /></td></tr>}

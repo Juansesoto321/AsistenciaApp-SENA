@@ -118,23 +118,23 @@ export default function DetalleFicha() {
       </p>
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr><th>Aprendiz</th><th>Documento</th><th>Correo</th><th>Huella</th><th>Matrícula</th><th>Acciones</th></tr></thead>
+        <thead><tr><th className="col-nombre">Aprendiz</th><th>Documento</th><th className="col-correo">Correo</th><th>Huella</th><th>Matrícula</th><th className="col-acciones">Acciones</th></tr></thead>
         <tbody>
           {(matriculas || []).map((m) => (
             <tr key={m.id_matricula}>
-              <td>{m.nombres} {m.apellidos}</td>
+              <td className="col-nombre">{m.nombres} {m.apellidos}</td>
               <td>{m.documento}</td>
-              <td>{m.correo}</td>
+              <td className="col-correo">{m.correo}</td>
               <td>{m.tiene_huella
                 ? <span className="insignia presente"><IconoHuella /> Registrada</span>
                 : <span className="insignia pendiente">Sin registrar</span>}</td>
               <td><span className={`insignia ${m.estado}`}>{m.estado}</span></td>
-              <td style={{ display: "flex", gap: 6 }}>
+              <td className="col-acciones"><div className="acciones-celda">
                 {!m.tiene_huella && m.estado === "activa" &&
                   <button className="boton mini" onClick={() => abrirEnrolar(m)}><IconoHuella /> Enrolar huella</button>}
                 {m.tiene_huella && ["coordinador", "programador"].includes(rol) &&
                   <button className="boton mini peligro" onClick={() => eliminarHuella(m)}>Eliminar huella</button>}
-              </td>
+              </div></td>
             </tr>
           ))}
           {matriculas === null && <tr><td colSpan={6}><Cargando /></td></tr>}

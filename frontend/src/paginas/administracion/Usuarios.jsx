@@ -126,21 +126,21 @@ export default function Usuarios() {
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr>{tabla.encabezado("nombre", "Nombre")}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("correo", "Correo")}{tabla.encabezado("rol", "Rol")}{tabla.encabezado("estado", "Estado")}<th>Acciones</th></tr></thead>
+        <thead><tr>{tabla.encabezado("nombre", "Nombre", { className: "col-nombre" })}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("correo", "Correo", { className: "col-correo" })}{tabla.encabezado("rol", "Rol")}{tabla.encabezado("estado", "Estado")}<th className="col-acciones">Acciones</th></tr></thead>
         <tbody>
           {tabla.visibles.map((u) => (
             <tr key={u.id_usuario}>
-              <td>{u.nombres} {u.apellidos}</td>
+              <td className="col-nombre">{u.nombres} {u.apellidos}</td>
               <td>{u.documento}</td>
-              <td>{u.correo}</td>
+              <td className="col-correo">{u.correo}</td>
               <td style={{ textTransform: "capitalize" }}>{u.rol}</td>
               <td><span className={`insignia ${u.estado}`}>{u.estado}</span></td>
-              <td style={{ display: "flex", gap: 6 }}>
+              <td className="col-acciones"><div className="acciones-celda">
                 <button className="boton mini suave" onClick={() => abrirEdicion(u)}>Editar</button>
                 {u.estado === "pendiente" && <button className="boton mini exito" onClick={() => cambiarEstado(u, "activo")}>Aprobar</button>}
                 {u.estado === "activo" && <button className="boton mini suave" onClick={() => cambiarEstado(u, "inactivo")}>Desactivar</button>}
                 {u.estado === "inactivo" && <button className="boton mini exito" onClick={() => cambiarEstado(u, "activo")}>Reactivar</button>}
-              </td>
+              </div></td>
             </tr>
           ))}
           {usuarios === null && <tr><td colSpan={6}><Cargando /></td></tr>}
