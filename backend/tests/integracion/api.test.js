@@ -141,6 +141,21 @@ prueba("una ficha no puede tener dos clases a la misma hora aunque cambien ambie
   assert.match(r.datos.mensaje, /Conflicto de ficha/);
 });
 
+prueba("dos guardados simultáneos de la misma clase dejan una sola (antes quedaba duplicada)", async () => {
+  const dia = (e.ids.diaDeHoy + 3) % 7;
+  const misma = { dia_semana: dia, hora_inicio: "16:00", hora_fin: "17:00" };
+  const [a, b] = await Promise.all([nuevoHorario(misma), nuevoHorario(misma)]);
+  assert.deepEqual([a.estado, b.estado].sort(), [201, 400]);
+  const r = await e.pool.query(
+    "SELECT COUNT(*)::int AS n FROM horario WHERE id_ficha = $1 AND dia_semana = $2 AND hora_inicio = '16:00'",
+    [e.ids.ficha, dia]
+  );
+  assert.equal(r.rows[0].n, 1);
+  // Y la base también lo impide (migración 008)
+  const indice = await e.pool.query("SELECT 1 FROM pg_indexes WHERE indexname = 'idx_horario_sin_duplicados'");
+  assert.equal(indice.rows.length, 1);
+});
+
 prueba("una clase de un trimestre futuro no aparece hoy ni se puede iniciar", async () => {
   const futura = await nuevoHorario({ dia_semana: e.ids.diaDeHoy, trimestre: 3, hora_inicio: "09:00", hora_fin: "10:00" });
   assert.equal(futura.estado, 201);
@@ -432,10 +447,13 @@ prueba("el lector real saluda y queda en línea; un serial desconocido se ignora
 });
 
 prueba("el lector real usa la hora de la marca, no la de llegada, y no duplica lo que reenvía", async () => {
-  // Clase de hoy en el ambiente de este lector. Se inserta directo: la ficha ya tiene otra a esa hora.
+  // Clase de hoy en el ambiente de este lector. La clase principal de la ficha
+  // (ya cerrada) se acorta a 00:00-00:01 para que la del lector sea otro bloque
+  // del mismo día: una ficha no puede tener dos clases a la misma hora.
+  await e.pool.query("UPDATE horario SET hora_fin = '00:01' WHERE id_horario = $1", [e.ids.horario]);
   const horario = await e.pool.query(
     `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
-     VALUES ($1, $2, $3, $4, EXTRACT(DOW FROM CURRENT_DATE), '00:00', '23:59') RETURNING id_horario`,
+     VALUES ($1, $2, $3, $4, EXTRACT(DOW FROM CURRENT_DATE), '00:02', '23:59') RETURNING id_horario`,
     [e.ids.ficha, e.ids.otroAmbiente, e.ids.instructor, e.ids.periodo]
   );
   const inicio = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: horario.rows[0].id_horario } });
@@ -565,4 +583,20 @@ prueba("la sesión se renueva con un token válido; sin token no", async () => {
   assert.equal(r.datos.usuario.rol, "instructor");
   assert.equal((await e.peticion("GET", "/api/sesiones/hoy", { token: r.datos.token })).estado, 200);
   assert.equal((await e.peticion("POST", "/api/auth/renovar")).estado, 401);
+});
+
+// ---------- Clases repetidas ----------
+
+prueba("no se abre una segunda sesión de la misma ficha a la misma hora (clase repetida)", async () => {
+  // Una clase repetida como las que la base ya tenía antes de la validación (se inserta directo)
+  const r = await e.pool.query(
+    `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
+     VALUES ($1, $2, $3, $4, $5, '10:00', '11:00') RETURNING id_horario`,
+    [e.ids.ficha, e.ids.otroAmbiente, e.ids.instructor, e.ids.periodo, e.ids.diaDeHoy]
+  );
+  const idRepetida = r.rows[0].id_horario;
+  const iniciar = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: idRepetida } });
+  assert.equal(iniciar.estado, 400);
+  assert.match(iniciar.datos.mensaje, /ya tiene una sesión hoy/);
+  await e.pool.query("DELETE FROM horario WHERE id_horario = $1", [idRepetida]);
 });

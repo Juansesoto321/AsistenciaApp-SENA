@@ -107,16 +107,19 @@ async function crearHorario(datos, usuario) {
   const dias = diasSolicitados(datos);
   const base = await completarHorario(datos, { esNuevo: true });
   const porDia = dias.map((dia) => ({ ...base, dia_semana: dia }));
+  porDia.forEach(validarHorario);
 
-  for (const h of porDia) {
-    validarHorario(h);
-    const conflicto = await modelo.buscarConflictoHorario(h);
-    if (conflicto) throw errorDeConflicto(conflicto, dias.length > 1 ? h.dia_semana : undefined);
-  }
-
+  // Los cruces se revisan dentro de la misma transacción que guarda, y con los
+  // horarios bloqueados: antes se revisaban afuera y dos guardados casi
+  // simultáneos dejaban la misma clase dos veces (pasó con la ficha 3311983).
   const creados = await enTransaccion(async (cliente) => {
+    await modelo.bloquearHorarios(cliente);
     const lista = [];
-    for (const h of porDia) lista.push(await modelo.crearHorario(h, cliente));
+    for (const h of porDia) {
+      const conflicto = await modelo.buscarConflictoHorario(h, null, cliente);
+      if (conflicto) throw errorDeConflicto(conflicto, dias.length > 1 ? h.dia_semana : undefined);
+      lista.push(await modelo.crearHorario(h, cliente));
+    }
     return lista;
   });
   for (const h of creados) await auditar(usuario.id, "crear_horario", "horario", h.id_horario);
@@ -148,10 +151,13 @@ async function editarHorario(id, datos, usuario) {
 
   const nuevo = await completarHorario(combinado, { esNuevo: false });
   validarHorario(nuevo);
-  const conflicto = await modelo.buscarConflictoHorario(nuevo, Number(id));
-  if (conflicto) throw errorDeConflicto(conflicto);
 
-  const horario = await modelo.editarHorario(id, nuevo);
+  const horario = await enTransaccion(async (cliente) => {
+    await modelo.bloquearHorarios(cliente);
+    const conflicto = await modelo.buscarConflictoHorario(nuevo, Number(id), cliente);
+    if (conflicto) throw errorDeConflicto(conflicto);
+    return modelo.editarHorario(id, nuevo, cliente);
+  });
   await auditar(usuario.id, "editar_horario", "horario", Number(id), nuevo);
   return horario;
 }

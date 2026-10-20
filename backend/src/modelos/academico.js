@@ -120,8 +120,8 @@ async function listarHorarios(usuario, filtros = {}) {
  * Las fechas del nuevo horario se calculan aquí con la misma regla de la vista
  * horario_vigencia. `idExcluir` evita que un horario choque consigo mismo al editarlo.
  */
-async function buscarConflictoHorario(datos, idExcluir = null) {
-  const resultado = await pool.query(
+async function buscarConflictoHorario(datos, idExcluir = null, cliente = pool) {
+  const resultado = await cliente.query(
     `WITH nuevo AS (
        SELECT CASE WHEN $7::int IS NULL THEN p.fecha_inicio
                    ELSE (f.fecha_inicio + make_interval(months => ($7::int - 1) * 3))::date END AS desde,
@@ -173,8 +173,8 @@ async function buscarTematica(idTematica) {
   return resultado.rows[0] || null;
 }
 
-async function editarHorario(id, datos) {
-  const resultado = await pool.query(
+async function editarHorario(id, datos, cliente = pool) {
+  const resultado = await cliente.query(
     `UPDATE horario SET id_ficha = $1, id_ambiente = $2, id_instructor = $3,
             id_periodo = $4, dia_semana = $5, hora_inicio = $6, hora_fin = $7,
             id_rap = $8, id_tematica = $9, id_competencia = $10, trimestre = $11
@@ -184,6 +184,15 @@ async function editarHorario(id, datos) {
      datos.id_rap || null, datos.id_tematica || null, datos.id_competencia, datos.trimestre ?? null, id]
   );
   return resultado.rows[0] || null;
+}
+
+/**
+ * Dentro de una transacción, espera a que termine cualquier otro cambio de
+ * horarios. Sin esto, dos guardados casi simultáneos pasaban los dos la
+ * revisión de cruces y quedaban clases duplicadas.
+ */
+async function bloquearHorarios(cliente) {
+  await cliente.query("SELECT pg_advisory_xact_lock(hashtext('asistenciaapp.horarios'))");
 }
 
 /** `cliente` permite crear varios días dentro de una misma transacción. */
@@ -295,6 +304,7 @@ module.exports = {
   crearFicha,
   listarHorarios,
   buscarConflictoHorario,
+  bloquearHorarios,
   buscarHorario,
   buscarFichaParaHorario,
   buscarRap,

@@ -57,6 +57,25 @@ async function buscarHorarioConLector(idHorario) {
   return r.rows[0] || null;
 }
 
+/**
+ * Una sesión de hoy de la MISMA ficha, en otra clase que se cruza en horas con
+ * esta. Pasa si el horario tiene clases duplicadas: cada una abría su propia
+ * sesión y los aprendices quedaban con la misma clase dos veces.
+ */
+async function buscarSesionCruzadaHoy(idHorario) {
+  const r = await pool.query(
+    `SELECT s.id_sesion, otro.id_horario
+     FROM horario h
+     JOIN horario otro ON otro.id_ficha = h.id_ficha AND otro.id_horario <> h.id_horario
+     JOIN sesion_clase s ON s.id_horario = otro.id_horario AND s.fecha = CURRENT_DATE
+     WHERE h.id_horario = $1
+       AND (h.hora_inicio, h.hora_fin) OVERLAPS (otro.hora_inicio, otro.hora_fin)
+     LIMIT 1`,
+    [idHorario]
+  );
+  return r.rows[0] || null;
+}
+
 async function crearOReanudarSesion(idHorario) {
   const r = await pool.query(
     `INSERT INTO sesion_clase (id_horario, fecha)
@@ -247,6 +266,7 @@ async function insertarNotificacionInasistencia(cliente, idAprendiz, mensaje) {
 module.exports = {
   horariosDeHoy,
   buscarHorarioConLector,
+  buscarSesionCruzadaHoy,
   crearOReanudarSesion,
   buscarDetalle,
   buscarAprendicesDeSesion,

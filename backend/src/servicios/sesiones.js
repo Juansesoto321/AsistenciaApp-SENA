@@ -70,6 +70,13 @@ async function iniciarSesion(idHorario, usuario) {
   verificarTitular(usuario, h.id_instructor, "iniciar esta sesión");
   if (!h.es_hoy) throw error("Este horario no corresponde al día de hoy", "validacion");
   if (h.estado_ficha !== "activa") throw error("La ficha de este horario ya finalizó", "validacion");
+  const cruzada = await modelo.buscarSesionCruzadaHoy(idHorario);
+  if (cruzada)
+    throw error(
+      `La ficha ${h.numero_ficha} ya tiene una sesión hoy a esa hora (sesión ${cruzada.id_sesion}). ` +
+      "Puede que la clase esté repetida en el horario: revísalo con la coordinación",
+      "validacion"
+    );
 
   const sesion = await modelo.crearOReanudarSesion(idHorario);
   if (sesion.estado === "cerrada") throw error("La sesión de hoy ya fue cerrada", "validacion");

@@ -18,6 +18,11 @@ const CARPETA_MIGRACIONES = path.join(CARPETA_DB, "migraciones");
  * igual para una base nueva que para una existente.
  */
 async function aplicarEsquema() {
+  // Una migración puede avisar algo sin fallar (RAISE NOTICE, código 00000).
+  // Los avisos de "ya existe, se omite" de los IF NOT EXISTS no se muestran.
+  pool.on("connect", (cliente) => cliente.on("notice", (aviso) => {
+    if (aviso.code === "00000") console.warn(`  AVISO: ${aviso.message}`);
+  }));
   console.log("Creando esquema...");
   await pool.query(fs.readFileSync(path.join(CARPETA_DB, "init.sql"), "utf8"));
 
