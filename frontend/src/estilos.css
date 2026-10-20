@@ -717,7 +717,14 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .bloque-clase:hover { filter: brightness(0.96); box-shadow: var(--sombra); }
 .bloque-clase .hora { font-weight: 700; }
 .bloque-clase .sec  { color: var(--tinta-suave); }
-.bloque-clase .sin-asignar { color: var(--tinta-suave); font-style: italic; }
+.bloque-clase .sin-asignar { color: var(--ambar); font-weight: 600; }
+/* Clases sin competencia (anteriores a que fuera obligatoria): aviso para la coordinación */
+.aviso-sin-competencia {
+  margin-bottom: 14px; padding: 12px 16px; border-radius: 12px; font-size: 14px;
+  background: var(--ambar-suave); color: var(--ambar); border: 1px solid var(--ambar-borde);
+}
+.aviso-sin-competencia p { line-height: 1.5; }
+.lista-sin-competencia { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
 .dia-hoy { background: var(--azul-suave); }
 

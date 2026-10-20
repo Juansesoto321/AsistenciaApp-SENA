@@ -127,6 +127,8 @@ export default function Horarios() {
     setAncla((a) => (vista === "mes" ? new Date(a.getFullYear(), a.getMonth() + paso, 1) : sumarDias(a, paso * 7)));
 
   const hoy = new Date();
+  // Clases creadas antes de que la competencia fuera obligatoria (las nuevas ya la exigen)
+  const sinCompetencia = puedeEditar ? horarios.filter((h) => !h.competencia) : [];
 
   function abrirNuevo() {
     setModal("nuevo");
@@ -227,6 +229,22 @@ export default function Horarios() {
         </Vacio>
       )}
 
+      {!cargando && sinCompetencia.length > 0 && (
+        <div className="aviso-sin-competencia" role="status">
+          <p>
+            <b>{sinCompetencia.length === 1 ? "1 clase no tiene" : `${sinCompetencia.length} clases no tienen`} competencia.</b>{" "}
+            Son anteriores a que fuera obligatoria: edítalas y elige la competencia que se ve en ellas.
+          </p>
+          <div className="lista-sin-competencia">
+            {sinCompetencia.map((h) => (
+              <button key={h.id_horario} type="button" className="boton mini suave" onClick={() => abrirEdicion(h)}>
+                Editar {DIAS[h.dia_semana].toLowerCase()} {h.hora_inicio.slice(0, 5)}–{h.hora_fin.slice(0, 5)} · ficha {h.numero_ficha}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!cargando && aplicado && !!horarios.length && (
         <div className="tarjeta">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
@@ -268,7 +286,9 @@ export default function Horarios() {
                 })}
 
                 {/* Eje de horas */}
-                <div style={{ position: "relative", height: horasEje.length * ALTO_HORA }}>
+                {/* marginTop: la etiqueta de cada hora sube 7 px para quedar centrada en su
+                    línea; sin este espacio la primera (08:00) quedaba bajo el encabezado */}
+                <div style={{ position: "relative", height: horasEje.length * ALTO_HORA, marginTop: 8 }}>
                   {horasEje.map((m, i) => (
                     <div key={m} style={{ position: "absolute", top: i * ALTO_HORA - 7, right: 8, fontSize: 12, color: "var(--tinta-suave)" }}>
                       {comoHora(m)}
@@ -281,7 +301,7 @@ export default function Horarios() {
                   const delDia = horarios.filter((h) => ocurreEn(h, fecha));
                   return (
                     <div key={fecha.toISOString()} style={{
-                      position: "relative", height: horasEje.length * ALTO_HORA,
+                      position: "relative", height: horasEje.length * ALTO_HORA, marginTop: 8,
                       borderLeft: "1px solid var(--borde)",
                       background: mismoDia(fecha, hoy) ? "var(--azul-suave)" : "transparent",
                     }}>
@@ -312,7 +332,7 @@ export default function Horarios() {
                             {cabe(2) && <div>Ficha {h.numero_ficha} · Amb. {h.numero_ambiente}</div>}
                             {cabe(3) && (h.tematica || h.competencia
                               ? <div className="sec">{h.tematica || h.competencia}</div>
-                              : <div className="sin-asignar">Sin competencia asignada</div>)}
+                              : puedeEditar && <div className="sin-asignar">Sin competencia: edítala</div>)}
                           </button>
                         );
                       })}
