@@ -269,6 +269,13 @@ prueba("una justificación con el plazo vencido responde 410", async () => {
   const vencida = await e.peticion("GET", `/api/justificaciones/token/${token}`);
   assert.equal(vencida.estado, 410);
   assert.equal(vencida.datos.vencida, true);
+
+  // En la bandeja ya sale como vencida, aunque la tarea programada aún no la haya marcado
+  const bandeja = await e.peticion("GET", "/api/justificaciones", { token: tokens.instructor });
+  const deBeto = bandeja.datos.find((j) => j.nombres === "Beto");
+  assert.equal(deBeto.estado, "vencida");
+  const enBase = await e.pool.query("SELECT estado FROM justificacion WHERE token = $1", [token]);
+  assert.equal(enBase.rows[0].estado, "pendiente");
 });
 
 prueba("pasadas 24 h del cierre, el instructor ya no corrige asistencia pero el coordinador sí", async () => {

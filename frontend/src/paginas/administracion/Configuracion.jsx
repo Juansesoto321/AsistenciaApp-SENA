@@ -3,7 +3,7 @@ import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { fechaCorta } from "../../utilidades/formato";
+import { fechaCorta, textoPlazo } from "../../utilidades/formato";
 
 const PERIODO_VACIO = { nombre: "", fecha_inicio: "", fecha_fin: "" };
 
@@ -56,6 +56,9 @@ export default function Configuracion() {
         <label>Horas de plazo para cargar justificaciones</label>
         <input type="number" min="1" value={conf.horas_justificacion || 72}
                onChange={(e) => setConf({ ...conf, horas_justificacion: e.target.value })} />
+        {Number(conf.horas_justificacion) > 0 && (
+          <p className="nota-estado">Los aprendices ven este plazo como {textoPlazo(Number(conf.horas_justificacion))}.</p>
+        )}
         <button className="boton" style={{ marginTop: 18 }} onClick={guardar}>Guardar configuración</button>
       </div>
 

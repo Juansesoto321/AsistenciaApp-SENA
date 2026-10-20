@@ -5,7 +5,7 @@ import Cargando from "../../componentes/Cargando.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { textoPlazo as formatearPlazo, fechaCorta, fechaHora } from "../../utilidades/formato";
+import { textoPlazo as formatearPlazo, fechaCorta, fechaHora, faltaCuanto, haceCuanto } from "../../utilidades/formato";
 
 const textoPlazo = (horas) => formatearPlazo(Number(horas || 72));
 
@@ -18,9 +18,23 @@ const ETIQUETA_TIPO = {
   otro: "Otro",
 };
 
-// "enviada" es la que el aprendiz cargó y espera respuesta
-const ETIQUETA_ESTADO = { enviada: "Por revisar", aprobada: "Aprobada", rechazada: "Rechazada" };
-const FILTROS = [["enviada", "Por revisar"], ["aprobada", "Aprobadas"], ["rechazada", "Rechazadas"], ["todas", "Todas"]];
+// "enviada" es la que el aprendiz cargó y espera respuesta; "pendiente" la que
+// aún no carga (con plazo) y "vencida" la que dejó pasar el plazo
+const ETIQUETA_ESTADO = {
+  enviada: "Por revisar", aprobada: "Aprobada", rechazada: "Rechazada", pendiente: "Sin cargar", vencida: "Vencida",
+};
+const FILTROS = [
+  ["enviada", "Por revisar"], ["pendiente", "Sin cargar"], ["vencida", "Vencidas"],
+  ["aprobada", "Aprobadas"], ["rechazada", "Rechazadas"], ["todas", "Todas"],
+];
+
+/** Qué pasó con el plazo: cuánto le queda, hace cuánto venció o hace cuánto espera revisión. */
+function textoTiempo(j) {
+  if (j.estado === "pendiente") return faltaCuanto(j.expira_en);
+  if (j.estado === "vencida") return `venció ${haceCuanto(j.expira_en)}`;
+  if (j.estado === "enviada" && j.enviada_en) return `espera ${haceCuanto(j.enviada_en).replace("hace ", "desde hace ")}`;
+  return null;
+}
 
 /** El soporte llega como data URI; se convierte en un enlace local para verlo dentro de la página. */
 async function enlaceDeSoporte(dataUri) {
@@ -158,13 +172,18 @@ export default function Justificaciones() {
                   {ETIQUETA_TIPO[j.tipo] || "—"}
                   {j.nombre_archivo && <Icono nombre="adjunto" aria-label="Tiene soporte adjunto" style={{ marginLeft: 6, color: "var(--tinta-suave)" }} />}
                 </td>
-                <td data-etiqueta="Enviada">{j.enviada_en ? fechaHora(j.enviada_en) : "—"}</td>
+                <td data-etiqueta="Enviada">
+                  {j.enviada_en ? fechaHora(j.enviada_en) : "—"}
+                  {textoTiempo(j) && <small className={`sub-celda${j.estado === "vencida" ? " texto-rojo" : ""}`}>{textoTiempo(j)}</small>}
+                </td>
                 <td data-etiqueta="Estado"><span className={`insignia ${j.estado}`}>{ETIQUETA_ESTADO[j.estado] || j.estado}</span></td>
                 <td data-etiqueta="Revisó">{j.revisada_por || "—"}</td>
                 <td>
-                  <button className={`boton mini ${j.estado === "enviada" ? "" : "suave"}`} onClick={() => abrir(j)}>
-                    {j.estado === "enviada" ? "Revisar" : "Ver"}
-                  </button>
+                  {["pendiente", "vencida"].includes(j.estado) ? null : (
+                    <button className={`boton mini ${j.estado === "enviada" ? "" : "suave"}`} onClick={() => abrir(j)}>
+                      {j.estado === "enviada" ? "Revisar" : "Ver"}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

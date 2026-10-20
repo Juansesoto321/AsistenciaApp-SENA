@@ -61,7 +61,8 @@ async function historialFicha(idAprendiz, idFicha) {
   const r = await pool.query(
     `SELECT s.fecha, a.estado, TO_CHAR(a.hora_marca AT TIME ZONE 'America/Bogota','HH24:MI') AS hora,
             a.metodo, a.observacion,
-            j.estado AS estado_soporte, j.token AS token_soporte, j.expira_en AS soporte_expira,
+            CASE WHEN j.estado = 'pendiente' AND j.expira_en < NOW() THEN 'vencida' ELSE j.estado END AS estado_soporte,
+            j.token AS token_soporte, j.expira_en AS soporte_expira,
             j.nombre_archivo AS soporte_archivo, j.tipo AS soporte_tipo, j.descripcion AS soporte_descripcion,
             j.observacion_validacion AS soporte_observacion
      FROM asistencia a
