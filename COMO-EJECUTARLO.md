@@ -45,9 +45,10 @@ http://localhost:8080
 | Rol | Correo | Contraseña |
 |---|---|---|
 | Coordinador | admin@sena.edu.co | Admin123* |
-| Instructor | cristian.buitrago@sena.edu.co | 
- |
+| Instructor | cristian.buitrago@sena.edu.co | Instructor123* |
 | Aprendiz | camilap.m1230@gmail.com | Aprendiz123* |
+
+Las demás cuentas de prueba están en el README, en "Cuentas de demostración".
 
 ## 5. Para apagarlo (cuando termines de probar)
 

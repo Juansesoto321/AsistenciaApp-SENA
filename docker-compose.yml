@@ -1,8 +1,12 @@
 # ============================================================
 # AsistenciaApp · Despliegue con Docker
-# Uso:
+# En tu computador (datos de demostración):
 #   docker compose up -d --build
-#   docker compose exec backend npm run sembrar   (primera vez)
+#   docker compose exec backend npm run sembrar             (primera vez)
+# En un servidor real: NODE_ENV=production y claves propias en el .env, y
+# en vez de sembrar (que ahí se niega a correr):
+#   docker compose exec backend npm run migrar              (al instalar y al actualizar)
+#   docker compose exec backend npm run crear-coordinador   (primera cuenta)
 # App: http://localhost:8080
 # ============================================================
 services:
@@ -23,6 +27,8 @@ services:
     ports:
       - "4000:4000"   # necesario para que el lector fisico real (ADMS) alcance el backend
     environment:
+      # production: no arranca con las claves de ejemplo y no siembra datos de demostración
+      NODE_ENV: ${NODE_ENV:-development}
       DATABASE_URL: postgres://postgres:postgres@basedatos:5432/asistenciaapp
       JWT_SECRETO: ${JWT_SECRETO:-cambia_esta_clave_en_produccion}
       CLAVE_CIFRADO: ${CLAVE_CIFRADO:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
