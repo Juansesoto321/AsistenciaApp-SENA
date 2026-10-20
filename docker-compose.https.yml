@@ -1,0 +1,16 @@
+# ============================================================
+# AsistenciaApp · HTTPS con el certificado en este mismo servidor
+# Solo si el servidor termina el HTTPS. Si el SENA publica el sistema detrás
+# de su propio proxy con HTTPS, no se usa este archivo.
+#   docker compose -f docker-compose.yml -f docker-compose.produccion.yml -f docker-compose.https.yml up -d --build
+# El certificado va en ./certificados (fullchain.pem y privkey.pem), carpeta
+# que Git ignora. Requiere Docker Compose 2.24 o superior (por !override).
+# ============================================================
+services:
+  frontend:
+    ports: !override
+      - "80:80"     # redirige a HTTPS
+      - "443:443"
+    volumes:
+      - ./frontend/nginx-https.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certificados:/etc/nginx/certificados:ro

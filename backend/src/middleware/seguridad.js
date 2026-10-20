@@ -46,4 +46,22 @@ function limitarPeticiones({ maximo, ventanaMinutos, mensaje }) {
   };
 }
 
-module.exports = { encabezadosSeguridad, limitarPeticiones };
+/**
+ * Solo deja pasar peticiones de las IP indicadas (los lectores reales). Se usa
+ * la IP de la conexión y no X-Forwarded-For: ese encabezado lo puede escribir
+ * cualquiera. Con la lista vacía deja pasar a todos (desarrollo y pruebas).
+ */
+function soloDesdeIps(permitidas) {
+  const lista = new Set(permitidas);
+  return (req, res, next) => {
+    if (!lista.size) return next();
+    const ip = String(req.socket?.remoteAddress || "").replace(/^::ffff:/, "");
+    if (lista.has(ip)) return next();
+    // La IP queda en el registro: si el lector legítimo aparece con otra
+    // (p. ej. detrás de Docker Desktop), así se sabe cuál poner en IP_LECTORES
+    console.warn(`[ADMS] Petición rechazada desde ${ip || "IP desconocida"}: no está en IP_LECTORES`);
+    res.status(403).type("text/plain").send("Forbidden");
+  };
+}
+
+module.exports = { encabezadosSeguridad, limitarPeticiones, soloDesdeIps };

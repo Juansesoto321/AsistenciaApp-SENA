@@ -37,9 +37,18 @@ if (usaEjemplo && process.env.NODE_ENV !== "test") {
 const origenesPermitidos = (process.env.URL_FRONTEND || "http://localhost:5173")
   .split(",").map((o) => o.trim().replace(/\/$/, "")).filter(Boolean);
 
+// IP de los lectores reales (ADMS), separadas por comas. El protocolo del
+// lector no tiene clave: sin esta lista, cualquier equipo que alcance el
+// puerto 4000 y conozca el serial podría enviar marcas.
+const ipLectores = (process.env.IP_LECTORES || "").split(",").map((ip) => ip.trim()).filter(Boolean);
+if (produccion && !ipLectores.length) {
+  console.warn("[AVISO] IP_LECTORES está vacío: el lector real (/iclock) acepta marcas de cualquier equipo de la red. Define la IP de cada lector en el .env.");
+}
+
 module.exports = {
   produccion,
   zonaHoraria: process.env.TZ,
   origenesPermitidos,
   urlFrontend: origenesPermitidos[0],
+  ipLectores,
 };

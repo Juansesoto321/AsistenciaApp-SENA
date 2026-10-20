@@ -3,8 +3,9 @@
 # En tu computador (datos de demostración):
 #   docker compose up -d --build
 #   docker compose exec backend npm run sembrar             (primera vez)
-# En un servidor real: NODE_ENV=production y claves propias en el .env, y
-# en vez de sembrar (que ahí se niega a correr):
+# En un servidor real (ver README, "En un servidor real"): .env con claves
+# propias y el archivo de producción encima de este:
+#   docker compose -f docker-compose.yml -f docker-compose.produccion.yml up -d --build
 #   docker compose exec backend npm run migrar              (al instalar y al actualizar)
 #   docker compose exec backend npm run crear-coordinador   (primera cuenta)
 # App: http://localhost:8080
@@ -12,6 +13,8 @@
 services:
   basedatos:
     image: postgres:16-alpine
+    # Vuelve a arrancar solo si el servidor se reinicia o el proceso se cae
+    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: asistenciaapp
@@ -24,6 +27,7 @@ services:
 
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "4000:4000"   # necesario para que el lector fisico real (ADMS) alcance el backend
     environment:
@@ -39,6 +43,8 @@ services:
       CORREO_USUARIO: ${CORREO_USUARIO:-}
       CORREO_CONTRASENA: ${CORREO_CONTRASENA:-}
       CORREO_REMITENTE: ${CORREO_REMITENTE:-AsistenciaApp <no-responder@asistenciaapp.co>}
+      # IP de los lectores reales, separadas por comas: solo ellos pueden enviar marcas (/iclock)
+      IP_LECTORES: ${IP_LECTORES:-}
     volumes:
       - ./db:/db:ro          # el script de siembra lee /db/init.sql
     depends_on:
@@ -47,6 +53,7 @@ services:
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     ports:
       - "8080:80"
     depends_on:

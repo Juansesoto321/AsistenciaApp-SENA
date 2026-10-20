@@ -1,0 +1,15 @@
+# ============================================================
+# AsistenciaApp · Ajustes para el servidor real
+# Se usa encima de docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.produccion.yml up -d --build
+# Exige las claves propias en el .env (ver .env.produccion.example): si falta
+# alguna, Docker se detiene en vez de usar las de ejemplo, que son públicas.
+# ============================================================
+services:
+  backend:
+    environment:
+      # No arranca con claves de ejemplo y `npm run sembrar` se niega a correr
+      NODE_ENV: production
+      JWT_SECRETO: ${JWT_SECRETO:?Falta JWT_SECRETO en el .env}
+      CLAVE_CIFRADO: ${CLAVE_CIFRADO:?Falta CLAVE_CIFRADO en el .env}
+      URL_FRONTEND: ${URL_FRONTEND:?Falta URL_FRONTEND en el .env (la dirección con la que los usuarios abren la aplicación)}
