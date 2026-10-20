@@ -891,18 +891,18 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .aviso-atencion b { font-family: var(--fuente-lector); font-size: 24px; font-weight: 600; line-height: 1; }
 
 /* Superficie oscura "del lector" en el panel: clase en curso y próxima clase */
-.en-curso, .proxima-clase {
+.clase-en-curso, .proxima-clase {
   position: relative; overflow: hidden; display: grid; align-items: center; gap: 18px 30px;
   padding: 22px 28px; margin-bottom: 14px; border-radius: var(--radio); color: #ece8ff; box-shadow: var(--sombra);
   background: radial-gradient(520px 320px at 12% 50%, #2a1f6b 0%, transparent 70%), var(--escenario);
 }
-.en-curso { grid-template-columns: auto minmax(0, 1fr); }
+.clase-en-curso { grid-template-columns: auto minmax(0, 1fr); }
 .proxima-clase {
   grid-template-columns: minmax(0, 1fr) auto;
   background: radial-gradient(520px 320px at 88% 50%, #2a1f6b 0%, transparent 70%), var(--escenario);
 }
 .en-curso-lista { display: grid; gap: 14px; margin-bottom: 14px; }
-.en-curso-lista .en-curso { margin-bottom: 0; }
+.en-curso-lista .clase-en-curso { margin-bottom: 0; }
 .escaner.en-curso-huella, .escaner.proxima-huella { width: 150px; }
 .escaner-marca .escaner-haz { animation: barrido 1s ease-in-out both; } /* una marca: el haz pasa una vez */
 .escaner-registrada .cresta { stroke: var(--presente); }
@@ -974,7 +974,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .reglas-clave li.cumple svg { opacity: 1; }
 
 @media (max-width: 700px) {
-  .en-curso, .proxima-clase { grid-template-columns: 1fr; padding: 18px; }
+  .clase-en-curso, .proxima-clase { grid-template-columns: 1fr; padding: 18px; }
   .escaner.en-curso-huella { width: 110px; }
   .escaner.proxima-huella { order: -1; width: 84px; }
   .en-curso-cifra b { font-size: 46px; }
