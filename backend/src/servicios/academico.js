@@ -165,7 +165,7 @@ async function editarHorario(id, datos, usuario) {
 async function eliminarHorario(id, usuario) {
   const eliminado = await modelo.eliminarHorario(id);
   if (!eliminado) throw error("Horario no encontrado", "no_encontrado");
-  await auditar(usuario.id, "eliminar_horario", "horario", Number(id));
+  await auditar(usuario.id, "eliminar_horario", "horario", Number(id), { nombre: eliminado.nombre });
 }
 
 // ---------- MATRICULAS (CU-06) ----------

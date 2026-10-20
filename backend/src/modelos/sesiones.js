@@ -229,7 +229,13 @@ async function eliminarSesion(cliente, idSesion) {
     [idSesion]
   );
   await cliente.query("DELETE FROM asistencia WHERE id_sesion = $1", [idSesion]);
-  const r = await cliente.query("DELETE FROM sesion_clase WHERE id_sesion = $1 RETURNING id_sesion", [idSesion]);
+  const r = await cliente.query(
+    `DELETE FROM sesion_clase WHERE id_sesion = $1
+     RETURNING id_sesion, 'Ficha ' || (SELECT f.numero_ficha FROM horario h JOIN ficha f ON f.id_ficha = h.id_ficha
+                                      WHERE h.id_horario = sesion_clase.id_horario)
+       || ' · clase del ' || to_char(fecha, 'DD/MM/YYYY') AS nombre`,
+    [idSesion]
+  );
   return r.rows[0] || null;
 }
 

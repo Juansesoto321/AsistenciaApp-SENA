@@ -556,6 +556,43 @@ prueba("las exportaciones quedan en la auditoría, que solo consulta la coordina
   assert.equal((await e.peticion("GET", "/api/auditoria", { token: tokens.ana })).estado, 403);
 });
 
+prueba("el registro de actividad nombra lo que se tocó, oculta los inicios de sesión y anota su exportación", async () => {
+  // Lo que se tocó aparece con su nombre, no como "ficha #2"; lo borrado conserva el nombre
+  await e.pool.query(
+    "INSERT INTO auditoria (id_usuario, accion, entidad, id_entidad) VALUES ($1, 'cambiar_trimestres_ficha', 'ficha', $2)",
+    [e.ids.coordinador, e.ids.ficha]
+  );
+  const tematica = await e.peticion("POST", "/api/competencias/tematicas", {
+    token: tokens.coordinador, cuerpo: { id_rap: e.ids.rap_competencia, nombre: "Temática que se borra" },
+  });
+  assert.equal(tematica.estado, 201);
+  const idTematica = tematica.datos.id_tematica;
+  assert.equal((await e.peticion("DELETE", `/api/competencias/tematicas/${idTematica}`, { token: tokens.coordinador })).estado, 200);
+
+  const todo = await e.peticion("GET", "/api/auditoria?limite=1000", { token: tokens.coordinador });
+  const deFicha = todo.datos.registros.find((x) => x.accion === "cambiar_trimestres_ficha");
+  assert.equal(deFicha.nombre_entidad, "Ficha 999999");
+  const borrada = todo.datos.registros.find((x) => x.accion === "eliminar_tematica" && x.id_entidad === idTematica);
+  assert.equal(borrada.nombre_entidad, "Temática que se borra");
+  assert.ok(todo.datos.registros.some((x) => x.accion === "login"));
+
+  // Ocultar inicios de sesión; la búsqueda también encuentra por lo que se tocó
+  const sinLogin = await e.peticion("GET", "/api/auditoria?sin_login=1&limite=1000", { token: tokens.coordinador });
+  assert.ok(sinLogin.datos.registros.length > 0);
+  assert.ok(sinLogin.datos.registros.every((x) => x.accion !== "login"));
+  const porFicha = await e.peticion("GET", "/api/auditoria?texto=999999", { token: tokens.coordinador });
+  assert.ok(porFicha.datos.registros.some((x) => x.accion === "cambiar_trimestres_ficha"));
+
+  // La exportación a CSV queda anotada (el archivo se arma en el navegador)
+  const exportacion = await e.peticion("POST", "/api/auditoria/exportaciones", {
+    token: tokens.coordinador, cuerpo: { filas: 42, filtros: { accion: "", ocultar_inicios: true } },
+  });
+  assert.equal(exportacion.estado, 201);
+  const anotada = await e.peticion("GET", "/api/auditoria?accion=exportar_auditoria", { token: tokens.coordinador });
+  assert.equal(anotada.datos.registros[0].detalle.filas, 42);
+  assert.equal((await e.peticion("POST", "/api/auditoria/exportaciones", { token: tokens.instructor, cuerpo: { filas: 1 } })).estado, 403);
+});
+
 // ---------- Soporte con captura ----------
 
 const PNG_1X1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";

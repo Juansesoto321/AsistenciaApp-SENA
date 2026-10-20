@@ -209,7 +209,9 @@ async function crearHorario(datos, cliente = pool) {
 }
 
 async function eliminarHorario(id) {
-  const resultado = await pool.query("DELETE FROM horario WHERE id_horario = $1 RETURNING id_horario", [id]);
+  const resultado = await pool.query(`DELETE FROM horario WHERE id_horario = $1
+     RETURNING id_horario, 'Ficha ' || (SELECT numero_ficha FROM ficha f WHERE f.id_ficha = horario.id_ficha)
+       || ' · ' || (ARRAY['domingo','lunes','martes','miércoles','jueves','viernes','sábado'])[dia_semana + 1] || ' ' || to_char(hora_inicio, 'HH24:MI') AS nombre`, [id]);
   return resultado.rows[0] || null;
 }
 

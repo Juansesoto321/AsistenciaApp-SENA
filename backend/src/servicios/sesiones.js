@@ -188,12 +188,13 @@ async function cerrarSesion(idSesion, usuario) {
 // Solo coordinador: es destructivo e irreversible, pensado para limpiar
 // sesiones de prueba (no para corregir asistencia real - para eso esta CU-15).
 async function eliminarSesion(idSesion, usuario) {
-  await enTransaccion(async (cliente) => {
-    const eliminada = await modelo.eliminarSesion(cliente, idSesion);
-    if (!eliminada) throw error("Sesión no encontrada", "no_encontrado");
+  const eliminada = await enTransaccion(async (cliente) => {
+    const borrada = await modelo.eliminarSesion(cliente, idSesion);
+    if (!borrada) throw error("Sesión no encontrada", "no_encontrado");
+    return borrada;
   });
 
-  await auditar(usuario.id, "eliminar_sesion_clase", "sesion_clase", Number(idSesion));
+  await auditar(usuario.id, "eliminar_sesion_clase", "sesion_clase", Number(idSesion), { nombre: eliminada.nombre });
   return { mensaje: "Sesión eliminada permanentemente, junto con su asistencia y justificaciones" };
 }
 

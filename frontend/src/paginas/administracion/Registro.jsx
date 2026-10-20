@@ -7,6 +7,7 @@ import Vacio from "../../componentes/Vacio.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import useTabla from "../../componentes/useTabla.jsx";
 import { fechaHora, haceCuanto } from "../../utilidades/formato";
+import { descargarCsv } from "../../utilidades/csv";
 
 /** Cada acción de la auditoría en palabras de quien la lee. */
 const ACCIONES = {
@@ -50,30 +51,75 @@ const ACCIONES = {
   eliminar_datos_biometricos: "Eliminó una huella",
   actualizar_configuracion: "Cambió la configuración",
   exportar_reporte: "Exportó un reporte",
+  exportar_auditoria: "Exportó el registro de actividad",
 };
 const FORMATO = { csv: "CSV", excel: "Excel", pdf: "PDF" };
+// Para lo que se borró antes de que la auditoría guardara su nombre
+const ENTIDAD = {
+  usuario: "usuario", ficha: "ficha", horario: "clase", sesion_clase: "sesión", asistencia: "asistencia",
+  justificacion: "justificación", matricula: "matrícula", ambiente: "ambiente", dispositivo: "lector",
+  competencia: "competencia", resultado_aprendizaje: "resultado de aprendizaje", tematica: "temática",
+};
+const LIMITE_EXPORTACION = 1000; // el máximo que entrega el servidor
+
+/** Sobre qué fue la acción ("Ficha 2901817", "Ana Ruiz · clase del 04/09/2026"). */
+function sobreQue(r) {
+  if (r.nombre_entidad) return r.nombre_entidad;
+  if (r.entidad && r.id_entidad) return `Ya no existe (${ENTIDAD[r.entidad] || r.entidad} n.º ${r.id_entidad})`;
+  return "";
+}
 
 /** Una línea legible con lo más útil del detalle guardado. */
 function resumirDetalle(r) {
   const d = r.detalle || {};
   if (r.accion === "exportar_reporte") return `${FORMATO[d.formato] || d.formato} · ${d.contenido === "resumen" ? "resumen" : "clase por clase"} · ${d.filas} filas`;
+  if (r.accion === "exportar_auditoria") return `CSV · ${d.filas} filas`;
   if (r.accion === "asistencia_manual") return `${d.estado}${d.motivo ? ` · "${d.motivo}"` : ""}`;
   if (r.accion === "cerrar_sesion_clase") return `${d.ausentes} ausente(s)`;
   if (r.accion === "actualizar_configuracion") return Object.entries(d).map(([k, v]) => `${k.replaceAll("_", " ")}: ${v}`).join(" · ");
   if (r.accion === "crear_usuario" && d.rol) return `rol ${d.rol}`;
   if (r.accion === "programar_competencia") return `trimestre ${d.trimestre}`;
-  if (r.entidad && r.id_entidad) return `${r.entidad.replaceAll("_", " ")} #${r.id_entidad}`;
   return "";
 }
 
-function Actividad({ alError }) {
-  const [filtros, setFiltros] = useState({ texto: "", accion: "", desde: "", hasta: "" });
+/** La consulta con los filtros que tienen valor; "ocultar inicios" no aplica si se piden justo esos. */
+function consultaDe(f, extra = {}) {
+  const { ocultarLogin, ...resto } = f;
+  const valores = { ...resto, sin_login: ocultarLogin && f.accion !== "login" ? "1" : "", ...extra };
+  return new URLSearchParams(Object.entries(valores).filter(([, v]) => v)).toString();
+}
+
+function Actividad({ alError, alAviso }) {
+  // Los inicios de sesión son la mayoría de las filas: se ocultan de entrada
+  const [filtros, setFiltros] = useState({ texto: "", accion: "", desde: "", hasta: "", ocultarLogin: true });
   const [datos, setDatos] = useState(null);
+  const [exportando, setExportando] = useState(false);
   const tabla = useTabla(datos?.registros, { porPagina: 25, valores: { creado_en: (r) => new Date(r.creado_en) } });
 
   function cargar(f = filtros) {
-    const consulta = new URLSearchParams(Object.entries(f).filter(([, v]) => v)).toString();
-    api(`/auditoria?${consulta}`).then(setDatos).catch((e) => { setDatos({ registros: [], acciones: [] }); alError(e.message); });
+    api(`/auditoria?${consultaDe(f)}`).then(setDatos).catch((e) => { setDatos({ registros: [], acciones: [] }); alError(e.message); });
+  }
+
+  // Se pide de nuevo con el tope del servidor: la tabla solo trae las 200 más recientes
+  async function exportar() {
+    setExportando(true);
+    try {
+      const { registros } = await api(`/auditoria?${consultaDe(filtros, { limite: LIMITE_EXPORTACION })}`);
+      descargarCsv(
+        ["Fecha y hora", "Quién", "Correo", "Rol", "Qué hizo", "Sobre qué", "Detalle"],
+        registros.map((r) => [fechaHora(r.creado_en), r.usuario || "", r.correo || "", r.rol || "", ACCIONES[r.accion] || r.accion, sobreQue(r), resumirDetalle(r)]),
+        `registro_actividad_${new Date().toISOString().slice(0, 10)}.csv`
+      );
+      const { ocultarLogin, ...resto } = filtros;
+      api("/auditoria/exportaciones", { method: "POST", body: { filas: registros.length, filtros: { ...resto, ocultar_inicios: ocultarLogin } } }).catch(() => {});
+      if (registros.length >= LIMITE_EXPORTACION) {
+        alAviso(`Se exportaron las ${LIMITE_EXPORTACION} acciones más recientes. Acota las fechas para llevarte las anteriores.`);
+      }
+    } catch (e) {
+      alError(e.message);
+    } finally {
+      setExportando(false);
+    }
   }
   useEffect(() => { cargar(); }, []);
 
@@ -85,7 +131,7 @@ function Actividad({ alError }) {
 
   return (<>
     <form className="barra-filtro" onSubmit={(e) => { e.preventDefault(); cargar(); }}>
-      <input type="search" className="buscador" placeholder="Buscar por nombre o correo" aria-label="Buscar por persona"
+      <input type="search" className="buscador" placeholder="Buscar persona, ficha o correo" aria-label="Buscar por persona, ficha o correo"
         value={filtros.texto} onChange={(e) => setFiltros({ ...filtros, texto: e.target.value })} />
       <select aria-label="Acción" value={filtros.accion} onChange={(e) => cambiar("accion", e.target.value)}>
         <option value="">Todas las acciones</option>
@@ -93,7 +139,15 @@ function Actividad({ alError }) {
       </select>
       <input type="date" aria-label="Desde" value={filtros.desde} onChange={(e) => cambiar("desde", e.target.value)} style={{ width: "auto" }} />
       <input type="date" aria-label="Hasta" value={filtros.hasta} onChange={(e) => cambiar("hasta", e.target.value)} style={{ width: "auto" }} />
+      <label className="casilla-filtro">
+        <input type="checkbox" checked={filtros.ocultarLogin} disabled={filtros.accion === "login"}
+          onChange={(e) => cambiar("ocultarLogin", e.target.checked)} />
+        Ocultar inicios de sesión
+      </label>
       <button className="boton suave" type="submit">Buscar</button>
+      <button className="boton suave" type="button" onClick={exportar} disabled={exportando || !datos?.registros.length}>
+        <Icono nombre="descargar" /> {exportando ? "Exportando…" : "Exportar CSV"}
+      </button>
     </form>
     {datos === null ? <Cargando /> : (
       <div className="tabla-desplazable">
@@ -105,7 +159,10 @@ function Actividad({ alError }) {
                 <td title={fechaHora(r.creado_en)}>{haceCuanto(r.creado_en)}<small className="sub-celda">{fechaHora(r.creado_en)}</small></td>
                 <td>{r.usuario || "—"}{r.rol && <small className="sub-celda" style={{ textTransform: "capitalize" }}>{r.rol}</small>}</td>
                 <td>{ACCIONES[r.accion] || r.accion}</td>
-                <td className="texto-suave">{resumirDetalle(r)}</td>
+                <td>
+                  {sobreQue(r)}
+                  {resumirDetalle(r) && <small className="sub-celda">{resumirDetalle(r)}</small>}
+                </td>
               </tr>
             ))}
             {!datos.registros.length && <tr><td colSpan={4}><Vacio icono="registro" titulo="No hay actividad con esos filtros" /></td></tr>}
@@ -178,6 +235,7 @@ export default function Registro() {
   const [pestana, setPestana] = useState("actividad");
   const [mensaje, setMensaje] = useState(null);
   const alError = (texto) => setMensaje({ tipo: "error", texto });
+  const alAviso = (texto) => setMensaje({ tipo: "info", texto });
 
   return (
     <>
@@ -192,7 +250,7 @@ export default function Registro() {
         <button role="tab" aria-selected={pestana === "actividad"} onClick={() => setPestana("actividad")}><Icono nombre="registro" /> Actividad</button>
         <button role="tab" aria-selected={pestana === "errores"} onClick={() => setPestana("errores")}><Icono nombre="alerta" /> Errores del servidor</button>
       </div>
-      {pestana === "actividad" ? <Actividad alError={alError} /> : <Errores alError={alError} />}
+      {pestana === "actividad" ? <Actividad alError={alError} alAviso={alAviso} /> : <Errores alError={alError} />}
     </>
   );
 }
