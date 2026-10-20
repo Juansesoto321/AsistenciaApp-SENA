@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../servicios/api";
 import { conectarTiempoReal } from "../servicios/socket";
@@ -100,6 +100,8 @@ export default function Diseno({ children }) {
   const [porRevisar, setPorRevisar] = useState(0); // justificaciones que esperan respuesta
   const [menuAbierto, setMenuAbierto] = useState(false); // solo aplica en pantallas angostas
   const [compacto, setCompacto] = useState(() => leerCompacto()); // menú solo con íconos (computador)
+  const [hayMas, setHayMas] = useState(false); // quedan opciones del menú más abajo
+  const menuRef = useRef(null);
   const [, cambiarTema, temaActual] = useTema();
   const revisaJustificaciones = usuario.rol !== "aprendiz";
 
@@ -125,6 +127,18 @@ export default function Diseno({ children }) {
   }, [usuario.id, revisaJustificaciones]);
 
   const contadores = { "/notificaciones": notifPendientes, "/justificaciones": porRevisar };
+
+  // Si el menú no cabe, el final se desvanece mientras queden opciones abajo
+  useEffect(() => {
+    const nav = menuRef.current;
+    if (!nav) return undefined;
+    const revisar = () => setHayMas(nav.scrollTop + nav.clientHeight < nav.scrollHeight - 2);
+    revisar();
+    nav.addEventListener("scroll", revisar, { passive: true });
+    const observador = new ResizeObserver(revisar);
+    observador.observe(nav);
+    return () => { nav.removeEventListener("scroll", revisar); observador.disconnect(); };
+  }, [compacto]);
 
   // En celular el menú se cierra al cambiar de página o con la tecla Escape
   useEffect(() => { setMenuAbierto(false); }, [pathname]);
@@ -169,7 +183,7 @@ export default function Diseno({ children }) {
             <Icono nombre="cerrar" size="1.2em" />
           </button>
         </div>
-        <nav>
+        <nav ref={menuRef} className={hayMas ? "hay-mas" : undefined}>
           {menu.map((entrada) => {
             if (typeof entrada === "string") return <p key={entrada} className="grupo-menu">{entrada}</p>;
             const [ruta, icono, nombre] = entrada;
