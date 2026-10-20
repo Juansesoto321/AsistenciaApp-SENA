@@ -7,6 +7,13 @@ import { fechaCorta, textoPlazo } from "../../utilidades/formato";
 
 const PERIODO_VACIO = { nombre: "", fecha_inicio: "", fecha_fin: "" };
 
+/** "12:00" movida N minutos ("11:45"), para el ejemplo de la ventana de marcación */
+function horaConMargen(hora, minutos) {
+  const [h, m] = hora.split(":").map(Number);
+  const total = (((h * 60 + m + (Number.isFinite(minutos) ? minutos : 0)) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export default function Configuracion() {
   const [conf, setConf] = useState(null);
   const [periodos, setPeriodos] = useState([]);
@@ -50,6 +57,23 @@ export default function Configuracion() {
         <label>Minutos de tolerancia antes de marcar tardanza</label>
         <input type="number" min="0" value={conf.minutos_tolerancia || 15}
                onChange={(e) => setConf({ ...conf, minutos_tolerancia: e.target.value })} />
+        <div className="rejilla-2">
+          <div>
+            <label htmlFor="conf-antes">Minutos antes del inicio para marcar</label>
+            <input id="conf-antes" type="number" min="0" max="120" value={conf.minutos_antes_marcar ?? 15}
+                   onChange={(e) => setConf({ ...conf, minutos_antes_marcar: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="conf-despues">Minutos después del fin para marcar</label>
+            <input id="conf-despues" type="number" min="0" max="120" value={conf.minutos_despues_marcar ?? 10}
+                   onChange={(e) => setConf({ ...conf, minutos_despues_marcar: e.target.value })} />
+          </div>
+        </div>
+        <p className="nota-estado">
+          Una huella fuera de ese margen no cuenta para la clase, aunque la sesión esté abierta. En una clase de 12:00 a 14:00
+          se aceptan desde las {horaConMargen("12:00", -Number(conf.minutos_antes_marcar ?? 15))} hasta
+          las {horaConMargen("14:00", Number(conf.minutos_despues_marcar ?? 10))}.
+        </p>
         <label>Porcentaje mínimo de asistencia (%)</label>
         <input type="number" min="0" max="100" value={conf.porcentaje_minimo || 80}
                onChange={(e) => setConf({ ...conf, porcentaje_minimo: e.target.value })} />

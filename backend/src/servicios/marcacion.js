@@ -8,6 +8,7 @@ const modelo = require("../modelos/marcacion");
 const { enTransaccion } = require("../modelos/transaccion");
 const { descifrar, generarTemplateSimulado } = require("./cifrado");
 const { emitirASesion, emitirNotificacionNueva } = require("./tiempoReal");
+const { ventanaMarcacion } = require("./configuracion");
 const { error } = require("../utilidades/errores");
 const { fechaLarga } = require("../utilidades/formato");
 
@@ -17,9 +18,29 @@ const MARGEN_RELOJ_MS = 5 * 60 * 1000;
 // lector va un poco atrasado, igual cuenta para la clase activa
 const VENTANA_EN_VIVO_MS = 10 * 60 * 1000;
 
-async function obtenerSesionActiva(idAmbiente) {
-  const sesion = await modelo.buscarSesionActivaEnAmbiente(idAmbiente);
-  if (!sesion) throw error("No hay una sesión de clase activa en este ambiente", "sin_sesion");
+const hhmm = (hora) => String(hora).slice(0, 5);
+
+/**
+ * Ninguna clase acepta la marca a esa hora. Si hay una abierta (iniciada antes
+ * de tiempo, o que ya terminó), el instructor ve en vivo por qué no contó.
+ */
+async function rechazarMarca(idAmbiente, momento, ventana, { avisarEnVivo = true, pin } = {}) {
+  const abierta = await modelo.buscarSesionAbiertaEnAmbiente(idAmbiente);
+  if (!abierta) throw error("No hay una sesión de clase activa en este ambiente", "sin_sesion");
+
+  const horario = `${hhmm(abierta.hora_inicio)} a ${hhmm(abierta.hora_fin)}`;
+  if (avisarEnVivo) emitirASesion(abierta.id_sesion, "marca_fuera_de_horario", { hora: momento, pin, horario, ...ventana });
+  throw error(
+    `Marca fuera del horario de la clase (${horario}). Las huellas cuentan desde ${ventana.antes} min antes del inicio ` +
+    `hasta ${ventana.despues} min después del fin`,
+    "fuera_de_horario"
+  );
+}
+
+async function obtenerSesionActiva(idAmbiente, momento = new Date()) {
+  const ventana = await ventanaMarcacion();
+  const sesion = await modelo.buscarSesionActivaEnAmbiente(idAmbiente, momento, ventana);
+  if (!sesion) await rechazarMarca(idAmbiente, momento, ventana);
   return sesion;
 }
 
@@ -128,10 +149,13 @@ async function marcarPorHuella(idAmbiente, lectura) {
  */
 async function marcarPorDocumento(idAmbiente, documento, horaDelEquipo, ahora = new Date()) {
   const momento = horaDeLaMarca(horaDelEquipo, ahora);
-  let sesion = await modelo.buscarSesionEnAmbienteAl(idAmbiente, momento);
+  const ventana = await ventanaMarcacion();
+  const enVivo = ahora - momento < VENTANA_EN_VIVO_MS;
+  let sesion = await modelo.buscarSesionEnAmbienteAl(idAmbiente, momento, ventana, documento);
   // Reloj del lector un poco atrasado: una marca reciente cuenta para la clase activa
-  if (!sesion && ahora - momento < VENTANA_EN_VIVO_MS) sesion = await modelo.buscarSesionActivaEnAmbiente(idAmbiente);
-  if (!sesion) throw error("No había una sesión de clase activa en este ambiente a esa hora", "sin_sesion");
+  if (!sesion && enVivo) sesion = await modelo.buscarSesionActivaEnAmbiente(idAmbiente, ahora, ventana, documento);
+  // Una marca vieja reenviada no se anuncia en la clase de ahora
+  if (!sesion) await rechazarMarca(idAmbiente, momento, ventana, { avisarEnVivo: enVivo, pin: documento });
 
   const aprendiz = await modelo.buscarAprendizPorDocumentoEnFicha(documento, sesion.id_ficha);
   if (!aprendiz) {

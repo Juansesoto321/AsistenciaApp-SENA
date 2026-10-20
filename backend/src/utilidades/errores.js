@@ -5,7 +5,7 @@
  * central (middleware/manejadorErrores.js) lo traduce al código de estado.
  * Tipos reconocidos: validacion, conflicto_horario, credenciales, prohibido,
  * cuenta_pendiente, cuenta_inactiva, cuenta_bloqueada, no_encontrado,
- * no_reconocida, sin_sesion, vencida, demasiadas_peticiones.
+ * no_reconocida, sin_sesion, fuera_de_horario, vencida, demasiadas_peticiones.
  *
  * Uso: throw error("La sesión ya está cerrada", "validacion");
  */

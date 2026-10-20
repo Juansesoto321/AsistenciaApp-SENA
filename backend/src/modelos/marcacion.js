@@ -1,13 +1,25 @@
 const pool = require("../config/db");
 
-async function buscarSesionActivaEnAmbiente(idAmbiente) {
+// La marca ($2) cae entre (inicio - $3 min) y (fin + $4 min) del horario de la
+// clase. Antes bastaba con que la sesión estuviera abierta: una clase de 12:00
+// iniciada a las 9:57 se quedaba con las huellas de las 9:57.
+const EN_VENTANA = `$2::timestamptz BETWEEN (s.fecha + h.hora_inicio) - make_interval(mins => $3::int)
+                                      AND (s.fecha + h.hora_fin) + make_interval(mins => $4::int)`;
+
+// Si dos clases del ambiente aceptan la marca (una sin cerrar y la siguiente ya
+// abierta), gana la de la ficha del aprendiz ($5 = documento; sin él no influye)
+const PRIMERO_SU_FICHA = `EXISTS (SELECT 1 FROM matricula m JOIN usuario u ON u.id_usuario = m.id_aprendiz
+                                 WHERE m.id_ficha = h.id_ficha AND m.estado = 'activa' AND u.documento = $5::text) DESC`;
+
+async function buscarSesionActivaEnAmbiente(idAmbiente, momento, { antes, despues }, documento = null) {
   const r = await pool.query(
     `SELECT s.id_sesion, s.estado, s.fecha, s.hora_apertura, h.id_ficha, h.hora_inicio
      FROM sesion_clase s
      JOIN horario h ON h.id_horario = s.id_horario
      WHERE h.id_ambiente = $1 AND s.fecha = CURRENT_DATE AND s.estado = 'activa'
-     ORDER BY s.hora_apertura DESC LIMIT 1`,
-    [idAmbiente]
+       AND ${EN_VENTANA}
+     ORDER BY ${PRIMERO_SU_FICHA}, s.hora_apertura DESC LIMIT 1`,
+    [idAmbiente, momento, antes, despues, documento]
   );
   return r.rows[0] || null;
 }
@@ -16,7 +28,7 @@ async function buscarSesionActivaEnAmbiente(idAmbiente) {
  * La sesión que estaba abierta en el ambiente en el momento de la marca, esté
  * activa o ya cerrada. Sirve para las marcas que el lector reenvía tarde.
  */
-async function buscarSesionEnAmbienteAl(idAmbiente, momento) {
+async function buscarSesionEnAmbienteAl(idAmbiente, momento, { antes, despues }, documento = null) {
   const r = await pool.query(
     `SELECT s.id_sesion, s.estado, s.fecha, s.hora_apertura, h.id_ficha, h.hora_inicio
      FROM sesion_clase s
@@ -25,8 +37,22 @@ async function buscarSesionEnAmbienteAl(idAmbiente, momento) {
        AND s.fecha = $2::timestamptz::date
        AND s.hora_apertura <= $2
        AND (s.hora_cierre IS NULL OR s.hora_cierre >= $2)
+       AND ${EN_VENTANA}
+     ORDER BY ${PRIMERO_SU_FICHA}, s.hora_apertura DESC LIMIT 1`,
+    [idAmbiente, momento, antes, despues, documento]
+  );
+  return r.rows[0] || null;
+}
+
+/** La clase abierta ahora en el ambiente, sin mirar la hora: para explicar por qué se rechazó una marca. */
+async function buscarSesionAbiertaEnAmbiente(idAmbiente) {
+  const r = await pool.query(
+    `SELECT s.id_sesion, h.hora_inicio, h.hora_fin
+     FROM sesion_clase s
+     JOIN horario h ON h.id_horario = s.id_horario
+     WHERE h.id_ambiente = $1 AND s.fecha = CURRENT_DATE AND s.estado = 'activa'
      ORDER BY s.hora_apertura DESC LIMIT 1`,
-    [idAmbiente, momento]
+    [idAmbiente]
   );
   return r.rows[0] || null;
 }
@@ -112,6 +138,7 @@ async function notificar(cliente, idUsuario, titulo, mensaje) {
 module.exports = {
   buscarSesionActivaEnAmbiente,
   buscarSesionEnAmbienteAl,
+  buscarSesionAbiertaEnAmbiente,
   buscarPlantillasDeFicha,
   buscarAprendizPorDocumentoEnFicha,
   obtenerTolerancia,

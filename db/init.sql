@@ -306,6 +306,8 @@ CREATE INDEX IF NOT EXISTS idx_log_error_fecha     ON log_error(creado_en DESC);
 -- ---------- CONFIGURACIÓN INICIAL ----------
 INSERT INTO configuracion (clave, valor) VALUES
   ('minutos_tolerancia', '15'),
+  ('minutos_antes_marcar', '15'),   -- ventana de marcación alrededor del horario
+  ('minutos_despues_marcar', '10'),
   ('porcentaje_minimo', '80'),
   ('horas_justificacion', '72'),
   ('nombre_institucion', 'SENA - CGMLTI')

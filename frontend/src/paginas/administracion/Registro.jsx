@@ -74,7 +74,7 @@ function resumirDetalle(r) {
   const d = r.detalle || {};
   if (r.accion === "exportar_reporte") return `${FORMATO[d.formato] || d.formato} · ${d.contenido === "resumen" ? "resumen" : "clase por clase"} · ${d.filas} filas`;
   if (r.accion === "exportar_auditoria") return `CSV · ${d.filas} filas`;
-  if (r.accion === "asistencia_manual") return `${d.estado}${d.motivo ? ` · "${d.motivo}"` : ""}`;
+  if (r.accion === "asistencia_manual") return `${d.estado}${d.sesion_cerrada ? " · con la clase cerrada" : ""}${d.motivo ? ` · "${d.motivo}"` : ""}`;
   if (r.accion === "cerrar_sesion_clase") return `${d.ausentes} ausente(s)`;
   if (r.accion === "actualizar_configuracion") return Object.entries(d).map(([k, v]) => `${k.replaceAll("_", " ")}: ${v}`).join(" · ");
   if (r.accion === "crear_usuario" && d.rol) return `rol ${d.rol}`;

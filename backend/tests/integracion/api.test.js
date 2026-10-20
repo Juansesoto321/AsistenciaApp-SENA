@@ -644,3 +644,56 @@ prueba("no se abre una segunda sesión de la misma ficha a la misma hora (clase 
   assert.match(iniciar.datos.mensaje, /ya tiene una sesión hoy/);
   await e.pool.query("DELETE FROM horario WHERE id_horario = $1", [idRepetida]);
 });
+
+// ---------- Ventana de marcación ----------
+
+prueba("una huella fuera del horario de la clase no cuenta, aunque la sesión esté abierta", async () => {
+  // Una base instalada antes de estos parámetros no los tiene: valen los de por defecto
+  await e.pool.query("DELETE FROM configuracion WHERE clave IN ('minutos_antes_marcar', 'minutos_despues_marcar')");
+  const conf = await e.peticion("GET", "/api/configuracion", { token: tokens.coordinador });
+  assert.equal(conf.datos.minutos_antes_marcar, "15");
+  assert.equal(conf.datos.minutos_despues_marcar, "10");
+
+  // Otra ficha con Ciro, y dos clases de hoy lejos de la hora actual: así se
+  // reproduce la clase de 12:00 iniciada a las 9:57 que se quedó con esas huellas
+  const ficha = await e.pool.query(
+    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor)
+     VALUES ('888888', 'Ventana', 'mañana', CURRENT_DATE - 30, CURRENT_DATE + 30, $1, $2) RETURNING id_ficha`,
+    [e.ids.periodo, e.ids.instructor]
+  );
+  const idFicha = ficha.rows[0].id_ficha;
+  await e.pool.query("INSERT INTO matricula (id_aprendiz, id_ficha) VALUES ($1, $2)", [e.ids.ajeno, idFicha]);
+  const temprano = new Date().getHours() < 3;
+  const bloques = temprano ? [["22:00", "22:30"], ["23:00", "23:30"]] : [["00:20", "00:40"], ["01:00", "01:20"]];
+  const ids = [];
+  for (const [[inicio, fin], ambiente] of [[bloques[0], e.ids.ambiente], [bloques[1], e.ids.otroAmbiente]]) {
+    const h = await e.pool.query(
+      `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_horario`,
+      [idFicha, ambiente, e.ids.instructor, e.ids.periodo, e.ids.diaDeHoy, inicio, fin]
+    );
+    ids.push(h.rows[0].id_horario);
+  }
+
+  // Lector simulado: la sesión está abierta pero la hora no es de esa clase
+  const sesion = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: ids[0] } });
+  assert.equal(sesion.estado, 200);
+  const simulada = await e.peticion("POST", "/api/lector/marcacion", { encabezados: LECTOR, cuerpo: { lectura: "dedo-ciro" } });
+  assert.equal(simulada.estado, 409);
+  assert.match(simulada.datos.mensaje, /fuera del horario de la clase/);
+
+  // Lector real: la marca de ahora se rechaza y no deja asistencia
+  const real = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: ids[1] } });
+  assert.equal(real.estado, 200);
+  await e.pool.query("UPDATE sesion_clase SET hora_apertura = NOW() - INTERVAL '10 minutes' WHERE id_sesion = $1", [real.datos.id_sesion]);
+  const linea = `900012\t${horaDelEquipo(haceMinutos(1))}\t0\t1`;
+  assert.equal((await enviarAttlog([linea])).datos, "OK");
+  const contar = async () => (await e.pool.query(
+    "SELECT COUNT(*)::int AS n FROM asistencia WHERE id_sesion = $1", [real.datos.id_sesion])).rows[0].n;
+  assert.equal(await contar(), 0);
+
+  // Si la clase sí es a esta hora, la misma marca cuenta
+  await e.pool.query("UPDATE horario SET hora_inicio = '00:00', hora_fin = '23:59' WHERE id_horario = $1", [ids[1]]);
+  assert.equal((await enviarAttlog([linea])).datos, "OK");
+  assert.equal(await contar(), 1);
+});
