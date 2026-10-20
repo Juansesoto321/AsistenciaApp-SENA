@@ -8,6 +8,9 @@ import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 import { colorAsistencia } from "../../componentes/AnilloAsistencia.jsx";
 
+// Una sigla (ADSO, TDS…) en vez del nombre del programa: queda distinto de las demás fichas
+const pareceSigla = (texto) => /^[A-ZÁÉÍÓÚÑ]{2,8}$/.test(texto.trim());
+
 const VACIA = { numero_ficha: "", programa: "", jornada: "mañana", fecha_inicio: "", fecha_fin: "", id_periodo: "", id_instructor: "", trimestres: "7" };
 
 export default function Fichas() {
@@ -115,7 +118,13 @@ export default function Fichas() {
             <div className="rejilla-2">
               <div>
                 <label>Programa de formación *</label>
-                <input required value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+                <input required list="programas-existentes" value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+                <datalist id="programas-existentes">
+                  {[...new Set((fichas || []).map((x) => x.programa).filter((p) => !pareceSigla(p)))].map((p) => <option key={p} value={p} />)}
+                </datalist>
+                {pareceSigla(f.programa) && (
+                  <p className="nota-estado">Escribe el nombre completo del programa, no la sigla, para que coincida con las demás fichas.</p>
+                )}
               </div>
               <div>
                 <label>Trimestres</label>

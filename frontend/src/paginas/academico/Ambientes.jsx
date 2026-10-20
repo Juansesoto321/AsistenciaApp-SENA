@@ -101,7 +101,11 @@ export default function Ambientes() {
               </div>
             </div>
             <label>Sede / Centro</label>
-            <input value={f.sede_centro} onChange={(e) => setF({ ...f, sede_centro: e.target.value })} placeholder="SENA - CGMLTI Bogotá" />
+            <input list="sedes-existentes" value={f.sede_centro} onChange={(e) => setF({ ...f, sede_centro: e.target.value })} placeholder="SENA - CGMLTI Bogotá" />
+            {/* Las sedes ya usadas, para escribirlas siempre igual */}
+            <datalist id="sedes-existentes">
+              {[...new Set((ambientes || []).map((a) => a.sede_centro))].map((s) => <option key={s} value={s} />)}
+            </datalist>
             <div className="acciones-modal">
               <button className="boton suave" onClick={() => setModal(null)}>Cancelar</button>
               <button className="boton" onClick={crearAmbiente}>Crear ambiente</button>
