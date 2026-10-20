@@ -127,10 +127,12 @@ export default function DetalleFicha() {
               <td className="col-correo">{m.correo}</td>
               <td>{m.tiene_huella
                 ? <span className="insignia presente"><IconoHuella /> Registrada</span>
-                : <span className="insignia pendiente">Sin registrar</span>}</td>
+                : m.huella_en_lector
+                  ? <span className="insignia presente" title="El lector del ambiente ya la reconoce: está guardada en el equipo, no en la app"><IconoHuella /> En el lector</span>
+                  : <span className="insignia pendiente">Sin registrar</span>}</td>
               <td><span className={`insignia ${m.estado}`}>{m.estado}</span></td>
               <td className="col-acciones"><div className="acciones-celda">
-                {!m.tiene_huella && m.estado === "activa" &&
+                {!m.tiene_huella && !m.huella_en_lector && m.estado === "activa" &&
                   <button className="boton mini" onClick={() => abrirEnrolar(m)}><IconoHuella /> Enrolar huella</button>}
                 {m.tiene_huella && ["coordinador", "programador"].includes(rol) &&
                   <button className="boton mini peligro" onClick={() => eliminarHuella(m)}>Eliminar huella</button>}

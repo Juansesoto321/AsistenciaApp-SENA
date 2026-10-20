@@ -231,7 +231,9 @@ async function listarMatriculasDeFicha(idFicha) {
   const resultado = await pool.query(
     `SELECT m.id_matricula, m.estado, m.fecha_matricula,
             u.id_usuario, u.nombres, u.apellidos, u.documento, u.correo,
-            (pb.id_plantilla IS NOT NULL) AS tiene_huella
+            -- huella_en_lector: el lector real la guarda en el equipo, no en la app
+            (pb.id_plantilla IS NOT NULL) AS tiene_huella,
+            EXISTS (SELECT 1 FROM asistencia x WHERE x.id_aprendiz = u.id_usuario AND x.metodo = 'huella') AS huella_en_lector
      FROM matricula m
      JOIN usuario u ON u.id_usuario = m.id_aprendiz
      LEFT JOIN plantilla_biometrica pb ON pb.id_aprendiz = u.id_usuario

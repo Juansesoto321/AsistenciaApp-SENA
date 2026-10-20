@@ -505,6 +505,12 @@ prueba("una marca hecha en clase pero recibida después del cierre corrige la au
   assert.equal(cambio.rows[0].cambiado_por, null); // lo cambió el lector, no una persona
   const aviso = await e.pool.query("SELECT 1 FROM notificacion WHERE id_usuario = $1 AND titulo = 'Asistencia corregida'", [e.ids.ausente]);
   assert.equal(aviso.rows.length, 1);
+
+  // Beto no tiene huella en la app, pero el lector real lo reconoció: no sale como "Sin registrar"
+  const matriculas = await e.peticion("GET", `/api/fichas/${e.ids.ficha}/matriculas`, { token: tokens.coordinador });
+  const filaBeto = matriculas.datos.find((m) => m.id_usuario === e.ids.ausente);
+  assert.equal(filaBeto.tiene_huella, false);
+  assert.equal(filaBeto.huella_en_lector, true);
 });
 
 // ---------- Panel y reportes ----------

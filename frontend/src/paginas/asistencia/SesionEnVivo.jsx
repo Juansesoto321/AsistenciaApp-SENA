@@ -228,6 +228,8 @@ export default function SesionEnVivo() {
               <td data-etiqueta="Huella">
                 {a.tiene_huella ? (
                   <IconoHuella title="Huella registrada" />
+                ) : a.huella_en_lector ? (
+                  <span style={{ fontSize: 12.5 }} title="El lector del ambiente ya la reconoce: está guardada en el equipo, no en la app"><IconoHuella /> En el lector</span>
                 ) : (
                   <span style={{ color: "var(--tinta-suave)", fontSize: 12.5 }} title="Sin huella registrada: usar registro manual">
                     Sin huella
