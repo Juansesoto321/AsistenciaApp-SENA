@@ -107,8 +107,8 @@ export default function Usuarios() {
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <input style={{ maxWidth: 260 }} placeholder="Buscar por nombre, documento o correo"
-               value={filtro.buscar} onChange={(e) => setFiltro({ ...filtro, buscar: e.target.value })} />
+        <input type="search" style={{ flex: "1 1 300px", maxWidth: 380 }} placeholder="Buscar por nombre, documento o correo"
+               aria-label="Buscar usuarios por nombre, documento o correo" value={filtro.buscar} onChange={(e) => setFiltro({ ...filtro, buscar: e.target.value })} />
         <select style={{ maxWidth: 170 }} value={filtro.rol} onChange={(e) => setFiltro({ ...filtro, rol: e.target.value })}>
           <option value="">Todos los roles</option>
           <option value="coordinador">Coordinador</option>
@@ -188,9 +188,17 @@ export default function Usuarios() {
               <div><label>Apellidos</label><input value={f.apellidos} onChange={(e) => setF({ ...f, apellidos: e.target.value })} /></div>
             </div>
             <div className="rejilla-2">
-              <div><label>Documento</label><input value={f.documento} onChange={(e) => setF({ ...f, documento: e.target.value })} /></div>
-              <div><label>Teléfono</label><input value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} /></div>
+              <div>
+                <label htmlFor="nuevo-tipo-doc">Tipo de documento</label>
+                <select id="nuevo-tipo-doc" value={f.tipo_documento} onChange={(e) => setF({ ...f, tipo_documento: e.target.value })}>
+                  <option value="CC">Cédula de ciudadanía</option>
+                  <option value="TI">Tarjeta de identidad</option>
+                  <option value="CE">Cédula de extranjería</option>
+                </select>
+              </div>
+              <div><label>Documento</label><input inputMode="numeric" value={f.documento} onChange={(e) => setF({ ...f, documento: e.target.value })} /></div>
             </div>
+            <label>Teléfono</label><input type="tel" value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} />
             <label>Correo</label><input value={f.correo} onChange={(e) => setF({ ...f, correo: e.target.value })} />
             <label>Rol</label>
             <select value={f.rol} onChange={(e) => setF({ ...f, rol: e.target.value })}>

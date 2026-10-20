@@ -4,7 +4,7 @@ const modelo = require("../modelos/usuarios");
 const { enviarCorreo } = require("./correo");
 const { auditar } = require("./auditoria");
 const { error } = require("../utilidades/errores");
-const { escaparHtml } = require("../utilidades/formato");
+const { escaparHtml, TIPOS_DOCUMENTO } = require("../utilidades/formato");
 
 const ROLES_VALIDOS = ["coordinador", "programador", "instructor", "aprendiz"];
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,6 +50,8 @@ async function listar(filtros) {
 // Crear usuario (contrasena temporal enviada por correo — CU-04)
 async function crear(datos, idActor) {
   if (!ROLES_VALIDOS.includes(datos.rol)) throw error("Rol inválido", "validacion");
+  if (datos.tipoDocumento && !TIPOS_DOCUMENTO.includes(datos.tipoDocumento))
+    throw error("Tipo de documento inválido", "validacion");
   const cuenta = normalizarCuenta(datos);
   const temporal = generarContrasenaTemporal();
   const hash = await bcrypt.hash(temporal, 10);
