@@ -26,8 +26,8 @@ const COORDINACION = ["coordinador", "programador"];
 function enlaceDe(n, rol) {
   if (n.enlace) return n.enlace;
   const personal = rol !== "aprendiz";
-  if (n.tipo === "justificacion") return personal ? "/justificaciones" : "/mi-asistencia";
-  if (n.tipo === "inasistencia" || n.tipo === "asistencia") return personal ? null : "/mi-asistencia";
+  if (n.tipo === "justificacion" || n.tipo === "inasistencia") return personal ? (n.tipo === "justificacion" ? "/justificaciones" : null) : "/mis-justificaciones";
+  if (n.tipo === "asistencia") return personal ? null : "/mi-asistencia";
   if (n.tipo === "solicitud_registro") return rol === "coordinador" ? "/usuarios" : null;
   if (n.tipo === "soporte") return "/soporte";
   if (n.tipo === "lector") return COORDINACION.includes(rol) ? "/ambientes" : "/sesiones";

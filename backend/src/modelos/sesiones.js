@@ -136,7 +136,7 @@ async function esInstructorDeSesion(idSesion, idUsuario) {
 // Datos para validar un registro manual: dueño de la clase y hace cuanto se cerro
 async function buscarSesionParaRegistroManual(idSesion) {
   const r = await pool.query(
-    `SELECT s.estado, s.fecha, h.id_instructor, h.id_ficha, f.numero_ficha,
+    `SELECT s.estado, s.fecha, h.id_instructor, h.id_ficha, f.numero_ficha, h.hora_inicio, h.hora_fin,
             (s.hora_cierre IS NOT NULL AND s.hora_cierre < NOW() - INTERVAL '24 hours') AS cerrada_hace_mas_de_24h
      FROM sesion_clase s
      JOIN horario h ON h.id_horario = s.id_horario
@@ -188,7 +188,7 @@ async function buscarNombreUsuario(idUsuario) {
 
 async function buscarSesionParaCerrar(idSesion) {
   const r = await pool.query(
-    `SELECT s.*, h.id_ficha, h.id_instructor, f.numero_ficha
+    `SELECT s.*, h.id_ficha, h.id_instructor, f.numero_ficha, h.hora_inicio, h.hora_fin
      FROM sesion_clase s
      JOIN horario h ON h.id_horario = s.id_horario
      JOIN ficha f ON f.id_ficha = h.id_ficha
@@ -265,8 +265,8 @@ async function buscarUsuarioParaCorreo(cliente, idAprendiz) {
 
 async function insertarNotificacionInasistencia(cliente, idAprendiz, mensaje) {
   await cliente.query(
-    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
-     VALUES ($1, 'inasistencia', 'Inasistencia registrada', $2)`,
+    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje, enlace)
+     VALUES ($1, 'inasistencia', 'Inasistencia registrada', $2, '/mis-justificaciones')`,
     [idAprendiz, mensaje]
   );
 }

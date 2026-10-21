@@ -849,3 +849,20 @@ prueba("la justificación que llega abre desde la notificación, y la clase pasa
   const ajeno = await e.peticion("GET", "/api/sesiones/historial", { token: tokens.otro });
   assert.ok(!ajeno.datos.some((c) => c.id_sesion === idPasada));
 });
+
+// ---------- Aprendiz: avisos con la clase real y Mis justificaciones (revisión, punto 15) ----------
+
+prueba("el aviso de inasistencia dice qué clase fue y lleva a Mis justificaciones", async () => {
+  const { rows } = await e.pool.query(
+    "SELECT mensaje, enlace FROM notificacion WHERE id_usuario = $1 AND titulo = 'Inasistencia registrada' ORDER BY id_notificacion",
+    [e.ids.ausente]
+  );
+  assert.ok(rows.length >= 1);
+  assert.match(rows[0].mensaje, /\(\d{2}:\d{2}–\d{2}:\d{2}, ficha 999999\)/); // antes: solo la fecha
+  assert.equal(rows[0].enlace, "/mis-justificaciones");
+
+  // El historial del aprendiz trae la hora de cada clase para listar sus faltas
+  const historial = await e.peticion("GET", "/api/reportes/mi-historial", { token: tokens.ana });
+  assert.equal(historial.estado, 200);
+  assert.ok(historial.datos.detalle.every((d) => /^\d{2}:\d{2}$/.test(d.hora_inicio)));
+});

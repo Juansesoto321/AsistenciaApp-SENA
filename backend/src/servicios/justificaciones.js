@@ -93,14 +93,14 @@ async function validarJustificacion(idJustificacion, usuario, { estado, observac
       if (estadoAnterior) await modelo.registrarCambioAsistencia(cliente, r.id_asistencia, estadoAnterior, usuario.id);
       await modelo.crearNotificacion(
         idAprendiz, "justificacion", "Justificación aprobada",
-        "Tu inasistencia quedó marcada como justificada.", cliente
+        "Tu inasistencia quedó marcada como justificada.", cliente, "/mis-justificaciones"
       );
       return { idAsistencia: r.id_asistencia, aprendiz: idAprendiz };
     }
 
     await modelo.crearNotificacion(
       idAprendiz, "justificacion", "Justificación rechazada",
-      `Tu justificación fue rechazada. Motivo: ${observacion.trim()}`, cliente
+      `Tu justificación fue rechazada. Motivo: ${observacion.trim()}`, cliente, "/mis-justificaciones"
     );
     return { idAsistencia: r.id_asistencia, aprendiz: idAprendiz };
   });

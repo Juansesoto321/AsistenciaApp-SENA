@@ -64,10 +64,13 @@ async function historialFicha(idAprendiz, idFicha) {
             CASE WHEN j.estado = 'pendiente' AND j.expira_en < NOW() THEN 'vencida' ELSE j.estado END AS estado_soporte,
             j.token AS token_soporte, j.expira_en AS soporte_expira,
             j.nombre_archivo AS soporte_archivo, j.tipo AS soporte_tipo, j.descripcion AS soporte_descripcion,
-            j.observacion_validacion AS soporte_observacion
+            j.observacion_validacion AS soporte_observacion,
+            TO_CHAR(h.hora_inicio, 'HH24:MI') AS hora_inicio, TO_CHAR(h.hora_fin, 'HH24:MI') AS hora_fin,
+            c.nombre AS competencia
      FROM asistencia a
      JOIN sesion_clase s ON s.id_sesion = a.id_sesion
      JOIN horario h ON h.id_horario = s.id_horario
+     LEFT JOIN competencia c ON c.id_competencia = h.id_competencia
      LEFT JOIN justificacion j ON j.id_asistencia = a.id_asistencia
      WHERE a.id_aprendiz = $1 AND h.id_ficha = $2
      ORDER BY s.fecha DESC`,

@@ -16,7 +16,7 @@ import ClaseEnCurso from "../../componentes/ClaseEnCurso.jsx";
 import SinClasesHoy from "../../componentes/SinClasesHoy.jsx";
 import EscanerHuella, { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { horaCorta, mayusculaInicial, saludo } from "../../utilidades/formato";
-import { nombreDelDia, proximaClase } from "../../utilidades/fechas";
+import { diaYFecha, mismoDia, proximaClase } from "../../utilidades/fechas";
 import { useFestivos } from "../../utilidades/festivos";
 
 const MAX_EN_RIESGO = 6;
@@ -396,12 +396,12 @@ function ProximaClase({ horarios, detalle, festivos }) {
         </p>
         <p className="proxima-hora">{horaCorta(horario.hora_inicio)} – {horaCorta(horario.hora_fin)}</p>
         <p className="proxima-cuando">
-          {mayusculaInicial(nombreDelDia(siguiente.fecha, ahora))}{cuando ? `, ${cuando}` : ""}
+          {mismoDia(siguiente.fecha, ahora) ? "Hoy" : diaYFecha(siguiente.fecha)}{cuando ? `, ${cuando}` : ""}
         </p>
         <p className="proxima-detalle">
           Ambiente <b>{horario.numero_ambiente}</b>{horario.sede_centro ? `, ${horario.sede_centro}` : ""}<br />
-          Instructor: {horario.instructor}<br />
-          {horario.tematica || horario.competencia || "Tema por asignar"}
+          Instructor: {horario.instructor}
+          {(horario.tematica || horario.competencia) && <><br />{horario.tematica || horario.competencia}</>}
         </p>
         {siguiente.enCurso && (
           <p className={`proxima-marca${marca ? " lista" : ""}`} role="status">
@@ -414,6 +414,16 @@ function ProximaClase({ horarios, detalle, festivos }) {
       </div>
       <EscanerHuella className="proxima-huella" estado={marca ? "registrada" : "espera"} encendidas={marca ? TOTAL_CRESTAS : 0} />
     </section>
+  );
+}
+
+/** Lleva a Mis justificaciones; si hay faltas por justificar, dice cuántas. */
+function BotonJustificar({ detalle }) {
+  const porCargar = detalle.filter((d) => d.estado_soporte === "pendiente").length;
+  return (
+    <Link className="boton mini boton-banda" to="/mis-justificaciones">
+      Justificar{porCargar > 0 ? ` (${porCargar})` : ""}
+    </Link>
   );
 }
 
@@ -443,6 +453,7 @@ function PanelAprendiz({ alError }) {
           Tu asistencia ({r.porcentaje} %) está por debajo del mínimo ({r.minimo} %). Habla con tu instructor y
           justifica tus inasistencias a tiempo.
         </span>
+        <BotonJustificar detalle={detalle} />
       </div>
     )}
 

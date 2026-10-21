@@ -2,6 +2,8 @@
  * Número que sube contando hasta su valor, y de un valor al siguiente cuando
  * cambia (por ejemplo, con cada marca de una clase en vivo). Respeta
  * "reducir movimiento" y deja pasar tal cual lo que no sea un número ("—").
+ * El lector de pantalla oye solo el valor final: antes leía los intermedios
+ * (0, 3, 8…) mientras el número subía.
  */
 import { useEffect, useRef, useState } from "react";
 import { reducirMovimiento } from "../utilidades/movimiento";
@@ -32,5 +34,8 @@ export default function Contador({ valor }) {
 
   if (!esNumero) return <>{valor ?? "—"}</>;
   const decimales = (String(objetivo).split(".")[1] || "").length; // 87.5 se sigue viendo 87.5
-  return <>{mostrado.toFixed(decimales)}</>;
+  return (<>
+    <span aria-hidden="true">{mostrado.toFixed(decimales)}</span>
+    <span className="sr-only">{objetivo.toFixed(decimales)}</span>
+  </>);
 }

@@ -28,7 +28,10 @@ function verificarTitular(usuario, idInstructor, accion) {
  * tenia enlace. El correo se envia DESPUES del COMMIT: el servidor SMTP puede
  * tardar segundos por mensaje y no debe mantener la transaccion abierta.
  */
-async function prepararJustificacion(cliente, { idAsistencia, idAprendiz, numeroFicha, fechaClase, horas }) {
+/** "08:00–12:00" de la clase de una sesión */
+const rangoHoras = (s) => `${String(s.hora_inicio).slice(0, 5)}–${String(s.hora_fin).slice(0, 5)}`;
+
+async function prepararJustificacion(cliente, { idAsistencia, idAprendiz, numeroFicha, fechaClase, horaClase, horas }) {
   const token = crypto.randomBytes(24).toString("hex");
   const creada = await modelo.insertarJustificacion(cliente, idAsistencia, token, horas);
   if (!creada) return null;
@@ -36,10 +39,11 @@ async function prepararJustificacion(cliente, { idAsistencia, idAprendiz, numero
   const plazo = textoPlazo(horas);
   await modelo.insertarNotificacionInasistencia(
     cliente, idAprendiz,
-    `Se registró tu inasistencia a la clase del ${fechaClase}. Revisa tu correo: tienes ${plazo} para cargar una justificación.`
+    `Se registró tu inasistencia a la clase del ${fechaClase} (${horaClase}, ficha ${numeroFicha}). ` +
+    `Tienes ${plazo} para cargar una justificación desde "Mis justificaciones" o con el enlace de tu correo.`
   );
   const aprendiz = await modelo.buscarUsuarioParaCorreo(cliente, idAprendiz);
-  return { idAprendiz, correo: aprendiz.correo, nombres: aprendiz.nombres, token, numeroFicha, fechaClase, plazo };
+  return { idAprendiz, correo: aprendiz.correo, nombres: aprendiz.nombres, token, numeroFicha, fechaClase, horaClase, plazo };
 }
 
 async function enviarAvisosDeInasistencia(avisos) {
@@ -49,7 +53,7 @@ async function enviarAvisosDeInasistencia(avisos) {
       para: a.correo,
       asunto: `AsistenciaApp · Inasistencia registrada (ficha ${a.numeroFicha})`,
       html: `<p>Hola ${escaparHtml(a.nombres)},</p>
-             <p>Se registró tu <b>inasistencia</b> a la clase del ${a.fechaClase} de la ficha ${a.numeroFicha}.</p>
+             <p>Se registró tu <b>inasistencia</b> a la clase del ${a.fechaClase} (${a.horaClase}) de la ficha ${a.numeroFicha}.</p>
              <p>Si tienes una excusa (por ejemplo, cita médica), cárgala en el siguiente enlace.
              <b>Disponible solo por ${a.plazo}</b>; después quedará como "sin justificación":</p>
              <p><a href="${enlace}">${enlace}</a></p>`,
@@ -148,7 +152,8 @@ async function registrarAsistenciaManual(idSesion, usuario, { id_aprendiz, estad
     const pendiente = estado === "ausente"
       ? await prepararJustificacion(cliente, {
           idAsistencia: upsert.id_asistencia, idAprendiz: id_aprendiz, numeroFicha: sesion.numero_ficha,
-          fechaClase: fechaLarga(sesion.fecha), horas: await modelo.obtenerHorasJustificacion(cliente),
+          fechaClase: fechaLarga(sesion.fecha), horaClase: rangoHoras(sesion),
+          horas: await modelo.obtenerHorasJustificacion(cliente),
         })
       : null;
 
@@ -187,7 +192,7 @@ async function cerrarSesion(idSesion, usuario) {
     for (const a of sinRegistro) {
       const aviso = await prepararJustificacion(cliente, {
         idAsistencia: a.id_asistencia, idAprendiz: a.id_aprendiz, numeroFicha: s.numero_ficha,
-        fechaClase: fechaLarga(s.fecha), horas,
+        fechaClase: fechaLarga(s.fecha), horaClase: rangoHoras(s), horas,
       });
       if (aviso) pendientes.push(aviso);
     }

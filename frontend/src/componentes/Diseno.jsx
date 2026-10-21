@@ -72,6 +72,7 @@ const MENUS = {
   aprendiz: [
     ["/panel", ico("panel"), "Panel"],
     ["/mi-asistencia", ico("asistencia"), "Mi asistencia"],
+    ["/mis-justificaciones", ico("justificaciones"), "Mis justificaciones"],
     ["/horarios", ico("horarios"), "Mi horario"],
     ["/notificaciones", ico("notificaciones"), "Notificaciones"],
     ["/perfil", ico("perfil"), "Mi perfil"],

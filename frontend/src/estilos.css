@@ -510,6 +510,8 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .accesos { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .accesos .boton { justify-content: flex-start; }
 .alerta-banda { display: flex; align-items: flex-start; gap: 10px; }
+.alerta-banda .boton-banda { margin-left: auto; flex-shrink: 0; align-self: center; }
+.texto-completo { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 860px) {
   .resumen-panel, .dos-columnas { grid-template-columns: 1fr; }
 }
