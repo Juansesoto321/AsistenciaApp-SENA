@@ -3,13 +3,12 @@
  * del lector y dibujada con luz neón: las crestas se encienden a medida que la
  * persona escribe, una línea de escaneo la cruza (y la recorre mientras se
  * verifican los datos), tiembla en rojo si no se pudo entrar y, al entrar, se
- * recoge y aparece el logo (el visto de "presente").
+ * recoge y aparece el visto de "presente".
  *
  * Es decorativa (aria-hidden): lo que pasa se anuncia en el formulario.
  * Las animaciones viven en estilos.css y se apagan con "reducir movimiento".
  */
 import { useEffect, useId, useState } from "react";
-import Logo from "./Logo.jsx";
 
 // Mismo dibujo que IconoHuella, con más crestas: [radio x, radio y, patrón, desfase]
 const CRESTAS = [
@@ -74,7 +73,9 @@ export default function EscanerHuella({ estado = "espera", encendidas = 0, inten
         <line className="escaner-linea" x1="-26" y1="118" x2="226" y2="118" />
       </svg>
       <div className="escaner-logo">
-        <Logo size="100%" colorVisto="var(--fondo)" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: "100%", height: "100%" }}>
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
       </div>
     </div>
   );
