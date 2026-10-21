@@ -92,7 +92,7 @@ export default function IniciarSesion() {
     : Math.round(avance(correo, contrasena, recuperando) * TOTAL_CRESTAS);
 
   return (
-    <div className="login">
+    <div className="login tema-oscuro">
       <EscenarioLector
         estado={estado}
         huella={estado === "enviado" ? "espera" : estado}

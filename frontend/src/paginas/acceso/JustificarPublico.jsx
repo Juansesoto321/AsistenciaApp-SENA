@@ -62,7 +62,7 @@ export default function JustificarPublico() {
   }
 
   return (
-    <div className="pantalla-acceso">
+    <div className="pantalla-acceso tema-oscuro">
       <FondoNeon />
       <div className="tarjeta-acceso" style={{ maxWidth: 500 }}>
         <div className="logo-acceso"><Icono nombre="justificaciones" size="1em" /></div>
