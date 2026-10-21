@@ -866,3 +866,24 @@ prueba("el aviso de inasistencia dice qué clase fue y lleva a Mis justificacion
   assert.equal(historial.estado, 200);
   assert.ok(historial.datos.detalle.every((d) => /^\d{2}:\d{2}$/.test(d.hora_inicio)));
 });
+
+// ---------- Soporte por rol (revisión, punto 16) ----------
+
+prueba("cada rol reporta los problemas que le pasan a él, y la coordinación lee el nombre del problema", async () => {
+  const deInstructor = await e.peticion("GET", "/api/soporte/tipos", { token: tokens.instructor });
+  const valores = deInstructor.datos.tipos.map((t) => t.valor);
+  assert.ok(valores.includes("lector") && !valores.includes("huella")); // "Mi huella no es reconocida" es del aprendiz
+  assert.ok((await e.peticion("GET", "/api/soporte/tipos", { token: tokens.ana })).datos.tipos.some((t) => t.valor === "huella"));
+
+  const ajeno = await e.peticion("POST", "/api/soporte", { token: tokens.instructor, cuerpo: { tipo: "huella", descripcion: "x" } });
+  assert.equal(ajeno.estado, 400);
+  const bueno = await e.peticion("POST", "/api/soporte", { token: tokens.instructor, cuerpo: { tipo: "lector", descripcion: "El lector del 201 no prende" } });
+  assert.equal(bueno.estado, 201);
+
+  const { rows } = await e.pool.query(
+    "SELECT mensaje, enlace FROM notificacion WHERE id_usuario = $1 AND mensaje LIKE $2",
+    [e.ids.coordinador, `Ticket #${bueno.datos.id_ticket}:%`]
+  );
+  assert.equal(rows[0].mensaje, `Ticket #${bueno.datos.id_ticket}: El lector del ambiente no funciona`);
+  assert.equal(rows[0].enlace, "/soporte");
+});

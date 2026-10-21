@@ -85,6 +85,18 @@ input, select, textarea {
    quede texto invisible (blanco sobre blanco) en ningún desplegable. */
 select option { background: var(--blanco); color: var(--tinta); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--violeta-500); border-color: transparent; }
+/* Selector de archivo: zona punteada con un botón de la app, en vez del
+   control gris del navegador */
+input[type="file"] {
+  padding: 8px; border-style: dashed; color: var(--tinta-suave); font-size: 13.5px; cursor: pointer;
+}
+input[type="file"]::file-selector-button {
+  margin-right: 12px; padding: 8px 14px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--violeta-100); color: var(--violeta-700); font: inherit; font-weight: 600;
+  transition: background .15s;
+}
+input[type="file"]:hover { border-color: var(--violeta-500); }
+input[type="file"]:hover::file-selector-button { background: var(--violeta-50); }
 /* Foco visible al navegar con teclado (no aparece al hacer clic) */
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--violeta-500); outline-offset: 2px; }
 label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }

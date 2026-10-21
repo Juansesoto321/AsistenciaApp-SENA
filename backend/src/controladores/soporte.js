@@ -4,6 +4,7 @@ async function crear(req, res, next) {
   try {
     const idTicket = await servicio.crear({
       idUsuario: req.usuario.id,
+      rol: req.usuario.rol,
       tipo: req.body.tipo,
       descripcion: req.body.descripcion,
       nombreArchivo: req.body.nombre_archivo,
@@ -13,6 +14,10 @@ async function crear(req, res, next) {
   } catch (error) {
     next(error);
   }
+}
+
+function tipos(req, res) {
+  res.json(servicio.tiposDe(req.usuario.rol));
 }
 
 async function listar(req, res, next) {
@@ -40,4 +45,4 @@ async function cambiarEstado(req, res, next) {
   }
 }
 
-module.exports = { crear, listar, verCaptura, cambiarEstado };
+module.exports = { tipos, crear, listar, verCaptura, cambiarEstado };
