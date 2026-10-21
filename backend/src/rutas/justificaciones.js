@@ -17,6 +17,7 @@ router.use(autenticar);
 router.get("/", autorizar("instructor", "coordinador", "programador"), controlador.listarBandeja);
 router.get("/pendientes/contador", autorizar("instructor", "coordinador", "programador"), controlador.contarPendientes);
 router.get("/:id/archivo", autorizar("instructor", "coordinador", "programador"), controlador.verArchivo);
-router.patch("/:id", autorizar("instructor", "coordinador", "programador"), controlador.validar);
+// El programador las consulta, pero solo el instructor o la coordinación deciden
+router.patch("/:id", autorizar("instructor", "coordinador"), controlador.validar);
 
 module.exports = router;

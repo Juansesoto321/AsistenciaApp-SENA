@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../servicios/api";
 import { conectarTiempoReal } from "../servicios/socket";
@@ -6,6 +6,7 @@ import { useAuth } from "../contexto/AuthContext.jsx";
 import Logo from "./Logo.jsx";
 import IconoSoporte from "./IconoSoporte.jsx";
 import Icono from "./Iconos.jsx";
+import Aviso from "./Aviso.jsx";
 import { useTema } from "../utilidades/tema";
 
 const SOPORTE = <IconoSoporte />;
@@ -57,7 +58,8 @@ const MENUS = {
     ...CUENTA,
   ],
   // Mismas opciones del coordinador salvo "Usuarios": el programador apoya la
-  // planeacion academica pero no administra cuentas.
+  // planeacion academica pero no administra cuentas. Las clases y las
+  // justificaciones las consulta, sin iniciarlas ni decidirlas.
   programador: [
     ["/panel", ico("panel"), "Panel"],
     ...DIA_A_DIA,
@@ -70,12 +72,18 @@ const MENUS = {
   aprendiz: [
     ["/panel", ico("panel"), "Panel"],
     ["/mi-asistencia", ico("asistencia"), "Mi asistencia"],
+    ["/mis-justificaciones", ico("justificaciones"), "Mis justificaciones"],
     ["/horarios", ico("horarios"), "Mi horario"],
     ["/notificaciones", ico("notificaciones"), "Notificaciones"],
     ["/perfil", ico("perfil"), "Mi perfil"],
     ["/soporte", SOPORTE, "Soporte"],
   ],
 };
+
+// Nombre de cada página del menú (de cualquier rol), para los avisos
+const NOMBRE_PAGINA = Object.fromEntries(
+  Object.values(MENUS).flat().filter(Array.isArray).map(([ruta, , nombre]) => [ruta, nombre])
+);
 
 const CLAVE_COMPACTO = "asistenciaapp.menu-compacto";
 function leerCompacto() {
@@ -93,15 +101,18 @@ function Contador({ valor }) {
 export default function Diseno({ children }) {
   const { sesion, cerrarSesion } = useAuth();
   const navegar = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const [avisoPermiso, setAvisoPermiso] = useState(null);
   const usuario = sesion.usuario;
   const menu = MENUS[usuario.rol] || [];
   const [notifPendientes, setNotifPendientes] = useState(0);
   const [porRevisar, setPorRevisar] = useState(0); // justificaciones que esperan respuesta
   const [menuAbierto, setMenuAbierto] = useState(false); // solo aplica en pantallas angostas
   const [compacto, setCompacto] = useState(() => leerCompacto()); // menú solo con íconos (computador)
+  const [hayMas, setHayMas] = useState(false); // quedan opciones del menú más abajo
+  const menuRef = useRef(null);
   const [, cambiarTema, temaActual] = useTema();
-  const revisaJustificaciones = usuario.rol !== "aprendiz";
+  const revisaJustificaciones = ["instructor", "coordinador"].includes(usuario.rol); // el programador solo las consulta
 
   function alternarCompacto() {
     const nuevo = !compacto;
@@ -125,6 +136,29 @@ export default function Diseno({ children }) {
   }, [usuario.id, revisaJustificaciones]);
 
   const contadores = { "/notificaciones": notifPendientes, "/justificaciones": porRevisar };
+
+  // Si el menú no cabe, el final se desvanece mientras queden opciones abajo
+  useEffect(() => {
+    const nav = menuRef.current;
+    if (!nav) return undefined;
+    const revisar = () => setHayMas(nav.scrollTop + nav.clientHeight < nav.scrollHeight - 2);
+    revisar();
+    nav.addEventListener("scroll", revisar, { passive: true });
+    const observador = new ResizeObserver(revisar);
+    observador.observe(nav);
+    return () => { nav.removeEventListener("scroll", revisar); observador.disconnect(); };
+  }, [compacto]);
+
+  // Se llegó aquí porque la página pedida es de otro rol (App.jsx): decirlo, una vez
+  useEffect(() => {
+    if (!state?.sinPermiso) return;
+    const pagina = NOMBRE_PAGINA[state.sinPermiso];
+    setAvisoPermiso({
+      tipo: "error",
+      texto: `No tienes permiso para abrir ${pagina ? `«${pagina}»` : "esa página"}. Te llevamos al panel.`,
+    });
+    navegar(pathname, { replace: true, state: null }); // que no se repita al recargar
+  }, [state]);
 
   // En celular el menú se cierra al cambiar de página o con la tecla Escape
   useEffect(() => { setMenuAbierto(false); }, [pathname]);
@@ -169,7 +203,7 @@ export default function Diseno({ children }) {
             <Icono nombre="cerrar" size="1.2em" />
           </button>
         </div>
-        <nav>
+        <nav ref={menuRef} className={hayMas ? "hay-mas" : undefined}>
           {menu.map((entrada) => {
             if (typeof entrada === "string") return <p key={entrada} className="grupo-menu">{entrada}</p>;
             const [ruta, icono, nombre] = entrada;
@@ -198,6 +232,7 @@ export default function Diseno({ children }) {
         </div>
       </aside>
       <main className="contenido">{children}</main>
+      <Aviso mensaje={avisoPermiso} alCerrar={() => setAvisoPermiso(null)} />
     </div>
   );
 }

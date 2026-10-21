@@ -8,7 +8,7 @@ const { auditar } = require("./auditoria");
 const { enviarCorreo } = require("./correo");
 const { emitirJustificacionesActualizadas, emitirNotificacionNueva } = require("./tiempoReal");
 const { error } = require("../utilidades/errores");
-const { escaparHtml, textoPlazo } = require("../utilidades/formato");
+const { escaparHtml, fechaLarga, textoPlazo } = require("../utilidades/formato");
 
 const TIPOS_VALIDOS = ["cita_medica", "incapacidad_medica", "calamidad_domestica", "diligencia_legal", "duelo", "otro"];
 const TIPOS_SIN_FOTO_OBLIGATORIA = ["calamidad_domestica", "duelo"];
@@ -39,11 +39,14 @@ async function enviarPorToken(token, { tipo, descripcion, nombre_archivo, archiv
 
   const instr = await modelo.buscarInstructorDeAsistencia(r.id_asistencia);
   if (instr) {
+    // La notificación abre esa justificación (antes había que buscarla en la bandeja)
     await modelo.crearNotificacion(
       instr.id_instructor,
       "justificacion",
       "Nueva justificación por revisar",
-      `${instr.nombres} ${instr.apellidos} cargó una justificación de inasistencia.`
+      `${instr.nombres} ${instr.apellidos} cargó una justificación de la clase del ${fechaLarga(instr.fecha)} (ficha ${instr.numero_ficha}).`,
+      undefined,
+      `/justificaciones?id=${r.id_justificacion}`
     );
     // CU-24: refleja al instante el nuevo pendiente en el contador del panel del instructor (y del admin)
     emitirJustificacionesActualizadas(instr.id_instructor);
@@ -90,14 +93,14 @@ async function validarJustificacion(idJustificacion, usuario, { estado, observac
       if (estadoAnterior) await modelo.registrarCambioAsistencia(cliente, r.id_asistencia, estadoAnterior, usuario.id);
       await modelo.crearNotificacion(
         idAprendiz, "justificacion", "Justificación aprobada",
-        "Tu inasistencia quedó marcada como justificada.", cliente
+        "Tu inasistencia quedó marcada como justificada.", cliente, "/mis-justificaciones"
       );
       return { idAsistencia: r.id_asistencia, aprendiz: idAprendiz };
     }
 
     await modelo.crearNotificacion(
       idAprendiz, "justificacion", "Justificación rechazada",
-      `Tu justificación fue rechazada. Motivo: ${observacion.trim()}`, cliente
+      `Tu justificación fue rechazada. Motivo: ${observacion.trim()}`, cliente, "/mis-justificaciones"
     );
     return { idAsistencia: r.id_asistencia, aprendiz: idAprendiz };
   });

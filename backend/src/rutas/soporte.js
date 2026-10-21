@@ -8,6 +8,7 @@ router.use(autenticar);
 
 router.post("/", controlador.crear);
 router.get("/", controlador.listar);
+router.get("/tipos", controlador.tipos);
 router.get("/:id/captura", controlador.verCaptura);
 router.patch("/:id", autorizar("coordinador", "programador"), controlador.cambiarEstado);
 

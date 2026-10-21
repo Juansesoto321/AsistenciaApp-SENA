@@ -34,10 +34,11 @@ async function enviarPorToken(token, { tipo, descripcion, nombre_archivo, archiv
 
 async function buscarInstructorDeAsistencia(idAsistencia) {
   const r = await pool.query(
-    `SELECT h.id_instructor, u.nombres, u.apellidos
+    `SELECT h.id_instructor, u.nombres, u.apellidos, s.fecha, f.numero_ficha
      FROM asistencia a
      JOIN sesion_clase s ON s.id_sesion = a.id_sesion
      JOIN horario h ON h.id_horario = s.id_horario
+     JOIN ficha f ON f.id_ficha = h.id_ficha
      JOIN usuario u ON u.id_usuario = a.id_aprendiz
      WHERE a.id_asistencia = $1`,
     [idAsistencia]
@@ -58,11 +59,19 @@ async function esPropietario(idJustificacion, usuario) {
   return !!r.rows[0];
 }
 
+// Un enlace que pasó su plazo sin usarse es "vencida" aunque la tarea programada
+// (cada minuto) todavía no lo haya marcado en la base.
+const ESTADO_EFECTIVO = "CASE WHEN j.estado = 'pendiente' AND j.expira_en < NOW() THEN 'vencida' ELSE j.estado END";
+
+/**
+ * Todas las justificaciones: las que esperan revisión, las ya revisadas y
+ * también las que el aprendiz no ha cargado (con su plazo) o dejó vencer.
+ */
 async function listarBandeja(usuario) {
   const filtro = usuario.rol === "instructor" ? "AND h.id_instructor = $1" : "";
   const valores = usuario.rol === "instructor" ? [usuario.id] : [];
   const r = await pool.query(
-    `SELECT j.id_justificacion, j.estado, j.tipo, j.descripcion, j.nombre_archivo, j.enviada_en, j.expira_en,
+    `SELECT j.id_justificacion, ${ESTADO_EFECTIVO} AS estado, j.tipo, j.descripcion, j.nombre_archivo, j.enviada_en, j.expira_en,
             j.observacion_validacion, j.validada_en,
             rev.nombres || ' ' || rev.apellidos AS revisada_por,
             s.fecha, f.numero_ficha, u.nombres, u.apellidos, u.documento
@@ -73,8 +82,8 @@ async function listarBandeja(usuario) {
      JOIN ficha f ON f.id_ficha = h.id_ficha
      JOIN usuario u ON u.id_usuario = a.id_aprendiz
      LEFT JOIN usuario rev ON rev.id_usuario = j.validada_por
-     WHERE j.estado IN ('enviada','aprobada','rechazada') ${filtro}
-     ORDER BY j.enviada_en DESC NULLS LAST`,
+     WHERE TRUE ${filtro}
+     ORDER BY j.enviada_en DESC NULLS LAST, j.expira_en DESC`,
     valores
   );
   return r.rows;
@@ -135,11 +144,14 @@ async function registrarCambioAsistencia(cliente, idAsistencia, estadoAnterior, 
   );
 }
 
-/** `cliente` solo se pasa cuando la notificación debe ir dentro de una transacción. */
-async function crearNotificacion(idUsuario, tipo, titulo, mensaje, cliente = pool) {
+/**
+ * `cliente` solo se pasa cuando la notificación debe ir dentro de una
+ * transacción; `enlace` es la página que abre la notificación.
+ */
+async function crearNotificacion(idUsuario, tipo, titulo, mensaje, cliente = pool, enlace = null) {
   await cliente.query(
-    "INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje) VALUES ($1,$2,$3,$4)",
-    [idUsuario, tipo, titulo, mensaje]
+    "INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje, enlace) VALUES ($1,$2,$3,$4,$5)",
+    [idUsuario, tipo, titulo, mensaje, enlace]
   );
 }
 

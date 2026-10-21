@@ -177,14 +177,14 @@ export default function Reportes() {
         ) : (
           <div className="tabla-desplazable">
             <table className="tabla">
-              <thead><tr><th>Ficha</th><th>Clases</th><th>Presentes</th><th>Tardanzas</th><th>Justificadas</th><th>Ausencias</th><th>Asistencia</th><th></th></tr></thead>
+              <thead><tr><th>Ficha</th><th>Clases</th><th>Presentes</th><th>Tardanzas</th><th>Justificadas</th><th>Ausencias</th><th>Asistencia</th><th className="col-acciones"><span className="sr-only">Acciones</span></th></tr></thead>
               <tbody>
                 {resumen.por_ficha.map((f) => (
                   <tr key={f.id_ficha}>
                     <td><b>{f.numero_ficha}</b><small className="sub-celda">{f.programa}</small></td>
                     <td>{f.clases}</td><td>{f.presentes}</td><td>{f.tardanzas}</td><td>{f.justificadas}</td><td>{f.ausencias}</td>
                     <td><Porcentaje valor={f.porcentaje} minimo={minimo} /></td>
-                    <td><button className="boton mini suave" onClick={() => verFicha(f.id_ficha)}>Ver clase por clase</button></td>
+                    <td className="col-acciones"><button className="boton mini suave" onClick={() => verFicha(f.id_ficha)} title="Ver la asistencia de la ficha clase por clase" aria-label={`Ver la asistencia de la ficha ${f.numero_ficha} clase por clase`}>Ver clases</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -271,12 +271,12 @@ export default function Reportes() {
       {resultados && (
         <div className="tabla-desplazable">
         <table className="tabla">
-          <thead><tr>{tabla.encabezado("fecha", "Fecha")}{tabla.encabezado("aprendiz", "Aprendiz")}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("estado", "Estado")}{tabla.encabezado("hora", "Hora")}{tabla.encabezado("metodo", "Método")}</tr></thead>
+          <thead><tr>{tabla.encabezado("fecha", "Fecha")}{tabla.encabezado("aprendiz", "Aprendiz", { className: "col-nombre" })}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("estado", "Estado")}{tabla.encabezado("hora", "Hora")}{tabla.encabezado("metodo", "Método")}</tr></thead>
           <tbody>
             {tabla.visibles.map((r) => (
               <tr key={r.id_asistencia}>
                 <td>{fechaCorta(r.fecha)}</td>
-                <td>{r.aprendiz}</td><td>{r.documento}</td><td>{r.numero_ficha}</td>
+                <td className="col-nombre">{r.aprendiz}</td><td>{r.documento}</td><td>{r.numero_ficha}</td>
                 <td><span className={`insignia ${r.estado}`}>{r.estado}</span></td>
                 <td>{r.hora || "—"}</td>
                 <td><span className={`insignia ${r.metodo}`}>{r.metodo}</span></td>

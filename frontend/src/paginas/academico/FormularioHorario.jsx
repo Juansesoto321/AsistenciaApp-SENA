@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../servicios/api";
-import { rangoCorto } from "../../utilidades/fechas";
+import { isoLocal, rangoCorto } from "../../utilidades/fechas";
 
 /**
  * Formulario para crear o editar una clase, en el orden en que se piensa:
  * 1. ficha · 2. trimestre · 3. qué se ve (competencia, RAP, temática)
  * 4. quién la dicta · 5. dónde y cuándo (ambiente, días, horas).
  * Las competencias del plan del trimestre salen primero y sugieren su
- * instructor. Al crear se pueden marcar varios días a la vez.
+ * instructor. Al crear se pueden marcar varios días a la vez, y la serie puede
+ * limitarse a un rango de fechas dentro del trimestre y saltarse los festivos.
  */
 const DIAS = [ // en orden de semana laboral; valor = dia_semana (0 = domingo)
   [1, "L", "Lunes"], [2, "M", "Martes"], [3, "X", "Miércoles"], [4, "J", "Jueves"],
@@ -24,7 +25,11 @@ const JORNADAS = {
 const VACIO = {
   id_ficha: "", trimestre: "", id_competencia: "", id_rap: "", id_tematica: "",
   id_instructor: "", id_ambiente: "", dias: [1], hora_inicio: "07:00", hora_fin: "12:00",
+  fecha_desde: "", fecha_hasta: "", excluir_festivos: true,
 };
+
+const fechaCortaIso = (iso) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("es-CO", { day: "numeric", month: "short" }).replace(".", "");
 
 function desdeHorario(h) {
   return {
@@ -33,10 +38,13 @@ function desdeHorario(h) {
     id_rap: h.id_rap ? String(h.id_rap) : "", id_tematica: h.id_tematica ? String(h.id_tematica) : "",
     id_instructor: String(h.id_instructor), id_ambiente: String(h.id_ambiente),
     dias: [h.dia_semana], hora_inicio: h.hora_inicio.slice(0, 5), hora_fin: h.hora_fin.slice(0, 5),
+    fecha_desde: h.fecha_desde ? isoLocal(new Date(h.fecha_desde)) : "",
+    fecha_hasta: h.fecha_hasta ? isoLocal(new Date(h.fecha_hasta)) : "",
+    excluir_festivos: h.excluir_festivos !== false,
   };
 }
 
-export default function FormularioHorario({ horario, fichas, ambientes, instructores, raps, competencias, alGuardar, alCerrar }) {
+export default function FormularioHorario({ horario, fichas, ambientes, instructores, raps, competencias, festivos = new Map(), alGuardar, alCerrar }) {
   const esNuevo = !horario;
   const [f, setF] = useState(() => (esNuevo ? VACIO : desdeHorario(horario)));
   const [plan, setPlan] = useState(null);
@@ -92,6 +100,21 @@ export default function FormularioHorario({ horario, fichas, ambientes, instruct
     cambiar({ dias });
   }
 
+  // Entre qué fechas se repetirá: el trimestre, recortado por el rango si lo hay
+  const delTrimestre = plan?.fechas_trimestres.find((t) => String(t.trimestre) === f.trimestre);
+  const limite = delTrimestre
+    ? { min: isoLocal(new Date(delTrimestre.desde)), max: isoLocal(new Date(delTrimestre.hasta)) }
+    : { min: undefined, max: undefined };
+  const serie = {
+    desde: [limite.min, f.fecha_desde].filter(Boolean).sort().pop(),
+    hasta: [limite.max, f.fecha_hasta].filter(Boolean).sort()[0],
+  };
+  const serieVacia = serie.desde && serie.hasta && serie.desde > serie.hasta;
+  const festivosEnSerie = serie.desde && serie.hasta && !serieVacia
+    ? [...festivos].filter(([iso]) => iso >= serie.desde && iso <= serie.hasta
+        && f.dias.includes(new Date(`${iso}T00:00:00`).getDay()))
+    : [];
+
   const fueraDeJornada = jornada && f.hora_inicio && f.hora_fin &&
     (f.hora_inicio < jornada.desde || f.hora_fin > jornada.hasta);
   const faltantes = [
@@ -102,11 +125,15 @@ export default function FormularioHorario({ horario, fichas, ambientes, instruct
   async function guardar() {
     if (faltantes.length) return setError(`Falta elegir ${faltantes.join(", ")}.`);
     if (f.hora_fin <= f.hora_inicio) return setError("La hora de fin debe ser posterior a la de inicio.");
+    if (f.fecha_desde && f.fecha_hasta && f.fecha_hasta < f.fecha_desde)
+      return setError("La fecha final de la serie debe ser igual o posterior a la inicial.");
+    if (serieVacia) return setError("Las fechas de la serie quedan fuera del trimestre elegido.");
     const cuerpo = {
       id_ficha: f.id_ficha, trimestre: f.trimestre || null, id_competencia: f.id_competencia,
       id_rap: f.id_rap || null, id_tematica: f.id_tematica || null,
       id_instructor: f.id_instructor, id_ambiente: f.id_ambiente,
       hora_inicio: f.hora_inicio, hora_fin: f.hora_fin,
+      fecha_desde: f.fecha_desde || null, fecha_hasta: f.fecha_hasta || null, excluir_festivos: f.excluir_festivos,
       ...(esNuevo ? { dias_semana: f.dias } : { dia_semana: f.dias[0] }),
     };
     setGuardando(true);
@@ -236,6 +263,36 @@ export default function FormularioHorario({ horario, fichas, ambientes, instruct
           {fueraDeJornada && (
             <p className="nota-estado alerta">
               La ficha es de jornada {ficha.jornada} ({jornada.desde}–{jornada.hasta}). Revisa que la hora sea la correcta.
+            </p>
+          )}
+          <div className="rejilla-2">
+            <div>
+              <label htmlFor="serie-desde">Desde <span className="texto-suave">(opcional)</span></label>
+              <input id="serie-desde" type="date" min={limite.min} max={limite.max} value={f.fecha_desde}
+                     onChange={(e) => cambiar({ fecha_desde: e.target.value })} />
+            </div>
+            <div>
+              <label htmlFor="serie-hasta">Hasta <span className="texto-suave">(opcional)</span></label>
+              <input id="serie-hasta" type="date" min={f.fecha_desde || limite.min} max={limite.max} value={f.fecha_hasta}
+                     onChange={(e) => cambiar({ fecha_hasta: e.target.value })} />
+            </div>
+          </div>
+          {serieVacia ? (
+            <p className="nota-estado alerta">Esas fechas quedan fuera del trimestre {f.trimestre}.</p>
+          ) : serie.desde && serie.hasta && (
+            <p className="nota-estado">
+              {f.fecha_desde || f.fecha_hasta
+                ? `Se repetirá del ${fechaCortaIso(serie.desde)} al ${fechaCortaIso(serie.hasta)}.`
+                : `Sin fechas, se repite todo el trimestre (${fechaCortaIso(serie.desde)} – ${fechaCortaIso(serie.hasta)}).`}
+            </p>
+          )}
+          <label className="casilla-filtro" style={{ marginTop: 10 }}>
+            <input type="checkbox" checked={f.excluir_festivos} onChange={(e) => cambiar({ excluir_festivos: e.target.checked })} />
+            No dictar en festivos
+          </label>
+          {f.excluir_festivos && festivosEnSerie.length > 0 && (
+            <p className="nota-estado">
+              Sin clase por festivo: {festivosEnSerie.map(([iso, nombre]) => `${fechaCortaIso(iso)} (${nombre})`).join(", ")}.
             </p>
           )}
         </fieldset>

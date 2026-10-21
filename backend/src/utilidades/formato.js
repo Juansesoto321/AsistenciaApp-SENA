@@ -45,4 +45,7 @@ function celdaCsv(valor) {
   return /[";\n\r]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 }
 
-module.exports = { escaparHtml, fechaLarga, fechaIso, textoPlazo, celdaCsv };
+/** Tipos de documento que acepta el sistema (registro y creación de cuentas). */
+const TIPOS_DOCUMENTO = ["CC", "TI", "CE"];
+
+module.exports = { TIPOS_DOCUMENTO, escaparHtml, fechaLarga, fechaIso, textoPlazo, celdaCsv };

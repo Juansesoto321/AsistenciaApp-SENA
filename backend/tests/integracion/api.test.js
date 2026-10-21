@@ -18,7 +18,7 @@ const LECTOR = { "x-serial": "LECTOR-PRUEBA", "x-clave-api": "clave-de-prueba" }
 before(async () => {
   e = await entorno.iniciar();
   if (!e) return;
-  for (const rol of ["coordinador", "instructor", "otro", "ana"]) {
+  for (const rol of ["coordinador", "instructor", "otro", "ana", "programador"]) {
     tokens[rol] = await e.iniciarSesionComo(`${rol}@prueba.co`);
   }
 });
@@ -139,6 +139,21 @@ prueba("una ficha no puede tener dos clases a la misma hora aunque cambien ambie
   const r = await nuevoHorario({ dia_semana: e.ids.diaDeHoy, hora_inicio: "09:00", hora_fin: "10:00" });
   assert.equal(r.estado, 400);
   assert.match(r.datos.mensaje, /Conflicto de ficha/);
+});
+
+prueba("dos guardados simultáneos de la misma clase dejan una sola (antes quedaba duplicada)", async () => {
+  const dia = (e.ids.diaDeHoy + 3) % 7;
+  const misma = { dia_semana: dia, hora_inicio: "16:00", hora_fin: "17:00" };
+  const [a, b] = await Promise.all([nuevoHorario(misma), nuevoHorario(misma)]);
+  assert.deepEqual([a.estado, b.estado].sort(), [201, 400]);
+  const r = await e.pool.query(
+    "SELECT COUNT(*)::int AS n FROM horario WHERE id_ficha = $1 AND dia_semana = $2 AND hora_inicio = '16:00'",
+    [e.ids.ficha, dia]
+  );
+  assert.equal(r.rows[0].n, 1);
+  // Y la base también lo impide (migración 008)
+  const indice = await e.pool.query("SELECT 1 FROM pg_indexes WHERE indexname = 'idx_horario_sin_duplicados'");
+  assert.equal(indice.rows.length, 1);
 });
 
 prueba("una clase de un trimestre futuro no aparece hoy ni se puede iniciar", async () => {
@@ -262,6 +277,13 @@ prueba("una justificación con el plazo vencido responde 410", async () => {
   const vencida = await e.peticion("GET", `/api/justificaciones/token/${token}`);
   assert.equal(vencida.estado, 410);
   assert.equal(vencida.datos.vencida, true);
+
+  // En la bandeja ya sale como vencida, aunque la tarea programada aún no la haya marcado
+  const bandeja = await e.peticion("GET", "/api/justificaciones", { token: tokens.instructor });
+  const deBeto = bandeja.datos.find((j) => j.nombres === "Beto");
+  assert.equal(deBeto.estado, "vencida");
+  const enBase = await e.pool.query("SELECT estado FROM justificacion WHERE token = $1", [token]);
+  assert.equal(enBase.rows[0].estado, "pendiente");
 });
 
 prueba("pasadas 24 h del cierre, el instructor ya no corrige asistencia pero el coordinador sí", async () => {
@@ -440,10 +462,13 @@ prueba("el lector real saluda y queda en línea; un serial desconocido se ignora
 });
 
 prueba("el lector real usa la hora de la marca, no la de llegada, y no duplica lo que reenvía", async () => {
-  // Clase de hoy en el ambiente de este lector. Se inserta directo: la ficha ya tiene otra a esa hora.
+  // Clase de hoy en el ambiente de este lector. La clase principal de la ficha
+  // (ya cerrada) se acorta a 00:00-00:01 para que la del lector sea otro bloque
+  // del mismo día: una ficha no puede tener dos clases a la misma hora.
+  await e.pool.query("UPDATE horario SET hora_fin = '00:01' WHERE id_horario = $1", [e.ids.horario]);
   const horario = await e.pool.query(
     `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
-     VALUES ($1, $2, $3, $4, EXTRACT(DOW FROM CURRENT_DATE), '00:00', '23:59') RETURNING id_horario`,
+     VALUES ($1, $2, $3, $4, EXTRACT(DOW FROM CURRENT_DATE), '00:02', '23:59') RETURNING id_horario`,
     [e.ids.ficha, e.ids.otroAmbiente, e.ids.instructor, e.ids.periodo]
   );
   const inicio = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: horario.rows[0].id_horario } });
@@ -488,6 +513,12 @@ prueba("una marca hecha en clase pero recibida después del cierre corrige la au
   assert.equal(cambio.rows[0].cambiado_por, null); // lo cambió el lector, no una persona
   const aviso = await e.pool.query("SELECT 1 FROM notificacion WHERE id_usuario = $1 AND titulo = 'Asistencia corregida'", [e.ids.ausente]);
   assert.equal(aviso.rows.length, 1);
+
+  // Beto no tiene huella en la app, pero el lector real lo reconoció: no sale como "Sin registrar"
+  const matriculas = await e.peticion("GET", `/api/fichas/${e.ids.ficha}/matriculas`, { token: tokens.coordinador });
+  const filaBeto = matriculas.datos.find((m) => m.id_usuario === e.ids.ausente);
+  assert.equal(filaBeto.tiene_huella, false);
+  assert.equal(filaBeto.huella_en_lector, true);
 });
 
 // ---------- Panel y reportes ----------
@@ -539,6 +570,43 @@ prueba("las exportaciones quedan en la auditoría, que solo consulta la coordina
   assert.equal((await e.peticion("GET", "/api/auditoria", { token: tokens.ana })).estado, 403);
 });
 
+prueba("el registro de actividad nombra lo que se tocó, oculta los inicios de sesión y anota su exportación", async () => {
+  // Lo que se tocó aparece con su nombre, no como "ficha #2"; lo borrado conserva el nombre
+  await e.pool.query(
+    "INSERT INTO auditoria (id_usuario, accion, entidad, id_entidad) VALUES ($1, 'cambiar_trimestres_ficha', 'ficha', $2)",
+    [e.ids.coordinador, e.ids.ficha]
+  );
+  const tematica = await e.peticion("POST", "/api/competencias/tematicas", {
+    token: tokens.coordinador, cuerpo: { id_rap: e.ids.rap_competencia, nombre: "Temática que se borra" },
+  });
+  assert.equal(tematica.estado, 201);
+  const idTematica = tematica.datos.id_tematica;
+  assert.equal((await e.peticion("DELETE", `/api/competencias/tematicas/${idTematica}`, { token: tokens.coordinador })).estado, 200);
+
+  const todo = await e.peticion("GET", "/api/auditoria?limite=1000", { token: tokens.coordinador });
+  const deFicha = todo.datos.registros.find((x) => x.accion === "cambiar_trimestres_ficha");
+  assert.equal(deFicha.nombre_entidad, "Ficha 999999");
+  const borrada = todo.datos.registros.find((x) => x.accion === "eliminar_tematica" && x.id_entidad === idTematica);
+  assert.equal(borrada.nombre_entidad, "Temática que se borra");
+  assert.ok(todo.datos.registros.some((x) => x.accion === "login"));
+
+  // Ocultar inicios de sesión; la búsqueda también encuentra por lo que se tocó
+  const sinLogin = await e.peticion("GET", "/api/auditoria?sin_login=1&limite=1000", { token: tokens.coordinador });
+  assert.ok(sinLogin.datos.registros.length > 0);
+  assert.ok(sinLogin.datos.registros.every((x) => x.accion !== "login"));
+  const porFicha = await e.peticion("GET", "/api/auditoria?texto=999999", { token: tokens.coordinador });
+  assert.ok(porFicha.datos.registros.some((x) => x.accion === "cambiar_trimestres_ficha"));
+
+  // La exportación a CSV queda anotada (el archivo se arma en el navegador)
+  const exportacion = await e.peticion("POST", "/api/auditoria/exportaciones", {
+    token: tokens.coordinador, cuerpo: { filas: 42, filtros: { accion: "", ocultar_inicios: true } },
+  });
+  assert.equal(exportacion.estado, 201);
+  const anotada = await e.peticion("GET", "/api/auditoria?accion=exportar_auditoria", { token: tokens.coordinador });
+  assert.equal(anotada.datos.registros[0].detalle.filas, 42);
+  assert.equal((await e.peticion("POST", "/api/auditoria/exportaciones", { token: tokens.instructor, cuerpo: { filas: 1 } })).estado, 403);
+});
+
 // ---------- Soporte con captura ----------
 
 const PNG_1X1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -573,4 +641,270 @@ prueba("la sesión se renueva con un token válido; sin token no", async () => {
   assert.equal(r.datos.usuario.rol, "instructor");
   assert.equal((await e.peticion("GET", "/api/sesiones/hoy", { token: r.datos.token })).estado, 200);
   assert.equal((await e.peticion("POST", "/api/auth/renovar")).estado, 401);
+});
+
+// ---------- Clases repetidas ----------
+
+prueba("no se abre una segunda sesión de la misma ficha a la misma hora (clase repetida)", async () => {
+  // Una clase repetida como las que la base ya tenía antes de la validación (se inserta directo)
+  const r = await e.pool.query(
+    `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
+     VALUES ($1, $2, $3, $4, $5, '10:00', '11:00') RETURNING id_horario`,
+    [e.ids.ficha, e.ids.otroAmbiente, e.ids.instructor, e.ids.periodo, e.ids.diaDeHoy]
+  );
+  const idRepetida = r.rows[0].id_horario;
+  const iniciar = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: idRepetida } });
+  assert.equal(iniciar.estado, 400);
+  assert.match(iniciar.datos.mensaje, /ya tiene una sesión hoy/);
+  await e.pool.query("DELETE FROM horario WHERE id_horario = $1", [idRepetida]);
+});
+
+// ---------- Ventana de marcación ----------
+
+prueba("una huella fuera del horario de la clase no cuenta, aunque la sesión esté abierta", async () => {
+  // Una base instalada antes de estos parámetros no los tiene: valen los de por defecto
+  await e.pool.query("DELETE FROM configuracion WHERE clave IN ('minutos_antes_marcar', 'minutos_despues_marcar')");
+  const conf = await e.peticion("GET", "/api/configuracion", { token: tokens.coordinador });
+  assert.equal(conf.datos.minutos_antes_marcar, "15");
+  assert.equal(conf.datos.minutos_despues_marcar, "10");
+
+  // Otra ficha con Ciro, y dos clases de hoy lejos de la hora actual: así se
+  // reproduce la clase de 12:00 iniciada a las 9:57 que se quedó con esas huellas
+  const ficha = await e.pool.query(
+    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor)
+     VALUES ('888888', 'Ventana', 'mañana', CURRENT_DATE - 30, CURRENT_DATE + 30, $1, $2) RETURNING id_ficha`,
+    [e.ids.periodo, e.ids.instructor]
+  );
+  const idFicha = ficha.rows[0].id_ficha;
+  await e.pool.query("INSERT INTO matricula (id_aprendiz, id_ficha) VALUES ($1, $2)", [e.ids.ajeno, idFicha]);
+  const temprano = new Date().getHours() < 3;
+  const bloques = temprano ? [["22:00", "22:30"], ["23:00", "23:30"]] : [["00:20", "00:40"], ["01:00", "01:20"]];
+  const ids = [];
+  for (const [[inicio, fin], ambiente] of [[bloques[0], e.ids.ambiente], [bloques[1], e.ids.otroAmbiente]]) {
+    const h = await e.pool.query(
+      `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_horario`,
+      [idFicha, ambiente, e.ids.instructor, e.ids.periodo, e.ids.diaDeHoy, inicio, fin]
+    );
+    ids.push(h.rows[0].id_horario);
+  }
+
+  // Lector simulado: la sesión está abierta pero la hora no es de esa clase
+  const sesion = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: ids[0] } });
+  assert.equal(sesion.estado, 200);
+  const simulada = await e.peticion("POST", "/api/lector/marcacion", { encabezados: LECTOR, cuerpo: { lectura: "dedo-ciro" } });
+  assert.equal(simulada.estado, 409);
+  assert.match(simulada.datos.mensaje, /fuera del horario de la clase/);
+
+  // Lector real: la marca de ahora se rechaza y no deja asistencia
+  const real = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: ids[1] } });
+  assert.equal(real.estado, 200);
+  await e.pool.query("UPDATE sesion_clase SET hora_apertura = NOW() - INTERVAL '10 minutes' WHERE id_sesion = $1", [real.datos.id_sesion]);
+  const linea = `900012\t${horaDelEquipo(haceMinutos(1))}\t0\t1`;
+  assert.equal((await enviarAttlog([linea])).datos, "OK");
+  const contar = async () => (await e.pool.query(
+    "SELECT COUNT(*)::int AS n FROM asistencia WHERE id_sesion = $1", [real.datos.id_sesion])).rows[0].n;
+  assert.equal(await contar(), 0);
+
+  // Si la clase sí es a esta hora, la misma marca cuenta
+  await e.pool.query("UPDATE horario SET hora_inicio = '00:00', hora_fin = '23:59' WHERE id_horario = $1", [ids[1]]);
+  assert.equal((await enviarAttlog([linea])).datos, "OK");
+  assert.equal(await contar(), 1);
+});
+
+// ---------- Permisos del programador ----------
+
+prueba("el programador consulta clases y justificaciones, pero no las inicia, cierra ni decide", async () => {
+  const token = tokens.programador;
+  assert.equal((await e.peticion("GET", "/api/sesiones/hoy", { token })).estado, 200);
+  assert.equal((await e.peticion("GET", `/api/sesiones/${idSesion}`, { token })).estado, 200);
+  const bandeja = await e.peticion("GET", "/api/justificaciones", { token });
+  assert.equal(bandeja.estado, 200);
+
+  const idJustificacion = bandeja.datos[0]?.id_justificacion ?? 1;
+  const decidir = await e.peticion("PATCH", `/api/justificaciones/${idJustificacion}`, { token, cuerpo: { estado: "aprobada" } });
+  assert.equal(decidir.estado, 403);
+  assert.equal((await e.peticion("POST", "/api/sesiones/iniciar", { token, cuerpo: { id_horario: e.ids.horario } })).estado, 403);
+  assert.equal((await e.peticion("POST", `/api/sesiones/${idSesion}/cerrar`, { token })).estado, 403);
+  const manual = await e.peticion("POST", `/api/sesiones/${idSesion}/asistencia-manual`, {
+    token, cuerpo: { id_aprendiz: e.ids.aprendiz, estado: "presente", motivo: "Prueba" },
+  });
+  assert.equal(manual.estado, 403);
+  assert.equal((await e.peticion("DELETE", `/api/sesiones/${idSesion}`, { token })).estado, 403);
+});
+
+// ---------- Rango de la serie, festivos, panel y lectores (revisión, punto 13) ----------
+
+const enDias = (n) => {
+  const f = new Date();
+  f.setDate(f.getDate() + n);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+};
+
+prueba("una clase puede repetirse solo entre dos fechas, y dos series que no se tocan no chocan", async () => {
+  const serie = await nuevoHorario({ dia_semana: pasado(), hora_inicio: "16:00", hora_fin: "17:00", fecha_desde: enDias(1), fecha_hasta: enDias(20) });
+  assert.equal(serie.estado, 201);
+  assert.equal(serie.datos.excluir_festivos, true); // por defecto no se dicta en festivos
+  const lista = await e.peticion("GET", `/api/horarios?id_ficha=${e.ids.ficha}`, { token: tokens.coordinador });
+  const creada = lista.datos.find((h) => h.id_horario === serie.datos.id_horario);
+  assert.equal(new Date(creada.vigente_desde).getTime(), new Date(`${enDias(1)}T00:00:00`).getTime());
+  assert.equal(new Date(creada.vigente_hasta).getTime(), new Date(`${enDias(20)}T00:00:00`).getTime());
+
+  // Otra ficha, mismo ambiente e instructor, a la misma hora pero después de la serie: no choca
+  const otra = await e.pool.query(
+    `INSERT INTO ficha (numero_ficha, programa, jornada, fecha_inicio, fecha_fin, id_periodo, id_instructor)
+     VALUES ('777777', 'Rango', 'tarde', CURRENT_DATE - 30, CURRENT_DATE + 30, $1, $2) RETURNING id_ficha`,
+    [e.ids.periodo, e.ids.instructor]
+  );
+  const despues = { id_ficha: otra.rows[0].id_ficha, dia_semana: pasado(), hora_inicio: "16:00", hora_fin: "17:00" };
+  assert.equal((await nuevoHorario({ ...despues, fecha_desde: enDias(21), fecha_hasta: enDias(40) })).estado, 201);
+  const encima = await nuevoHorario({ ...despues, hora_inicio: "16:30", hora_fin: "17:30", fecha_desde: enDias(10), fecha_hasta: enDias(12) });
+  assert.equal(encima.estado, 400);
+
+  // Fechas al revés o fuera del trimestre se rechazan con un mensaje claro
+  const alReves = await nuevoHorario({ dia_semana: pasado(), hora_inicio: "18:00", hora_fin: "19:00", fecha_desde: enDias(9), fecha_hasta: enDias(3) });
+  assert.equal(alReves.estado, 400);
+  assert.match(alReves.datos.mensaje, /posterior/);
+  const fuera = await nuevoHorario({ dia_semana: pasado(), hora_inicio: "18:00", hora_fin: "19:00", fecha_desde: enDias(200) });
+  assert.equal(fuera.estado, 400);
+  assert.match(fuera.datos.mensaje, /fuera del trimestre/);
+});
+
+prueba("los festivos de Colombia salen calculados para el calendario", async () => {
+  const r = await e.peticion("GET", "/api/festivos?anio=2026", { token: tokens.ana });
+  assert.equal(r.estado, 200);
+  assert.ok(r.datos.some((f) => f.fecha === "2026-10-12" && f.nombre === "Día de la Raza"));
+  assert.ok(r.datos.some((f) => f.fecha.startsWith("2027-")) && r.datos.some((f) => f.fecha.startsWith("2025-")));
+});
+
+prueba("el panel cuenta huellas sin registrar y justificaciones vencidas", async () => {
+  const contar = async () => (await e.peticion("GET", "/api/reportes/estadisticas", { token: tokens.coordinador })).datos;
+  const antes = await contar();
+
+  // Dora entra a una ficha sin huella en la app ni marcas del lector, y deja vencer una justificación
+  const ficha = await e.pool.query("SELECT id_ficha FROM ficha WHERE numero_ficha = '777777'");
+  await e.pool.query("INSERT INTO matricula (id_aprendiz, id_ficha) VALUES ($1, $2)", [e.ids.bloqueable, ficha.rows[0].id_ficha]);
+  const ausencia = await e.pool.query(
+    "INSERT INTO asistencia (id_sesion, id_aprendiz, estado, metodo) VALUES ($1, $2, 'ausente', 'sistema') RETURNING id_asistencia",
+    [idSesion, e.ids.bloqueable]
+  );
+  await e.pool.query(
+    "INSERT INTO justificacion (id_asistencia, token, expira_en) VALUES ($1, 'token-vencido-panel', NOW() - INTERVAL '1 hour')",
+    [ausencia.rows[0].id_asistencia]
+  );
+
+  const despues = await contar();
+  assert.equal(despues.huellas_sin_registrar, antes.huellas_sin_registrar + 1);
+  assert.equal(despues.justificaciones_vencidas, antes.justificaciones_vencidas + 1);
+});
+
+prueba("un lector que pasa 3 minutos sin señal avisa una sola vez a la coordinación", async () => {
+  const dispositivo = require("../../src/modelos/dispositivo");
+  const { avisarLectoresCaidos } = require("../../src/servicios/tareasProgramadas");
+  await e.pool.query(
+    "UPDATE dispositivo SET estado = 'en_linea', ultimo_heartbeat = NOW() - INTERVAL '4 minutes' WHERE serial = 'LECTOR-PRUEBA'"
+  );
+  await avisarLectoresCaidos(await dispositivo.marcarFueraDeLineaSinHeartbeat());
+  await avisarLectoresCaidos(await dispositivo.marcarFueraDeLineaSinHeartbeat()); // el minuto siguiente ya no avisa
+
+  const avisos = await e.pool.query(
+    "SELECT mensaje FROM notificacion WHERE id_usuario = $1 AND titulo = 'Lector sin señal'", [e.ids.coordinador]
+  );
+  assert.equal(avisos.rows.length, 1);
+  assert.match(avisos.rows[0].mensaje, /LECTOR-PRUEBA del ambiente P-1/);
+});
+
+// ---------- Instructor: notificaciones con enlace e historial (revisión, punto 14) ----------
+
+prueba("la justificación que llega abre desde la notificación, y la clase pasada sale en el historial", async () => {
+  // Clase de hace dos días, cerrada, en la que Ana faltó y tiene enlace para justificar
+  const sesion = await e.pool.query(
+    `INSERT INTO sesion_clase (id_horario, fecha, estado, hora_apertura, hora_cierre)
+     VALUES ($1, CURRENT_DATE - 2, 'cerrada', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days') RETURNING id_sesion`,
+    [e.ids.horario]
+  );
+  const idPasada = sesion.rows[0].id_sesion;
+  const ausencia = await e.pool.query(
+    "INSERT INTO asistencia (id_sesion, id_aprendiz, estado, metodo) VALUES ($1, $2, 'ausente', 'sistema') RETURNING id_asistencia",
+    [idPasada, e.ids.aprendiz]
+  );
+  await e.pool.query(
+    "INSERT INTO justificacion (id_asistencia, token, expira_en) VALUES ($1, 'token-con-enlace', NOW() + INTERVAL '1 day')",
+    [ausencia.rows[0].id_asistencia]
+  );
+  const envio = await e.peticion("POST", "/api/justificaciones/token/token-con-enlace", {
+    cuerpo: { tipo: "calamidad_domestica", descripcion: "Calamidad en casa" },
+  });
+  assert.equal(envio.estado, 200);
+
+  const { rows } = await e.pool.query(
+    `SELECT n.mensaje, n.enlace, j.id_justificacion FROM notificacion n, justificacion j
+     WHERE n.id_usuario = $1 AND n.titulo = 'Nueva justificación por revisar' AND j.token = 'token-con-enlace'
+     ORDER BY n.id_notificacion DESC LIMIT 1`,
+    [e.ids.instructor]
+  );
+  assert.equal(rows[0].enlace, `/justificaciones?id=${rows[0].id_justificacion}`);
+  assert.match(rows[0].mensaje, /ficha 999999/);
+  const lista = await e.peticion("GET", "/api/notificaciones", { token: tokens.instructor });
+  assert.ok(lista.datos.some((n) => n.enlace === rows[0].enlace));
+
+  // Historial: el titular ve su clase pasada con cuántos faltaron; otro instructor no
+  const historial = await e.peticion("GET", "/api/sesiones/historial?dias=30", { token: tokens.instructor });
+  assert.equal(historial.estado, 200);
+  const pasada = historial.datos.find((c) => c.id_sesion === idPasada);
+  assert.equal(pasada.ausentes, 1);
+  assert.ok(historial.datos.every((c) => new Date(c.fecha) < new Date(new Date().toDateString()))); // nada de hoy
+  const ajeno = await e.peticion("GET", "/api/sesiones/historial", { token: tokens.otro });
+  assert.ok(!ajeno.datos.some((c) => c.id_sesion === idPasada));
+});
+
+// ---------- Aprendiz: avisos con la clase real y Mis justificaciones (revisión, punto 15) ----------
+
+prueba("el aviso de inasistencia dice qué clase fue y lleva a Mis justificaciones", async () => {
+  const { rows } = await e.pool.query(
+    "SELECT mensaje, enlace FROM notificacion WHERE id_usuario = $1 AND titulo = 'Inasistencia registrada' ORDER BY id_notificacion",
+    [e.ids.ausente]
+  );
+  assert.ok(rows.length >= 1);
+  assert.match(rows[0].mensaje, /\(\d{2}:\d{2}–\d{2}:\d{2}, ficha 999999\)/); // antes: solo la fecha
+  assert.equal(rows[0].enlace, "/mis-justificaciones");
+
+  // El historial del aprendiz trae la hora de cada clase para listar sus faltas
+  const historial = await e.peticion("GET", "/api/reportes/mi-historial", { token: tokens.ana });
+  assert.equal(historial.estado, 200);
+  assert.ok(historial.datos.detalle.every((d) => /^\d{2}:\d{2}$/.test(d.hora_inicio)));
+});
+
+// ---------- Soporte por rol (revisión, punto 16) ----------
+
+prueba("cada rol reporta los problemas que le pasan a él, y la coordinación lee el nombre del problema", async () => {
+  const deInstructor = await e.peticion("GET", "/api/soporte/tipos", { token: tokens.instructor });
+  const valores = deInstructor.datos.tipos.map((t) => t.valor);
+  assert.ok(valores.includes("lector") && !valores.includes("huella")); // "Mi huella no es reconocida" es del aprendiz
+  assert.ok((await e.peticion("GET", "/api/soporte/tipos", { token: tokens.ana })).datos.tipos.some((t) => t.valor === "huella"));
+
+  const ajeno = await e.peticion("POST", "/api/soporte", { token: tokens.instructor, cuerpo: { tipo: "huella", descripcion: "x" } });
+  assert.equal(ajeno.estado, 400);
+  const bueno = await e.peticion("POST", "/api/soporte", { token: tokens.instructor, cuerpo: { tipo: "lector", descripcion: "El lector del 201 no prende" } });
+  assert.equal(bueno.estado, 201);
+
+  const { rows } = await e.pool.query(
+    "SELECT mensaje, enlace FROM notificacion WHERE id_usuario = $1 AND mensaje LIKE $2",
+    [e.ids.coordinador, `Ticket #${bueno.datos.id_ticket}:%`]
+  );
+  assert.equal(rows[0].mensaje, `Ticket #${bueno.datos.id_ticket}: El lector del ambiente no funciona`);
+  assert.equal(rows[0].enlace, "/soporte");
+});
+
+// ---------- Nombres largos (revisión, punto 17) ----------
+
+prueba("un apellido largo se guarda completo (no se recorta)", async () => {
+  const apellidos = "Becerra Villalobos de la Torre y Hernández Castañeda";
+  const r = await e.peticion("POST", "/api/usuarios", {
+    token: tokens.coordinador,
+    cuerpo: { nombres: "Julian Felipe", apellidos, tipo_documento: "CC", documento: "900099", correo: "largo@prueba.co", rol: "aprendiz" },
+  });
+  assert.equal(r.estado, 201);
+  const { rows } = await e.pool.query("SELECT apellidos FROM usuario WHERE correo = 'largo@prueba.co'");
+  assert.equal(rows[0].apellidos, apellidos);
 });

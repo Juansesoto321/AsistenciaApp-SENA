@@ -4,6 +4,7 @@ const { auditar } = require("./auditoria");
 const { error } = require("../utilidades/errores");
 const { enTransaccion } = require("../modelos/transaccion");
 const { trimestreEnCurso } = require("./programacion");
+const { fechaIso } = require("../utilidades/formato");
 
 const ESTADOS_MATRICULA = ["activa", "retirada", "finalizada"];
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -88,7 +89,31 @@ async function completarHorario(h, { esNuevo }) {
       throw error(`El trimestre debe estar entre 1 y ${ficha.trimestres}`, "validacion");
   }
 
-  return { ...h, id_competencia: idCompetencia, trimestre, id_periodo: h.id_periodo || ficha.id_periodo };
+  const fechaDesde = fechaOpcional(h.fecha_desde, "de inicio");
+  const fechaHasta = fechaOpcional(h.fecha_hasta, "de fin");
+  if (fechaDesde && fechaHasta && fechaHasta < fechaDesde)
+    throw error("La fecha final de la serie debe ser igual o posterior a la inicial", "validacion");
+
+  return {
+    ...h, id_competencia: idCompetencia, trimestre, id_periodo: h.id_periodo || ficha.id_periodo,
+    fecha_desde: fechaDesde, fecha_hasta: fechaHasta, excluir_festivos: h.excluir_festivos !== false,
+  };
+}
+
+/** "AAAA-MM-DD" o null; vacío significa "todo el trimestre". */
+function fechaOpcional(valor, cual) {
+  if (valor === undefined || valor === null || valor === "") return null;
+  const texto = String(valor).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto) || Number.isNaN(new Date(`${texto}T00:00:00`).getTime()))
+    throw error(`La fecha ${cual} de la serie no es válida`, "validacion");
+  return texto;
+}
+
+/** El rango de la serie debe quedar dentro del trimestre (o del periodo). */
+async function validarVigencia(h, cliente) {
+  const vigencia = await modelo.calcularVigencia(h, cliente);
+  if (vigencia && vigencia.desde > vigencia.hasta)
+    throw error("Las fechas de la serie quedan fuera del trimestre elegido", "validacion");
 }
 
 /** Acepta `dias_semana` (varios días a la vez) o `dia_semana` (uno). */
@@ -107,16 +132,20 @@ async function crearHorario(datos, usuario) {
   const dias = diasSolicitados(datos);
   const base = await completarHorario(datos, { esNuevo: true });
   const porDia = dias.map((dia) => ({ ...base, dia_semana: dia }));
+  porDia.forEach(validarHorario);
 
-  for (const h of porDia) {
-    validarHorario(h);
-    const conflicto = await modelo.buscarConflictoHorario(h);
-    if (conflicto) throw errorDeConflicto(conflicto, dias.length > 1 ? h.dia_semana : undefined);
-  }
-
+  // Los cruces se revisan dentro de la misma transacción que guarda, y con los
+  // horarios bloqueados: antes se revisaban afuera y dos guardados casi
+  // simultáneos dejaban la misma clase dos veces (pasó con la ficha 3311983).
   const creados = await enTransaccion(async (cliente) => {
+    await modelo.bloquearHorarios(cliente);
+    await validarVigencia(base, cliente);
     const lista = [];
-    for (const h of porDia) lista.push(await modelo.crearHorario(h, cliente));
+    for (const h of porDia) {
+      const conflicto = await modelo.buscarConflictoHorario(h, null, cliente);
+      if (conflicto) throw errorDeConflicto(conflicto, dias.length > 1 ? h.dia_semana : undefined);
+      lista.push(await modelo.crearHorario(h, cliente));
+    }
     return lista;
   });
   for (const h of creados) await auditar(usuario.id, "crear_horario", "horario", h.id_horario);
@@ -141,6 +170,9 @@ async function editarHorario(id, datos, usuario) {
     id_tematica: datos.id_tematica !== undefined ? datos.id_tematica : actual.id_tematica,
     id_competencia: datos.id_competencia !== undefined ? datos.id_competencia : actual.id_competencia,
     trimestre: datos.trimestre !== undefined ? datos.trimestre : actual.trimestre,
+    fecha_desde: datos.fecha_desde !== undefined ? datos.fecha_desde : actual.fecha_desde && fechaIso(actual.fecha_desde),
+    fecha_hasta: datos.fecha_hasta !== undefined ? datos.fecha_hasta : actual.fecha_hasta && fechaIso(actual.fecha_hasta),
+    excluir_festivos: datos.excluir_festivos !== undefined ? datos.excluir_festivos : actual.excluir_festivos,
   };
   // Si cambia de ficha, el periodo pasa a ser el de la nueva ficha
   if (datos.id_ficha && Number(datos.id_ficha) !== actual.id_ficha && datos.id_periodo === undefined)
@@ -148,10 +180,14 @@ async function editarHorario(id, datos, usuario) {
 
   const nuevo = await completarHorario(combinado, { esNuevo: false });
   validarHorario(nuevo);
-  const conflicto = await modelo.buscarConflictoHorario(nuevo, Number(id));
-  if (conflicto) throw errorDeConflicto(conflicto);
 
-  const horario = await modelo.editarHorario(id, nuevo);
+  const horario = await enTransaccion(async (cliente) => {
+    await modelo.bloquearHorarios(cliente);
+    await validarVigencia(nuevo, cliente);
+    const conflicto = await modelo.buscarConflictoHorario(nuevo, Number(id), cliente);
+    if (conflicto) throw errorDeConflicto(conflicto);
+    return modelo.editarHorario(id, nuevo, cliente);
+  });
   await auditar(usuario.id, "editar_horario", "horario", Number(id), nuevo);
   return horario;
 }
@@ -159,7 +195,7 @@ async function editarHorario(id, datos, usuario) {
 async function eliminarHorario(id, usuario) {
   const eliminado = await modelo.eliminarHorario(id);
   if (!eliminado) throw error("Horario no encontrado", "no_encontrado");
-  await auditar(usuario.id, "eliminar_horario", "horario", Number(id));
+  await auditar(usuario.id, "eliminar_horario", "horario", Number(id), { nombre: eliminado.nombre });
 }
 
 // ---------- MATRICULAS (CU-06) ----------

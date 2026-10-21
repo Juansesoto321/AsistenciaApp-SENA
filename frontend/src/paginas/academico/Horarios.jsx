@@ -4,7 +4,8 @@ import { useAuth } from "../../contexto/AuthContext.jsx";
 import { useConfirmar } from "../../componentes/Confirmar.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { aMinutos, lunesDe, mismoDia, ocurreEn, rangoCorto, sumarDias } from "../../utilidades/fechas";
+import { aMinutos, isoLocal, lunesDe, mismoDia, ocurreEn, rangoCorto, sumarDias } from "../../utilidades/fechas";
+import { useFestivos } from "../../utilidades/festivos";
 import Aviso from "../../componentes/Aviso.jsx";
 import FormularioHorario from "./FormularioHorario.jsx";
 
@@ -15,6 +16,20 @@ const ORDEN_SEMANA = [1, 2, 3, 4, 5, 6, 0];
 // Paleta estable por ficha, para distinguir bloques de un vistazo
 const COLORES = ["#6d4aff", "#0e9f6e", "#d97706", "#dc2626", "#0284c7", "#7c3aed", "#be185d"];
 const colorDe = (idFicha) => COLORES[Number(idFicha) % COLORES.length];
+
+const CLAVE_FICHA = "asistenciaapp.calendario-ficha"; // última ficha que miró la coordinación
+
+/** La última ficha que se miró; si no, la primera activa que tenga clases. */
+function fichaInicial(lista) {
+  let ultima = null;
+  try { ultima = localStorage.getItem(CLAVE_FICHA); } catch { /* sin almacenamiento: no se recuerda */ }
+  const activas = lista.filter((f) => f.estado === "activa");
+  return lista.find((f) => String(f.id_ficha) === ultima)
+    || activas.find((f) => f.total_clases > 0) || activas[0] || lista[0];
+}
+function recordarFicha(id) {
+  try { localStorage.setItem(CLAVE_FICHA, String(id)); } catch { /* solo no se recuerda */ }
+}
 
 const ALTO_HORA = 44; // px por hora en la grilla
 const comoHora = (minutos) =>
@@ -34,10 +49,12 @@ export default function Horarios() {
   const [ambientes, setAmbientes] = useState([]);
   const [instructores, setInstructores] = useState([]);
   const [raps, setRaps] = useState([]);
+  const festivos = useFestivos();
   const [competencias, setCompetencias] = useState([]);
 
-  // Instructor y aprendiz ven lo suyo sin elegir nada. La coordinación ve de
-  // entrada la primera ficha activa y puede cambiar a otra ficha, a un
+  // Instructor y aprendiz ven lo suyo sin elegir nada. La coordinación abre en
+  // la última ficha que miró (o en una activa con clases: antes abría la
+  // primera activa aunque estuviera vacía) y puede cambiar a otra ficha, a un
   // instructor o a un ambiente; el calendario se carga al elegir.
   const [tipoFiltro, setTipoFiltro] = useState(vistaPropia ? "instructor" : "ficha");
   const [valorFiltro, setValorFiltro] = useState(vistaPropia ? String(sesion.usuario.id) : "");
@@ -56,7 +73,7 @@ export default function Horarios() {
     if (puedeEditar) {
       api("/fichas").then((lista) => {
         setFichas(lista);
-        const primera = lista.find((f) => f.estado === "activa") || lista[0];
+        const primera = fichaInicial(lista);
         if (primera) { setValorFiltro(String(primera.id_ficha)); cargar("ficha", String(primera.id_ficha)); }
         else setCargando(false);
       }).catch((e) => { setCargando(false); setMensaje({ tipo: "error", texto: e.message }); });
@@ -127,6 +144,8 @@ export default function Horarios() {
     setAncla((a) => (vista === "mes" ? new Date(a.getFullYear(), a.getMonth() + paso, 1) : sumarDias(a, paso * 7)));
 
   const hoy = new Date();
+  // Clases creadas antes de que la competencia fuera obligatoria (las nuevas ya la exigen)
+  const sinCompetencia = puedeEditar ? horarios.filter((h) => !h.competencia) : [];
 
   function abrirNuevo() {
     setModal("nuevo");
@@ -163,7 +182,7 @@ export default function Horarios() {
   // Al cambiar "ver por", se muestra de una vez la primera opción de la lista
   function cambiarTipo(tipo) {
     setTipoFiltro(tipo);
-    const primero = ({ instructor: instructores, ficha: fichas, ambiente: ambientes }[tipo] || [])[0];
+    const primero = tipo === "ficha" ? fichaInicial(fichas) : ({ instructor: instructores, ambiente: ambientes }[tipo] || [])[0];
     const id = primero ? String(ID_DE[tipo](primero)) : "";
     setValorFiltro(id);
     if (id) cargar(tipo, id);
@@ -172,6 +191,7 @@ export default function Horarios() {
 
   function cambiarValor(valor) {
     setValorFiltro(valor);
+    if (tipoFiltro === "ficha" && valor) recordarFicha(valor);
     if (valor) cargar(tipoFiltro, valor);
   }
 
@@ -227,6 +247,22 @@ export default function Horarios() {
         </Vacio>
       )}
 
+      {!cargando && sinCompetencia.length > 0 && (
+        <div className="aviso-sin-competencia" role="status">
+          <p>
+            <b>{sinCompetencia.length === 1 ? "1 clase no tiene" : `${sinCompetencia.length} clases no tienen`} competencia.</b>{" "}
+            Son anteriores a que fuera obligatoria: edítalas y elige la competencia que se ve en ellas.
+          </p>
+          <div className="lista-sin-competencia">
+            {sinCompetencia.map((h) => (
+              <button key={h.id_horario} type="button" className="boton mini suave" onClick={() => abrirEdicion(h)}>
+                Editar {DIAS[h.dia_semana].toLowerCase()} {h.hora_inicio.slice(0, 5)}–{h.hora_fin.slice(0, 5)} · ficha {h.numero_ficha}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!cargando && aplicado && !!horarios.length && (
         <div className="tarjeta">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
@@ -250,6 +286,7 @@ export default function Horarios() {
                 <div style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--blanco)" }} />
                 {diasSemana.map((fecha) => {
                   const esHoy = mismoDia(fecha, hoy);
+                  const festivo = festivos.get(isoLocal(fecha));
                   return (
                     <div key={fecha.toISOString()} style={{
                       textAlign: "center", padding: "6px 0", borderBottom: "1px solid var(--borde)",
@@ -263,12 +300,15 @@ export default function Horarios() {
                       <div style={{ fontSize: 10.5, color: "var(--tinta-suave)" }}>
                         {fecha.toLocaleDateString("es-CO", { month: "short" })}
                       </div>
+                      {festivo && <div className="etiqueta-festivo" title={festivo}>Festivo</div>}
                     </div>
                   );
                 })}
 
                 {/* Eje de horas */}
-                <div style={{ position: "relative", height: horasEje.length * ALTO_HORA }}>
+                {/* marginTop: la etiqueta de cada hora sube 7 px para quedar centrada en su
+                    línea; sin este espacio la primera (08:00) quedaba bajo el encabezado */}
+                <div style={{ position: "relative", height: horasEje.length * ALTO_HORA, marginTop: 8 }}>
                   {horasEje.map((m, i) => (
                     <div key={m} style={{ position: "absolute", top: i * ALTO_HORA - 7, right: 8, fontSize: 12, color: "var(--tinta-suave)" }}>
                       {comoHora(m)}
@@ -278,12 +318,13 @@ export default function Horarios() {
 
                 {/* Una columna por fecha real */}
                 {diasSemana.map((fecha) => {
-                  const delDia = horarios.filter((h) => ocurreEn(h, fecha));
+                  const delDia = horarios.filter((h) => ocurreEn(h, fecha, festivos));
+                  const festivo = festivos.get(isoLocal(fecha));
                   return (
-                    <div key={fecha.toISOString()} style={{
-                      position: "relative", height: horasEje.length * ALTO_HORA,
+                    <div key={fecha.toISOString()} title={festivo ? `Festivo: ${festivo}` : undefined} style={{
+                      position: "relative", height: horasEje.length * ALTO_HORA, marginTop: 8,
                       borderLeft: "1px solid var(--borde)",
-                      background: mismoDia(fecha, hoy) ? "var(--azul-suave)" : "transparent",
+                      background: mismoDia(fecha, hoy) ? "var(--azul-suave)" : festivo ? "var(--violeta-50)" : "transparent",
                     }}>
                       {horasEje.map((m, i) => (
                         <div key={m} style={{ position: "absolute", top: i * ALTO_HORA, left: 0, right: 0, borderTop: "1px solid var(--borde)", opacity: 0.5 }} />
@@ -312,7 +353,7 @@ export default function Horarios() {
                             {cabe(2) && <div>Ficha {h.numero_ficha} · Amb. {h.numero_ambiente}</div>}
                             {cabe(3) && (h.tematica || h.competencia
                               ? <div className="sec">{h.tematica || h.competencia}</div>
-                              : <div className="sin-asignar">Sin competencia asignada</div>)}
+                              : puedeEditar && <div className="sin-asignar">Sin competencia: edítala</div>)}
                           </button>
                         );
                       })}
@@ -332,7 +373,7 @@ export default function Horarios() {
                   </div>
                 ))}
                 {semanasDelMes.flat().map((fecha) => {
-                  const delDia = horarios.filter((h) => ocurreEn(h, fecha));
+                  const delDia = horarios.filter((h) => ocurreEn(h, fecha, festivos));
                   const esDelMes = fecha.getMonth() === ancla.getMonth();
                   const esHoy = mismoDia(fecha, hoy);
                   return (
@@ -343,6 +384,9 @@ export default function Horarios() {
                     }}>
                       <div style={{ fontSize: 12, fontWeight: esHoy ? 800 : 600, color: esHoy ? "var(--azul)" : "var(--tinta-suave)", marginBottom: 3 }}>
                         {fecha.getDate()}
+                        {festivos.has(isoLocal(fecha)) && (
+                          <span className="etiqueta-festivo en-linea" title={festivos.get(isoLocal(fecha))}>Festivo</span>
+                        )}
                       </div>
                       {delDia.slice(0, 3).map((h) => {
                         const color = colorDe(h.id_ficha);
@@ -396,6 +440,7 @@ export default function Horarios() {
                 <tr><td><b>Competencia</b></td><td>{detalle.competencia || "— sin asignar —"}</td></tr>
                 <tr><td><b>Resultado de aprendizaje</b></td><td>{detalle.codigo_rap ? `${detalle.codigo_rap} · ${detalle.resultado_aprendizaje}` : "— sin asignar —"}</td></tr>
                 <tr><td><b>Temática</b></td><td>{detalle.tematica || "— sin asignar —"}</td></tr>
+                <tr><td><b>Festivos</b></td><td>{detalle.excluir_festivos === false ? "Se dicta también en festivos" : "No se dicta en festivos"}</td></tr>
               </tbody>
             </table>
             <div className="acciones-modal">
@@ -415,6 +460,7 @@ export default function Horarios() {
           instructores={instructores}
           raps={raps}
           competencias={competencias}
+          festivos={festivos}
           alGuardar={alGuardar}
           alCerrar={() => setModal(null)}
         />

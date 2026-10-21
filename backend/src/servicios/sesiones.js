@@ -11,10 +11,11 @@ const { auditar } = require("./auditoria");
 const { emitirASesion, emitirNotificacionNueva } = require("./tiempoReal");
 const { error } = require("../utilidades/errores");
 const { escaparHtml, fechaLarga, textoPlazo } = require("../utilidades/formato");
+const { festivoEn } = require("../utilidades/festivos");
 
 const ESTADOS_VALIDOS = ["presente", "tardanza", "ausente", "justificada"];
 // Regla RF-35: pasadas 24 h del cierre, solo la coordinación corrige asistencia
-const ROLES_SIN_LIMITE_DE_TIEMPO = ["coordinador", "programador"];
+const ROLES_SIN_LIMITE_DE_TIEMPO = ["coordinador"];
 
 function verificarTitular(usuario, idInstructor, accion) {
   if (usuario.rol === "instructor" && idInstructor !== usuario.id)
@@ -27,7 +28,10 @@ function verificarTitular(usuario, idInstructor, accion) {
  * tenia enlace. El correo se envia DESPUES del COMMIT: el servidor SMTP puede
  * tardar segundos por mensaje y no debe mantener la transaccion abierta.
  */
-async function prepararJustificacion(cliente, { idAsistencia, idAprendiz, numeroFicha, fechaClase, horas }) {
+/** "08:00–12:00" de la clase de una sesión */
+const rangoHoras = (s) => `${String(s.hora_inicio).slice(0, 5)}–${String(s.hora_fin).slice(0, 5)}`;
+
+async function prepararJustificacion(cliente, { idAsistencia, idAprendiz, numeroFicha, fechaClase, horaClase, horas }) {
   const token = crypto.randomBytes(24).toString("hex");
   const creada = await modelo.insertarJustificacion(cliente, idAsistencia, token, horas);
   if (!creada) return null;
@@ -35,10 +39,11 @@ async function prepararJustificacion(cliente, { idAsistencia, idAprendiz, numero
   const plazo = textoPlazo(horas);
   await modelo.insertarNotificacionInasistencia(
     cliente, idAprendiz,
-    `Se registró tu inasistencia a la clase del ${fechaClase}. Revisa tu correo: tienes ${plazo} para cargar una justificación.`
+    `Se registró tu inasistencia a la clase del ${fechaClase} (${horaClase}, ficha ${numeroFicha}). ` +
+    `Tienes ${plazo} para cargar una justificación desde "Mis justificaciones" o con el enlace de tu correo.`
   );
   const aprendiz = await modelo.buscarUsuarioParaCorreo(cliente, idAprendiz);
-  return { idAprendiz, correo: aprendiz.correo, nombres: aprendiz.nombres, token, numeroFicha, fechaClase, plazo };
+  return { idAprendiz, correo: aprendiz.correo, nombres: aprendiz.nombres, token, numeroFicha, fechaClase, horaClase, plazo };
 }
 
 async function enviarAvisosDeInasistencia(avisos) {
@@ -48,7 +53,7 @@ async function enviarAvisosDeInasistencia(avisos) {
       para: a.correo,
       asunto: `AsistenciaApp · Inasistencia registrada (ficha ${a.numeroFicha})`,
       html: `<p>Hola ${escaparHtml(a.nombres)},</p>
-             <p>Se registró tu <b>inasistencia</b> a la clase del ${a.fechaClase} de la ficha ${a.numeroFicha}.</p>
+             <p>Se registró tu <b>inasistencia</b> a la clase del ${a.fechaClase} (${a.horaClase}) de la ficha ${a.numeroFicha}.</p>
              <p>Si tienes una excusa (por ejemplo, cita médica), cárgala en el siguiente enlace.
              <b>Disponible solo por ${a.plazo}</b>; después quedará como "sin justificación":</p>
              <p><a href="${enlace}">${enlace}</a></p>`,
@@ -57,8 +62,18 @@ async function enviarAvisosDeInasistencia(avisos) {
   }
 }
 
+const DIAS_HISTORIAL = [30, 90, 365];
+
+async function historialDeClases(usuario, dias) {
+  const pedido = Number(dias);
+  return modelo.historialDeClases(usuario, DIAS_HISTORIAL.includes(pedido) ? pedido : DIAS_HISTORIAL[0]);
+}
+
 async function horariosDeHoy(usuario) {
-  return modelo.horariosDeHoy(usuario);
+  const clases = await modelo.horariosDeHoy(usuario);
+  if (!festivoEn(new Date())) return clases;
+  // En festivo solo quedan las clases que se dictan igual, o las ya iniciadas
+  return clases.filter((c) => c.excluir_festivos === false || c.id_sesion);
 }
 
 // CU-12: iniciar (o reanudar) la sesion de hoy
@@ -69,7 +84,20 @@ async function iniciarSesion(idHorario, usuario) {
   // Regla CU-12: solo el instructor titular (o un coordinador)
   verificarTitular(usuario, h.id_instructor, "iniciar esta sesión");
   if (!h.es_hoy) throw error("Este horario no corresponde al día de hoy", "validacion");
+  const festivo = festivoEn(new Date());
+  if (festivo && h.excluir_festivos !== false)
+    throw error(
+      `Hoy es festivo (${festivo}) y esta clase no se dicta en festivos. Si sí hay clase, edita el horario y desmarca «No dictar en festivos»`,
+      "validacion"
+    );
   if (h.estado_ficha !== "activa") throw error("La ficha de este horario ya finalizó", "validacion");
+  const cruzada = await modelo.buscarSesionCruzadaHoy(idHorario);
+  if (cruzada)
+    throw error(
+      `La ficha ${h.numero_ficha} ya tiene una sesión hoy a esa hora (sesión ${cruzada.id_sesion}). ` +
+      "Puede que la clase esté repetida en el horario: revísalo con la coordinación",
+      "validacion"
+    );
 
   const sesion = await modelo.crearOReanudarSesion(idHorario);
   if (sesion.estado === "cerrada") throw error("La sesión de hoy ya fue cerrada", "validacion");
@@ -124,7 +152,8 @@ async function registrarAsistenciaManual(idSesion, usuario, { id_aprendiz, estad
     const pendiente = estado === "ausente"
       ? await prepararJustificacion(cliente, {
           idAsistencia: upsert.id_asistencia, idAprendiz: id_aprendiz, numeroFicha: sesion.numero_ficha,
-          fechaClase: fechaLarga(sesion.fecha), horas: await modelo.obtenerHorasJustificacion(cliente),
+          fechaClase: fechaLarga(sesion.fecha), horaClase: rangoHoras(sesion),
+          horas: await modelo.obtenerHorasJustificacion(cliente),
         })
       : null;
 
@@ -163,7 +192,7 @@ async function cerrarSesion(idSesion, usuario) {
     for (const a of sinRegistro) {
       const aviso = await prepararJustificacion(cliente, {
         idAsistencia: a.id_asistencia, idAprendiz: a.id_aprendiz, numeroFicha: s.numero_ficha,
-        fechaClase: fechaLarga(s.fecha), horas,
+        fechaClase: fechaLarga(s.fecha), horaClase: rangoHoras(s), horas,
       });
       if (aviso) pendientes.push(aviso);
     }
@@ -181,13 +210,14 @@ async function cerrarSesion(idSesion, usuario) {
 // Solo coordinador: es destructivo e irreversible, pensado para limpiar
 // sesiones de prueba (no para corregir asistencia real - para eso esta CU-15).
 async function eliminarSesion(idSesion, usuario) {
-  await enTransaccion(async (cliente) => {
-    const eliminada = await modelo.eliminarSesion(cliente, idSesion);
-    if (!eliminada) throw error("Sesión no encontrada", "no_encontrado");
+  const eliminada = await enTransaccion(async (cliente) => {
+    const borrada = await modelo.eliminarSesion(cliente, idSesion);
+    if (!borrada) throw error("Sesión no encontrada", "no_encontrado");
+    return borrada;
   });
 
-  await auditar(usuario.id, "eliminar_sesion_clase", "sesion_clase", Number(idSesion));
+  await auditar(usuario.id, "eliminar_sesion_clase", "sesion_clase", Number(idSesion), { nombre: eliminada.nombre });
   return { mensaje: "Sesión eliminada permanentemente, junto con su asistencia y justificaciones" };
 }
 
-module.exports = { horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };
+module.exports = { historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };

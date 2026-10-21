@@ -12,8 +12,8 @@ async function crearTicket({ idUsuario, tipo, descripcion, nombreArchivo, archiv
 // Coordinador y programador atienden los tickets: los dos deben enterarse
 async function notificarCoordinadores(idTicket, tipo) {
   await pool.query(
-    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
-     SELECT id_usuario, 'soporte', 'Nuevo ticket de soporte', 'Ticket #' || $1 || ': ' || $2
+    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje, enlace)
+     SELECT id_usuario, 'soporte', 'Nuevo ticket de soporte', 'Ticket #' || $1 || ': ' || $2, '/soporte'
      FROM usuario WHERE rol IN ('coordinador', 'programador') AND estado = 'activo'`,
     [idTicket, tipo]
   );

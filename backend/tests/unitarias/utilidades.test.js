@@ -130,3 +130,26 @@ describe("solo los lectores de IP_LECTORES pueden enviar marcas", () => {
     assert.equal(probar(soloDesdeIps([]), "10.12.19.77"), "pasa");
   });
 });
+
+describe("festivos de Colombia", () => {
+  const { festivosDelAnio, festivoEn, domingoDePascua } = require("../../src/utilidades/festivos");
+
+  test("calcula la Pascua", () => {
+    assert.equal(fechaIso(domingoDePascua(2026)), "2026-04-05");
+    assert.equal(fechaIso(domingoDePascua(2027)), "2027-03-28");
+  });
+
+  test("2026 tiene los 18 festivos oficiales, con los de la Ley Emiliani en lunes", () => {
+    const fechas = festivosDelAnio(2026).map((f) => f.fecha.slice(5));
+    assert.deepEqual(fechas, [
+      "01-01", "01-12", "03-23", "04-02", "04-03", "05-01", "05-18", "06-08", "06-15",
+      "06-29", "07-20", "08-07", "08-17", "10-12", "11-02", "11-16", "12-08", "12-25",
+    ]);
+  });
+
+  test("dice qué festivo es una fecha, o null en un día hábil", () => {
+    assert.equal(festivoEn("2026-10-12"), "Día de la Raza");
+    assert.equal(festivoEn(new Date(2027, 6, 5)), "San Pedro y San Pablo"); // 29 de junio de 2027 es martes
+    assert.equal(festivoEn("2026-10-20"), null);
+  });
+});

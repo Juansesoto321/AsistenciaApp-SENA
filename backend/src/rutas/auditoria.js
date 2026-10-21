@@ -11,5 +11,6 @@ const router = express.Router();
 router.use(autenticar, autorizar("coordinador", "programador"));
 
 router.get("/", controlador.listar);
+router.post("/exportaciones", controlador.registrarExportacion);
 
 module.exports = router;

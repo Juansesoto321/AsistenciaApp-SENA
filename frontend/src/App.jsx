@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./contexto/AuthContext.jsx";
 import Diseno from "./componentes/Diseno.jsx";
 
@@ -23,6 +23,7 @@ import Sesiones from "./paginas/asistencia/Sesiones.jsx";
 import SesionEnVivo from "./paginas/asistencia/SesionEnVivo.jsx";
 import Justificaciones from "./paginas/asistencia/Justificaciones.jsx";
 import MiAsistencia from "./paginas/asistencia/MiAsistencia.jsx";
+import MisJustificaciones from "./paginas/asistencia/MisJustificaciones.jsx";
 import Reportes from "./paginas/asistencia/Reportes.jsx";
 // Administración
 import Usuarios from "./paginas/administracion/Usuarios.jsx";
@@ -35,8 +36,10 @@ const PERSONAL = [...COORDINACION, "instructor"];
 
 function Protegida({ children, roles }) {
   const { sesion } = useAuth();
+  const { pathname } = useLocation();
   if (!sesion) return <Navigate to="/" replace />;
-  if (roles && !roles.includes(sesion.usuario.rol)) return <Navigate to="/panel" replace />;
+  // Antes llevaba al panel sin decir nada: el panel muestra por qué (Diseno.jsx)
+  if (roles && !roles.includes(sesion.usuario.rol)) return <Navigate to="/panel" replace state={{ sinPermiso: pathname }} />;
   return <Diseno>{children}</Diseno>;
 }
 
@@ -63,6 +66,7 @@ export default function App() {
       <Route path="/sesiones/:id" element={<Protegida roles={PERSONAL}><SesionEnVivo /></Protegida>} />
       <Route path="/justificaciones" element={<Protegida roles={PERSONAL}><Justificaciones /></Protegida>} />
       <Route path="/mi-asistencia" element={<Protegida roles={["aprendiz"]}><MiAsistencia /></Protegida>} />
+      <Route path="/mis-justificaciones" element={<Protegida roles={["aprendiz"]}><MisJustificaciones /></Protegida>} />
       <Route path="/reportes" element={<Protegida roles={PERSONAL}><Reportes /></Protegida>} />
 
       <Route path="/usuarios" element={<Protegida roles={["coordinador"]}><Usuarios /></Protegida>} />

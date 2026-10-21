@@ -35,7 +35,7 @@ export default function AnilloAsistencia({ porcentaje, minimo = 80, tamano = 120
                 transform={`rotate(-90 ${centro} ${centro})`} />
       </svg>
       <div className="centro" style={{ color, fontSize: Math.round(tamano / 5) }} aria-hidden="true">
-        <Contador valor={porcentaje} />%
+        <span><Contador valor={porcentaje} />%</span>
       </div>
     </div>
   );

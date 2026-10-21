@@ -10,7 +10,10 @@ import Icono from "../../componentes/Iconos.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import PanelRegistroManual from "../../componentes/PanelRegistroManual.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
-import { textoPlazo, fechaCorta } from "../../utilidades/formato";
+import { textoPlazo, fechaCorta, horaCorta } from "../../utilidades/formato";
+
+/** Hora de un instante en 24 h ("09:57"), como el horario de la clase */
+const horaDe = (fecha) => new Date(fecha).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 export default function SesionEnVivo() {
   const { id } = useParams();
@@ -18,12 +21,14 @@ export default function SesionEnVivo() {
   const { confirmar } = useConfirmar();
   const { sesion: sesionUsuario } = useAuth();
   const rol = sesionUsuario.usuario.rol;
+  const soloConsulta = rol === "programador"; // ve la clase en vivo, pero no la cierra ni corrige
 
   const [sesion, setSesion] = useState(null);
   const [alerta, setAlerta] = useState(null);
   const [modal, setModal] = useState(null); // aprendiz con el panel de registro manual abierto
   const [mensaje, setMensaje] = useState(null);
   const [plazo, setPlazo] = useState(72);
+  const [ventana, setVentana] = useState({ antes: 15, despues: 10 }); // minutos en que el lector acepta huellas
   const [cerrando, setCerrando] = useState(false);
   const temporizadorAlerta = useRef(null);
 
@@ -35,7 +40,10 @@ export default function SesionEnVivo() {
   useEffect(() => {
     cargar();
     api("/configuracion")
-      .then((c) => c?.horas_justificacion && setPlazo(Number(c.horas_justificacion)))
+      .then((c) => {
+        if (c?.horas_justificacion) setPlazo(Number(c.horas_justificacion));
+        if (c?.minutos_antes_marcar) setVentana({ antes: Number(c.minutos_antes_marcar), despues: Number(c.minutos_despues_marcar) });
+      })
       .catch(() => {});
 
     const socket = conectarTiempoReal();
@@ -53,10 +61,20 @@ export default function SesionEnVivo() {
       });
     });
 
-    socket.on("huella_no_reconocida", () => {
-      setAlerta("Huella no reconocida en el lector. Si el aprendiz insiste, usa el registro manual.");
+    const alertar = (texto) => {
+      setAlerta(texto);
       clearTimeout(temporizadorAlerta.current);
       temporizadorAlerta.current = setTimeout(() => setAlerta(null), 8000);
+    };
+    socket.on("huella_no_reconocida", () => {
+      alertar("Huella no reconocida en el lector. Si el aprendiz insiste, usa el registro manual.");
+    });
+    // La sesión está abierta, pero la huella llegó fuera del horario de la clase
+    socket.on("marca_fuera_de_horario", (m) => {
+      alertar(
+        `Una huella de las ${horaDe(m.hora)} no contó: la clase es de ${m.horario} y el lector acepta huellas ` +
+        `desde ${m.antes} min antes del inicio hasta ${m.despues} min después del fin.`
+      );
     });
 
     return () => {
@@ -81,6 +99,20 @@ export default function SesionEnVivo() {
       setMensaje({ tipo: "error", texto: e.message });
       return false;
     }
+  }
+
+  // En una clase cerrada, corregir es excepcional: se confirma antes de abrir el panel
+  async function abrirRegistro(aprendiz) {
+    if (sesion.estado === "cerrada") {
+      const ok = await confirmar({
+        titulo: "¿Corregir la asistencia de una clase cerrada?",
+        mensaje: `La clase del ${fechaCorta(sesion.fecha)} ya se cerró. El cambio de ${aprendiz.nombres} ${aprendiz.apellidos} ` +
+          "queda en el registro del sistema con tu nombre y el motivo que escribas.",
+        textoConfirmar: "Sí, corregir",
+      });
+      if (!ok) return;
+    }
+    setModal(aprendiz);
   }
 
   async function cerrar() {
@@ -132,12 +164,23 @@ export default function SesionEnVivo() {
   }
 
   const marcados = sesion.aprendices.filter((a) => a.estado).length;
+  const esDeHoy = new Date(sesion.fecha).toDateString() === new Date().toDateString();
+  // Pasadas 24 h del cierre solo la coordinación corrige (el backend lo vuelve a validar)
+  const soloCoordinacion = sesion.estado === "cerrada" && rol !== "coordinador"
+    && Date.now() - new Date(sesion.hora_cierre) > 24 * 3600 * 1000;
+  // Clase iniciada antes de tiempo: las huellas aún no cuentan
+  const desdeCuandoMarca = new Date(sesion.fecha);
+  const [horaInicio, minutoInicio] = sesion.hora_inicio.split(":").map(Number);
+  desdeCuandoMarca.setHours(horaInicio, minutoInicio - ventana.antes, 0, 0);
+  const marcaTemprano = sesion.estado === "activa" && Date.now() < desdeCuandoMarca.getTime();
 
   return (
     <>
       <div className="cabecera-pagina">
         <div>
-          <Link to="/sesiones" style={{ fontSize: 13.5 }}>← Sesiones de hoy</Link>
+          {esDeHoy
+            ? <Link to="/sesiones" style={{ fontSize: 13.5 }}>← Sesiones de hoy</Link>
+            : <Link to="/sesiones?vista=historial" style={{ fontSize: 13.5 }}>← Historial de clases</Link>}
           <h1>
             {sesion.estado === "activa" && <span className="pulso" />}
             Ficha {sesion.numero_ficha} · Ambiente {sesion.numero_ambiente}
@@ -149,14 +192,14 @@ export default function SesionEnVivo() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {sesion.estado === "activa" ? (
+          {sesion.estado === "activa" && !soloConsulta && (
             <button className="boton peligro" onClick={cerrar} disabled={cerrando}>
               {cerrando ? "Cerrando…" : "Cerrar sesión de clase"}
             </button>
-          ) : (
-            <span className="insignia cerrada">Sesión cerrada</span>
           )}
-          {["coordinador", "programador"].includes(rol) && (
+          {sesion.estado === "activa" && soloConsulta && <span className="insignia activa">En curso</span>}
+          {sesion.estado !== "activa" && <span className="insignia cerrada">Sesión cerrada</span>}
+          {rol === "coordinador" && (
             <button className="boton mini suave" onClick={eliminar} title="Borra la sesión y su asistencia permanentemente">
               Eliminar sesión
             </button>
@@ -170,6 +213,12 @@ export default function SesionEnVivo() {
         </div>
       )}
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
+      {marcaTemprano && (
+        <p className="nota-estado alerta" role="status">
+          <Icono nombre="alerta" /> La clase empieza a las {horaCorta(sesion.hora_inicio)}. El lector acepta huellas desde
+          las {horaDe(desdeCuandoMarca)}; las de antes no cuentan.
+        </p>
+      )}
 
       <table className="tabla tabla-tarjetas">
         <thead>
@@ -183,6 +232,8 @@ export default function SesionEnVivo() {
               <td data-etiqueta="Huella">
                 {a.tiene_huella ? (
                   <IconoHuella title="Huella registrada" />
+                ) : a.huella_en_lector ? (
+                  <span style={{ fontSize: 12.5 }} title="El lector del ambiente ya la reconoce: está guardada en el equipo, no en la app"><IconoHuella /> En el lector</span>
                 ) : (
                   <span style={{ color: "var(--tinta-suave)", fontSize: 12.5 }} title="Sin huella registrada: usar registro manual">
                     Sin huella
@@ -201,13 +252,14 @@ export default function SesionEnVivo() {
               </td>
               <td data-etiqueta="Método">{a.metodo ? <span className={`insignia ${a.metodo}`}>{a.metodo}</span> : "—"}</td>
               <td>
-                <button
+                {!soloConsulta && <button
                   className="boton mini suave"
-                  disabled={cerrando}
-                  onClick={() => setModal(a)}
+                  disabled={cerrando || soloCoordinacion}
+                  title={soloCoordinacion ? "Pasadas 24 horas del cierre, solo la coordinación puede corregir" : undefined}
+                  onClick={() => abrirRegistro(a)}
                 >
-                  Registro manual
-                </button>
+                  {sesion.estado === "cerrada" ? "Corregir" : "Registro manual"}
+                </button>}
               </td>
             </tr>
           ))}
@@ -221,6 +273,7 @@ export default function SesionEnVivo() {
         <PanelRegistroManual
           aprendiz={modal}
           plazoHoras={plazo}
+          correccion={sesion.estado === "cerrada"}
           alGuardar={guardarManual}
           alCerrar={() => setModal(null)}
         />

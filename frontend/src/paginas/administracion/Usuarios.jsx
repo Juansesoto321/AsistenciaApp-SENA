@@ -107,8 +107,8 @@ export default function Usuarios() {
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <input style={{ maxWidth: 260 }} placeholder="Buscar por nombre, documento o correo"
-               value={filtro.buscar} onChange={(e) => setFiltro({ ...filtro, buscar: e.target.value })} />
+        <input type="search" style={{ flex: "1 1 300px", maxWidth: 380 }} placeholder="Buscar por nombre, documento o correo"
+               aria-label="Buscar usuarios por nombre, documento o correo" value={filtro.buscar} onChange={(e) => setFiltro({ ...filtro, buscar: e.target.value })} />
         <select style={{ maxWidth: 170 }} value={filtro.rol} onChange={(e) => setFiltro({ ...filtro, rol: e.target.value })}>
           <option value="">Todos los roles</option>
           <option value="coordinador">Coordinador</option>
@@ -126,21 +126,21 @@ export default function Usuarios() {
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr>{tabla.encabezado("nombre", "Nombre")}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("correo", "Correo")}{tabla.encabezado("rol", "Rol")}{tabla.encabezado("estado", "Estado")}<th>Acciones</th></tr></thead>
+        <thead><tr>{tabla.encabezado("nombre", "Nombre", { className: "col-nombre" })}{tabla.encabezado("documento", "Documento")}{tabla.encabezado("correo", "Correo", { className: "col-correo" })}{tabla.encabezado("rol", "Rol")}{tabla.encabezado("estado", "Estado")}<th className="col-acciones">Acciones</th></tr></thead>
         <tbody>
           {tabla.visibles.map((u) => (
             <tr key={u.id_usuario}>
-              <td>{u.nombres} {u.apellidos}</td>
+              <td className="col-nombre">{u.nombres} {u.apellidos}</td>
               <td>{u.documento}</td>
-              <td>{u.correo}</td>
+              <td className="col-correo">{u.correo}</td>
               <td style={{ textTransform: "capitalize" }}>{u.rol}</td>
               <td><span className={`insignia ${u.estado}`}>{u.estado}</span></td>
-              <td style={{ display: "flex", gap: 6 }}>
+              <td className="col-acciones"><div className="acciones-celda">
                 <button className="boton mini suave" onClick={() => abrirEdicion(u)}>Editar</button>
                 {u.estado === "pendiente" && <button className="boton mini exito" onClick={() => cambiarEstado(u, "activo")}>Aprobar</button>}
                 {u.estado === "activo" && <button className="boton mini suave" onClick={() => cambiarEstado(u, "inactivo")}>Desactivar</button>}
                 {u.estado === "inactivo" && <button className="boton mini exito" onClick={() => cambiarEstado(u, "activo")}>Reactivar</button>}
-              </td>
+              </div></td>
             </tr>
           ))}
           {usuarios === null && <tr><td colSpan={6}><Cargando /></td></tr>}
@@ -188,9 +188,17 @@ export default function Usuarios() {
               <div><label>Apellidos</label><input value={f.apellidos} onChange={(e) => setF({ ...f, apellidos: e.target.value })} /></div>
             </div>
             <div className="rejilla-2">
-              <div><label>Documento</label><input value={f.documento} onChange={(e) => setF({ ...f, documento: e.target.value })} /></div>
-              <div><label>Teléfono</label><input value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} /></div>
+              <div>
+                <label htmlFor="nuevo-tipo-doc">Tipo de documento</label>
+                <select id="nuevo-tipo-doc" value={f.tipo_documento} onChange={(e) => setF({ ...f, tipo_documento: e.target.value })}>
+                  <option value="CC">Cédula de ciudadanía</option>
+                  <option value="TI">Tarjeta de identidad</option>
+                  <option value="CE">Cédula de extranjería</option>
+                </select>
+              </div>
+              <div><label>Documento</label><input inputMode="numeric" value={f.documento} onChange={(e) => setF({ ...f, documento: e.target.value })} /></div>
             </div>
+            <label>Teléfono</label><input type="tel" value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} />
             <label>Correo</label><input value={f.correo} onChange={(e) => setF({ ...f, correo: e.target.value })} />
             <label>Rol</label>
             <select value={f.rol} onChange={(e) => setF({ ...f, rol: e.target.value })}>

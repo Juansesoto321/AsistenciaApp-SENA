@@ -30,7 +30,7 @@ async function editarCompetencia(id, { codigo, nombre }, usuario) {
 async function eliminarCompetencia(id, usuario) {
   const borrada = await modelo.eliminarCompetencia(id);
   if (!borrada) throw error("Competencia no encontrada", "no_encontrado");
-  await auditar(usuario.id, "eliminar_competencia", "competencia", Number(id));
+  await auditar(usuario.id, "eliminar_competencia", "competencia", Number(id), { nombre: borrada.nombre });
 }
 
 // ---------- RESULTADOS DE APRENDIZAJE ----------
@@ -60,7 +60,7 @@ async function editarRap(id, { id_competencia, codigo, nombre }, usuario) {
 async function eliminarRap(id, usuario) {
   const borrado = await modelo.eliminarRap(id);
   if (!borrado) throw error("Resultado de aprendizaje no encontrado", "no_encontrado");
-  await auditar(usuario.id, "eliminar_rap", "resultado_aprendizaje", Number(id));
+  await auditar(usuario.id, "eliminar_rap", "resultado_aprendizaje", Number(id), { nombre: borrado.nombre });
 }
 
 // ---------- TEMATICAS ----------
@@ -78,7 +78,7 @@ async function crearTematica({ id_rap, nombre }, usuario) {
 async function eliminarTematica(id, usuario) {
   const borrada = await modelo.eliminarTematica(id);
   if (!borrada) throw error("Temática no encontrada", "no_encontrado");
-  await auditar(usuario.id, "eliminar_tematica", "tematica", Number(id));
+  await auditar(usuario.id, "eliminar_tematica", "tematica", Number(id), { nombre: borrada.nombre });
 }
 
 // ---------- CARGA MASIVA ----------

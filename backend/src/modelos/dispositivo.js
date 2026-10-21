@@ -20,13 +20,37 @@ async function marcarEnLinea(idDispositivo) {
   );
 }
 
-/** Tarea programada CU-09: sin heartbeat en 3 minutos, el lector se da por caido. */
+/**
+ * Tarea programada CU-09: sin heartbeat en 3 minutos, el lector se da por
+ * caido. Devuelve solo los que acaban de caer (para avisar una sola vez).
+ */
 async function marcarFueraDeLineaSinHeartbeat() {
   const r = await pool.query(
-    `UPDATE dispositivo SET estado = 'fuera_de_linea'
-     WHERE estado = 'en_linea' AND ultimo_heartbeat < NOW() - INTERVAL '3 minutes'`
+    `UPDATE dispositivo d SET estado = 'fuera_de_linea'
+     WHERE d.estado = 'en_linea' AND d.ultimo_heartbeat < NOW() - INTERVAL '3 minutes'
+     RETURNING d.id_dispositivo, d.serial, d.id_ambiente,
+               (SELECT numero_ambiente FROM ambiente a WHERE a.id_ambiente = d.id_ambiente) AS numero_ambiente`
   );
-  return r.rowCount;
+  return r.rows;
 }
 
-module.exports = { buscarPorSerial, buscarPorCredenciales, marcarEnLinea, marcarFueraDeLineaSinHeartbeat };
+/**
+ * Notificación de lector caído para la coordinación, el programador y el
+ * instructor que tenga clase en curso en ese ambiente. Devuelve a quiénes.
+ */
+async function notificarLectorCaido({ id_ambiente: idAmbiente }, mensaje) {
+  const r = await pool.query(
+    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
+     SELECT u.id_usuario, 'lector', 'Lector sin señal', $2
+     FROM usuario u
+     WHERE u.estado = 'activo'
+       AND (u.rol IN ('coordinador', 'programador')
+            OR u.id_usuario IN (SELECT h.id_instructor FROM sesion_clase s JOIN horario h ON h.id_horario = s.id_horario
+                                WHERE h.id_ambiente = $1 AND s.fecha = CURRENT_DATE AND s.estado = 'activa'))
+     RETURNING id_usuario`,
+    [idAmbiente, mensaje]
+  );
+  return r.rows.map((f) => f.id_usuario);
+}
+
+module.exports = { buscarPorSerial, buscarPorCredenciales, marcarEnLinea, marcarFueraDeLineaSinHeartbeat, notificarLectorCaido };
