@@ -30,7 +30,8 @@ router.post("/fichas/:id/matriculas", autorizar(...PLANEACION), controlador.matr
 router.patch("/matriculas/:id", autorizar(...PLANEACION), controlador.cambiarEstadoMatricula);
 
 // ---------- AMBIENTES Y DISPOSITIVOS (CU-07) ----------
-router.get("/ambientes", controlador.listarAmbientes);
+// Incluye el serial de cada lector: solo la planeación lo necesita
+router.get("/ambientes", autorizar(...PLANEACION), controlador.listarAmbientes);
 router.post("/ambientes", autorizar(...PLANEACION), controlador.crearAmbiente);
 
 // Asociar lector al ambiente: genera la clave API que usara el dispositivo

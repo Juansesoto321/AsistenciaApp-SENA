@@ -16,8 +16,12 @@
  */
 const express = require("express");
 const controlador = require("../controladores/adms");
+const { ipLectores } = require("../config/entorno");
+const { soloDesdeIps } = require("../middleware/seguridad");
 
 const router = express.Router();
+// El serial no es un secreto: solo los equipos de IP_LECTORES pueden marcar
+router.use(soloDesdeIps(ipLectores));
 router.use(express.text({ type: "*/*" }));
 
 router.get("/cdata", controlador.cdataGet);

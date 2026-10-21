@@ -90,15 +90,18 @@ node simulador-lector/simulador.js http://localhost:8080
 
 ### En un servidor real (producción)
 
-Un servidor real **no lleva datos de demostración**: sus cuentas tienen contraseñas
-públicas (están en el código). Crea un archivo `.env` junto al compose con
-`NODE_ENV=production`, `JWT_SECRETO` y `CLAVE_CIFRADO` propios (64 hex), `URL_FRONTEND`
-(dirección pública, usada en los correos) y las credenciales SMTP (`CORREO_HOST`,
-`CORREO_USUARIO`, `CORREO_CONTRASENA`). Con `NODE_ENV=production` el backend no arranca
-con las claves de ejemplo y `npm run sembrar` se niega a correr.
+Un servidor real **no lleva datos de demostración** y usa los ajustes de
+`docker-compose.produccion.yml`: `NODE_ENV=production` (el backend no arranca con las
+claves de ejemplo y `npm run sembrar` se niega a correr) y claves obligatorias.
+
+1. Copia `.env.produccion.example` como `.env` y llénalo: `JWT_SECRETO` y `CLAVE_CIFRADO`
+   propios, `URL_FRONTEND` (la dirección con la que se abre la aplicación), `IP_LECTORES`
+   (IP de cada lector) y el correo SMTP. Si falta una clave, Docker se detiene con un
+   mensaje en vez de usar las de ejemplo.
+2. Levanta el sistema y crea la base y la primera cuenta:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.produccion.yml up -d --build
 docker compose exec backend npm run migrar              # esquema y migraciones, sin datos
 docker compose exec backend npm run crear-coordinador   # primera cuenta; la contraseña se muestra una vez
 ```
@@ -107,7 +110,23 @@ El coordinador crea después las demás cuentas desde **Usuarios**. Para dar una
 nueva y aleatoria a una cuenta (por ejemplo, si el coordinador perdió el acceso):
 `docker compose exec backend npm run nueva-clave -- correo@sena.edu.co`.
 
-Sin SMTP, los correos se imprimen en la consola del backend (útil para la demo).
+Todos los servicios tienen `restart: unless-stopped`: si el servidor se reinicia o un
+proceso se cae, vuelven a arrancar solos.
+
+**HTTPS.** Hay dos casos:
+- **El SENA publica el sistema detrás de su propio proxy con HTTPS:** no hay que hacer
+  nada más; su proxy envía el tráfico al puerto web (8080) de este servidor.
+- **Este servidor tiene el certificado:** pon `fullchain.pem` y `privkey.pem` en la
+  carpeta `certificados/` (Git la ignora) y agrega el tercer archivo:
+  `docker compose -f docker-compose.yml -f docker-compose.produccion.yml -f docker-compose.https.yml up -d --build`.
+  Así nginx atiende por el 443 con TLS 1.2/1.3 y HSTS, y redirige el 80 a HTTPS
+  (requiere Docker Compose 2.24 o superior).
+
+**Puertos.** Hacia internet solo se publica el puerto web. El **4000** es solo para los
+lectores: el protocolo del lector no tiene clave (se identifica con su serial), así que
+el backend únicamente acepta marcas de las IP de `IP_LECTORES`, y conviene que el
+firewall del servidor deje entrar al 4000 solo desde la red de los lectores. Si una marca
+se rechaza, el registro del backend muestra la IP desde la que llegó.
 
 ### Adjuntos de justificaciones
 

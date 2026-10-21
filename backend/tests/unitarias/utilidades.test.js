@@ -8,7 +8,7 @@ const assert = require("node:assert/strict");
 const { escaparHtml, celdaCsv, fechaIso, textoPlazo } = require("../../src/utilidades/formato");
 const { error } = require("../../src/utilidades/errores");
 const { manejadorErrores } = require("../../src/middleware/manejadorErrores");
-const { limitarPeticiones } = require("../../src/middleware/seguridad");
+const { limitarPeticiones, soloDesdeIps } = require("../../src/middleware/seguridad");
 
 /** Respuesta falsa de Express que guarda el código y el cuerpo. */
 function respuestaFalsa() {
@@ -96,6 +96,38 @@ describe("límite de peticiones por IP", () => {
     limite({ ip: "10.0.0.1" }, respuestaFalsa(), (e) => { if (!e) pasaron++; });
     limite({ ip: "10.0.0.2" }, respuestaFalsa(), (e) => { if (!e) pasaron++; });
     assert.equal(pasaron, 2);
+  });
+});
+
+describe("solo los lectores de IP_LECTORES pueden enviar marcas", () => {
+  /** Petición falsa desde una IP, con un X-Forwarded-For que intenta suplantar al lector. */
+  const desde = (ip) => ({ socket: { remoteAddress: ip }, headers: { "x-forwarded-for": "10.12.19.50" } });
+  const respuesta = () => ({
+    estado: null,
+    status(c) { this.estado = c; return this; },
+    type() { return this; },
+    send() { return this; },
+  });
+  const probar = (filtro, ip) => {
+    const res = respuesta();
+    let paso = false;
+    filtro(desde(ip), res, () => { paso = true; });
+    return paso ? "pasa" : res.estado;
+  };
+
+  test("deja pasar la IP del lector, también escrita como IPv6", () => {
+    const filtro = soloDesdeIps(["10.12.19.50"]);
+    assert.equal(probar(filtro, "10.12.19.50"), "pasa");
+    assert.equal(probar(filtro, "::ffff:10.12.19.50"), "pasa");
+  });
+
+  test("rechaza otras IP aunque el encabezado X-Forwarded-For diga la del lector", () => {
+    const filtro = soloDesdeIps(["10.12.19.50"]);
+    assert.equal(probar(filtro, "10.12.19.77"), 403);
+  });
+
+  test("sin lista deja pasar a todos (desarrollo y simulador)", () => {
+    assert.equal(probar(soloDesdeIps([]), "10.12.19.77"), "pasa");
   });
 });
 

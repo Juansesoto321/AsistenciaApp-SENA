@@ -8,3 +8,5 @@ dist/
 
 # Copias de seguridad de la base (servicio "respaldos" de docker-compose)
 /respaldos/
+# Certificado HTTPS del servidor (docker-compose.https.yml): la clave privada nunca va a Git
+/certificados/

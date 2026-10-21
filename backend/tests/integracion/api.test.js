@@ -178,6 +178,14 @@ prueba("el aprendiz solo ve el horario de su propia ficha (Mi horario)", async (
   assert.deepEqual(ajena.datos, []);
 });
 
+prueba("los ambientes con el serial de su lector solo los ve la planeación", async () => {
+  assert.equal((await e.peticion("GET", "/api/ambientes", { token: tokens.ana })).estado, 403);
+  assert.equal((await e.peticion("GET", "/api/ambientes", { token: tokens.instructor })).estado, 403);
+  const coordinacion = await e.peticion("GET", "/api/ambientes", { token: tokens.coordinador });
+  assert.equal(coordinacion.estado, 200);
+  assert.ok(coordinacion.datos.some((a) => a.serial));
+});
+
 // ---------- Sesión de clase y marcación ----------
 
 prueba("el instructor titular inicia la sesión de hoy; otro instructor no puede", async () => {
