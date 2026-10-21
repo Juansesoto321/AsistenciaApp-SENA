@@ -59,7 +59,7 @@ async function main() {
 
   const aprendices = [
     ["Julieth Camila", "Peña Mahecha", "1016716963", "camilap.m1230@gmail.com"],
-    ["Julian Felipe", "Becerra Villalobo", "1027524931", "becerravillalobos08@gmail.com"],
+    ["Julian Felipe", "Becerra Villalobos", "1027524931", "becerravillalobos08@gmail.com"], // antes "Villalobo": su correo dice villalobos
     ["Juan Sebastian", "Soto Moreno", "1192771015", "juansesoto321@gmail.com"],
     ["Santiago", "Bermudez Torres", "1019764503", "santibermudez0656@gmail.com"],
     ["Yordan Hernando", "Mendez Beltran", "1021675228", "hernandomendezlol@gmail.com"],

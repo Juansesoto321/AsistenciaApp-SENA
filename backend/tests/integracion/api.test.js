@@ -887,3 +887,16 @@ prueba("cada rol reporta los problemas que le pasan a él, y la coordinación le
   assert.equal(rows[0].mensaje, `Ticket #${bueno.datos.id_ticket}: El lector del ambiente no funciona`);
   assert.equal(rows[0].enlace, "/soporte");
 });
+
+// ---------- Nombres largos (revisión, punto 17) ----------
+
+prueba("un apellido largo se guarda completo (no se recorta)", async () => {
+  const apellidos = "Becerra Villalobos de la Torre y Hernández Castañeda";
+  const r = await e.peticion("POST", "/api/usuarios", {
+    token: tokens.coordinador,
+    cuerpo: { nombres: "Julian Felipe", apellidos, tipo_documento: "CC", documento: "900099", correo: "largo@prueba.co", rol: "aprendiz" },
+  });
+  assert.equal(r.estado, 201);
+  const { rows } = await e.pool.query("SELECT apellidos FROM usuario WHERE correo = 'largo@prueba.co'");
+  assert.equal(rows[0].apellidos, apellidos);
+});
