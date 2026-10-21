@@ -15,6 +15,7 @@ const SUPERVISION = ["instructor", "coordinador", "programador"];
 const GESTION = ["instructor", "coordinador"];
 
 router.get("/hoy", autorizar(...SUPERVISION), controlador.horariosDeHoy);
+router.get("/historial", autorizar(...SUPERVISION), controlador.historialDeClases);
 router.post("/iniciar", autorizar(...GESTION), controlador.iniciarSesion);
 router.get("/:id", autorizar(...SUPERVISION), controlador.verDetalle);
 router.post("/:id/asistencia-manual", autorizar(...GESTION), controlador.registrarAsistenciaManual);

@@ -164,6 +164,7 @@ export default function SesionEnVivo() {
   }
 
   const marcados = sesion.aprendices.filter((a) => a.estado).length;
+  const esDeHoy = new Date(sesion.fecha).toDateString() === new Date().toDateString();
   // Pasadas 24 h del cierre solo la coordinación corrige (el backend lo vuelve a validar)
   const soloCoordinacion = sesion.estado === "cerrada" && rol !== "coordinador"
     && Date.now() - new Date(sesion.hora_cierre) > 24 * 3600 * 1000;
@@ -177,7 +178,9 @@ export default function SesionEnVivo() {
     <>
       <div className="cabecera-pagina">
         <div>
-          <Link to="/sesiones" style={{ fontSize: 13.5 }}>← Sesiones de hoy</Link>
+          {esDeHoy
+            ? <Link to="/sesiones" style={{ fontSize: 13.5 }}>← Sesiones de hoy</Link>
+            : <Link to="/sesiones?vista=historial" style={{ fontSize: 13.5 }}>← Historial de clases</Link>}
           <h1>
             {sesion.estado === "activa" && <span className="pulso" />}
             Ficha {sesion.numero_ficha} · Ambiente {sesion.numero_ambiente}

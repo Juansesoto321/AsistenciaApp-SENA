@@ -13,6 +13,7 @@ import GraficaTendencia from "../../componentes/GraficaTendencia.jsx";
 import Tendencia from "../../componentes/Tendencia.jsx";
 import Contador from "../../componentes/Contador.jsx";
 import ClaseEnCurso from "../../componentes/ClaseEnCurso.jsx";
+import SinClasesHoy from "../../componentes/SinClasesHoy.jsx";
 import EscanerHuella, { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { horaCorta, mayusculaInicial, saludo } from "../../utilidades/formato";
 import { nombreDelDia, proximaClase } from "../../utilidades/fechas";
@@ -272,7 +273,7 @@ function PanelSupervision({ rol, alError }) {
           {clases?.length > 0 && <Link to="/sesiones" style={{ fontSize: 13.5 }}>Ver todas →</Link>}
         </div>
         {clases === null ? <Cargando /> : clases.length === 0 ? (
-          <Vacio icono="sesiones" titulo="No hay clases programadas para hoy" />
+          <SinClasesHoy titulo={esInstructor ? "No tienes clases hoy" : "No hay clases programadas para hoy"} />
         ) : (
           <>
             <ul className="lista-clases">

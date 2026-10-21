@@ -805,3 +805,47 @@ prueba("un lector que pasa 3 minutos sin señal avisa una sola vez a la coordina
   assert.equal(avisos.rows.length, 1);
   assert.match(avisos.rows[0].mensaje, /LECTOR-PRUEBA del ambiente P-1/);
 });
+
+// ---------- Instructor: notificaciones con enlace e historial (revisión, punto 14) ----------
+
+prueba("la justificación que llega abre desde la notificación, y la clase pasada sale en el historial", async () => {
+  // Clase de hace dos días, cerrada, en la que Ana faltó y tiene enlace para justificar
+  const sesion = await e.pool.query(
+    `INSERT INTO sesion_clase (id_horario, fecha, estado, hora_apertura, hora_cierre)
+     VALUES ($1, CURRENT_DATE - 2, 'cerrada', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days') RETURNING id_sesion`,
+    [e.ids.horario]
+  );
+  const idPasada = sesion.rows[0].id_sesion;
+  const ausencia = await e.pool.query(
+    "INSERT INTO asistencia (id_sesion, id_aprendiz, estado, metodo) VALUES ($1, $2, 'ausente', 'sistema') RETURNING id_asistencia",
+    [idPasada, e.ids.aprendiz]
+  );
+  await e.pool.query(
+    "INSERT INTO justificacion (id_asistencia, token, expira_en) VALUES ($1, 'token-con-enlace', NOW() + INTERVAL '1 day')",
+    [ausencia.rows[0].id_asistencia]
+  );
+  const envio = await e.peticion("POST", "/api/justificaciones/token/token-con-enlace", {
+    cuerpo: { tipo: "calamidad_domestica", descripcion: "Calamidad en casa" },
+  });
+  assert.equal(envio.estado, 200);
+
+  const { rows } = await e.pool.query(
+    `SELECT n.mensaje, n.enlace, j.id_justificacion FROM notificacion n, justificacion j
+     WHERE n.id_usuario = $1 AND n.titulo = 'Nueva justificación por revisar' AND j.token = 'token-con-enlace'
+     ORDER BY n.id_notificacion DESC LIMIT 1`,
+    [e.ids.instructor]
+  );
+  assert.equal(rows[0].enlace, `/justificaciones?id=${rows[0].id_justificacion}`);
+  assert.match(rows[0].mensaje, /ficha 999999/);
+  const lista = await e.peticion("GET", "/api/notificaciones", { token: tokens.instructor });
+  assert.ok(lista.datos.some((n) => n.enlace === rows[0].enlace));
+
+  // Historial: el titular ve su clase pasada con cuántos faltaron; otro instructor no
+  const historial = await e.peticion("GET", "/api/sesiones/historial?dias=30", { token: tokens.instructor });
+  assert.equal(historial.estado, 200);
+  const pasada = historial.datos.find((c) => c.id_sesion === idPasada);
+  assert.equal(pasada.ausentes, 1);
+  assert.ok(historial.datos.every((c) => new Date(c.fecha) < new Date(new Date().toDateString()))); // nada de hoy
+  const ajeno = await e.peticion("GET", "/api/sesiones/historial", { token: tokens.otro });
+  assert.ok(!ajeno.datos.some((c) => c.id_sesion === idPasada));
+});

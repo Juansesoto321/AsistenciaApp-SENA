@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
@@ -61,12 +61,20 @@ export default function Justificaciones() {
   const [observacion, setObservacion] = useState("");
   const [procesando, setProcesando] = useState(false);
 
+  // ?id=N (desde una notificación): se abre esa justificación al cargar, una vez
+  const pedida = useRef(Number(parametros.get("id")) || null);
   const cargar = () =>
     api("/justificaciones")
       .then((datos) => {
         setLista(datos);
         // Si no hay nada por revisar, se muestran todas en vez de una lista vacía
         setFiltro((actual) => (actual === "enviada" && !datos.some((j) => j.estado === "enviada") ? "todas" : actual));
+        if (pedida.current) {
+          const j = datos.find((x) => x.id_justificacion === pedida.current);
+          pedida.current = null;
+          if (j) { setFiltro(j.estado); abrir(j); }
+          else setMensaje({ tipo: "error", texto: "Esa justificación ya no está en tu bandeja." });
+        }
       })
       .catch((e) => {
         setLista([]);

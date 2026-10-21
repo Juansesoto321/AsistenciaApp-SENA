@@ -62,6 +62,13 @@ export function proximaClase(horarios, ahora = new Date(), festivos) {
   return null;
 }
 
+/** "Martes 27 oct": día y fecha, sin "Mañana" (que se confunde con la jornada). */
+export function diaYFecha(fecha) {
+  const dia = fecha.toLocaleDateString("es-CO", { weekday: "long" });
+  const mes = fecha.toLocaleDateString("es-CO", { month: "short" }).replace(".", "");
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${fecha.getDate()} ${mes}`;
+}
+
 /** "Hoy", "Mañana" o "jueves 25 de septiembre". */
 export function nombreDelDia(fecha, ahora = new Date()) {
   if (mismoDia(fecha, ahora)) return "Hoy";

@@ -271,7 +271,38 @@ async function insertarNotificacionInasistencia(cliente, idAprendiz, mensaje) {
   );
 }
 
+/**
+ * Clases de días anteriores (las de hoy ya salen en horariosDeHoy), con cómo
+ * les fue. El instructor solo ve las suyas. Antes solo se llegaba a una clase
+ * pasada si se tenía su dirección.
+ */
+async function historialDeClases(usuario, dias) {
+  const filtro = usuario.rol === "instructor" ? "AND h.id_instructor = $2" : "";
+  const valores = usuario.rol === "instructor" ? [dias, usuario.id] : [dias];
+  const r = await pool.query(
+    `SELECT s.id_sesion, s.fecha, s.estado, h.hora_inicio, h.hora_fin,
+            f.numero_ficha, f.programa, a.numero_ambiente,
+            u.nombres || ' ' || u.apellidos AS instructor,
+            COUNT(x.id_asistencia) FILTER (WHERE x.estado IN ('presente', 'tardanza', 'justificada'))::int AS asistieron,
+            COUNT(x.id_asistencia) FILTER (WHERE x.estado = 'ausente')::int AS ausentes,
+            COUNT(x.id_asistencia)::int AS registros
+     FROM sesion_clase s
+     JOIN horario h ON h.id_horario = s.id_horario
+     JOIN ficha f ON f.id_ficha = h.id_ficha
+     JOIN ambiente a ON a.id_ambiente = h.id_ambiente
+     JOIN usuario u ON u.id_usuario = h.id_instructor
+     LEFT JOIN asistencia x ON x.id_sesion = s.id_sesion
+     WHERE s.fecha < CURRENT_DATE AND s.fecha >= CURRENT_DATE - $1::int ${filtro}
+     GROUP BY s.id_sesion, h.id_horario, f.id_ficha, a.id_ambiente, u.id_usuario
+     ORDER BY s.fecha DESC, h.hora_inicio DESC
+     LIMIT 300`,
+    valores
+  );
+  return r.rows;
+}
+
 module.exports = {
+  historialDeClases,
   horariosDeHoy,
   buscarHorarioConLector,
   buscarSesionCruzadaHoy,

@@ -58,6 +58,13 @@ async function enviarAvisosDeInasistencia(avisos) {
   }
 }
 
+const DIAS_HISTORIAL = [30, 90, 365];
+
+async function historialDeClases(usuario, dias) {
+  const pedido = Number(dias);
+  return modelo.historialDeClases(usuario, DIAS_HISTORIAL.includes(pedido) ? pedido : DIAS_HISTORIAL[0]);
+}
+
 async function horariosDeHoy(usuario) {
   const clases = await modelo.horariosDeHoy(usuario);
   if (!festivoEn(new Date())) return clases;
@@ -208,4 +215,4 @@ async function eliminarSesion(idSesion, usuario) {
   return { mensaje: "Sesión eliminada permanentemente, junto con su asistencia y justificaciones" };
 }
 
-module.exports = { horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };
+module.exports = { historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };

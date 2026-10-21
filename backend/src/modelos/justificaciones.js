@@ -34,10 +34,11 @@ async function enviarPorToken(token, { tipo, descripcion, nombre_archivo, archiv
 
 async function buscarInstructorDeAsistencia(idAsistencia) {
   const r = await pool.query(
-    `SELECT h.id_instructor, u.nombres, u.apellidos
+    `SELECT h.id_instructor, u.nombres, u.apellidos, s.fecha, f.numero_ficha
      FROM asistencia a
      JOIN sesion_clase s ON s.id_sesion = a.id_sesion
      JOIN horario h ON h.id_horario = s.id_horario
+     JOIN ficha f ON f.id_ficha = h.id_ficha
      JOIN usuario u ON u.id_usuario = a.id_aprendiz
      WHERE a.id_asistencia = $1`,
     [idAsistencia]
@@ -143,11 +144,14 @@ async function registrarCambioAsistencia(cliente, idAsistencia, estadoAnterior, 
   );
 }
 
-/** `cliente` solo se pasa cuando la notificación debe ir dentro de una transacción. */
-async function crearNotificacion(idUsuario, tipo, titulo, mensaje, cliente = pool) {
+/**
+ * `cliente` solo se pasa cuando la notificación debe ir dentro de una
+ * transacción; `enlace` es la página que abre la notificación.
+ */
+async function crearNotificacion(idUsuario, tipo, titulo, mensaje, cliente = pool, enlace = null) {
   await cliente.query(
-    "INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje) VALUES ($1,$2,$3,$4)",
-    [idUsuario, tipo, titulo, mensaje]
+    "INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje, enlace) VALUES ($1,$2,$3,$4,$5)",
+    [idUsuario, tipo, titulo, mensaje, enlace]
   );
 }
 

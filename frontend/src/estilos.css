@@ -662,6 +662,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .grafica-tendencia .linea { fill: none; stroke: var(--violeta-600); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .grafica-tendencia .punto { fill: var(--blanco); stroke: var(--violeta-600); stroke-width: 2; }
 .grafica-tendencia .punto.bajo { stroke: var(--rojo); }
+.acciones-notificacion { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
 .grafica-tendencia .barra-dia { fill: var(--violeta-600); opacity: .85; }
 .grafica-tendencia .barra-dia.bajo { fill: var(--rojo); }
 .grafica-tendencia .valor-barra { fill: var(--tinta); font-size: 13px; font-weight: 700; }
