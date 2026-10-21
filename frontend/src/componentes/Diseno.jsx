@@ -4,23 +4,16 @@ import { api } from "../servicios/api";
 import { conectarTiempoReal } from "../servicios/socket";
 import { useAuth } from "../contexto/AuthContext.jsx";
 import Logo from "./Logo.jsx";
-import IconoSoporte from "./IconoSoporte.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
 import FondoNeon from "./FondoNeon.jsx";
-import { useTema } from "../utilidades/tema";
+import AccionesCuenta from "./AccionesCuenta.jsx";
 
-const SOPORTE = <IconoSoporte />;
 const ico = (nombre) => <Icono nombre={nombre} />;
 
 // Un texto suelto es el título de un grupo del menú. Lo que se usa a diario
-// va arriba; la planeación y la administración, después.
-const CUENTA = [
-  "Mi cuenta",
-  ["/notificaciones", ico("notificaciones"), "Notificaciones"],
-  ["/perfil", ico("perfil"), "Mi perfil"],
-  ["/soporte", SOPORTE, "Soporte"],
-];
+// va arriba; la planeación y la administración, después. Notificaciones, Mi
+// perfil, Soporte y Salir están arriba a la derecha (AccionesCuenta).
 const PLANEACION = [
   "Planeación",
   ["/fichas", ico("fichas"), "Fichas"],
@@ -44,7 +37,6 @@ const MENUS = {
     ["/usuarios", ico("usuarios"), "Usuarios"],
     ["/configuracion", ico("configuracion"), "Configuración"],
     ["/registro", ico("registro"), "Registro del sistema"],
-    ...CUENTA,
   ],
   instructor: [
     ["/panel", ico("panel"), "Panel"],
@@ -56,7 +48,6 @@ const MENUS = {
     ["/fichas", ico("fichas"), "Mis fichas"],
     ["/horarios", ico("horarios"), "Mis horarios"],
     ["/competencias", ico("competencias"), "Competencias"],
-    ...CUENTA,
   ],
   // Mismas opciones del coordinador salvo "Usuarios": el programador apoya la
   // planeacion academica pero no administra cuentas. Las clases y las
@@ -68,16 +59,12 @@ const MENUS = {
     "Administración",
     ["/configuracion", ico("configuracion"), "Configuración"],
     ["/registro", ico("registro"), "Registro del sistema"],
-    ...CUENTA,
   ],
   aprendiz: [
     ["/panel", ico("panel"), "Panel"],
     ["/mi-asistencia", ico("asistencia"), "Mi asistencia"],
     ["/mis-justificaciones", ico("justificaciones"), "Mis justificaciones"],
     ["/horarios", ico("horarios"), "Mi horario"],
-    ["/notificaciones", ico("notificaciones"), "Notificaciones"],
-    ["/perfil", ico("perfil"), "Mi perfil"],
-    ["/soporte", SOPORTE, "Soporte"],
   ],
 };
 
@@ -91,16 +78,13 @@ function leerCompacto() {
   try { return localStorage.getItem(CLAVE_COMPACTO) === "1"; } catch { return false; }
 }
 
-const iniciales = ({ nombres = "", apellidos = "" }) =>
-  `${nombres.trim().charAt(0)}${apellidos.trim().charAt(0)}`.toUpperCase();
-
 function Contador({ valor }) {
   if (!valor) return null;
   return <span className="contador-notif">{valor > 99 ? "99+" : valor}</span>;
 }
 
 export default function Diseno({ children }) {
-  const { sesion, cerrarSesion } = useAuth();
+  const { sesion } = useAuth();
   const navegar = useNavigate();
   const { pathname, state } = useLocation();
   const [avisoPermiso, setAvisoPermiso] = useState(null);
@@ -112,7 +96,6 @@ export default function Diseno({ children }) {
   const [compacto, setCompacto] = useState(() => leerCompacto()); // menú solo con íconos (computador)
   const [hayMas, setHayMas] = useState(false); // quedan opciones del menú más abajo
   const menuRef = useRef(null);
-  const [, cambiarTema, temaActual] = useTema();
   const revisaJustificaciones = ["instructor", "coordinador"].includes(usuario.rol); // el programador solo las consulta
 
   function alternarCompacto() {
@@ -121,8 +104,8 @@ export default function Diseno({ children }) {
     try { localStorage.setItem(CLAVE_COMPACTO, nuevo ? "1" : "0"); } catch { /* solo no se recuerda */ }
   }
 
-  // Numeritos del menú, actualizados en vivo: notificaciones sin leer (todos)
-  // y justificaciones por revisar (instructor y coordinación).
+  // Numeritos actualizados en vivo: notificaciones sin leer (todos, en la
+  // campana) y justificaciones por revisar (instructor y coordinación, en el menú).
   useEffect(() => {
     const cargarNotificaciones = () =>
       api("/notificaciones/contador").then((r) => setNotifPendientes(r.pendientes)).catch(() => {});
@@ -136,7 +119,7 @@ export default function Diseno({ children }) {
     return () => socket.disconnect();
   }, [usuario.id, revisaJustificaciones]);
 
-  const contadores = { "/notificaciones": notifPendientes, "/justificaciones": porRevisar };
+  const contadores = { "/justificaciones": porRevisar };
 
   // Si el menú no cabe, el final se desvanece mientras queden opciones abajo
   useEffect(() => {
@@ -180,11 +163,7 @@ export default function Diseno({ children }) {
         </button>
         <Link to="/panel" className="marca-mini">
           <span className="icono"><Logo size="1.25em" /></span>
-          AsistenciaApp SENA
-        </Link>
-        <Link to="/notificaciones" className="boton-menu campana" aria-label={`Notificaciones: ${notifPendientes} sin leer`}>
-          <Icono nombre="notificaciones" size="1.3em" />
-          <Contador valor={notifPendientes} />
+          <span className="marca-mini-texto">AsistenciaApp SENA</span>
         </Link>
       </header>
 
@@ -220,22 +199,11 @@ export default function Diseno({ children }) {
             );
           })}
         </nav>
-        <div className="pie-usuario">
-          <Link to="/perfil" className="avatar" title="Mi perfil" aria-label="Mi perfil">{iniciales(usuario)}</Link>
-          <div className="datos-usuario">
-            <b title={`${usuario.nombres} ${usuario.apellidos}`}>{usuario.nombres} {usuario.apellidos}</b>
-            <span>{usuario.rol}</span>
-          </div>
-          <button type="button" className="boton-salir" onClick={() => cambiarTema(temaActual === "oscuro" ? "claro" : "oscuro")}
-            title={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"} aria-label={temaActual === "oscuro" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}>
-            <Icono nombre={temaActual === "oscuro" ? "sol" : "luna"} size="1.15em" />
-          </button>
-          <button className="boton-salir" onClick={() => { cerrarSesion(); navegar("/"); }} title="Cerrar sesión" aria-label="Cerrar sesión">
-            <Icono nombre="salir" size="1.15em" />
-          </button>
-        </div>
       </aside>
-      <main className="contenido">{children}</main>
+      <main className="contenido">
+        <AccionesCuenta notificaciones={notifPendientes} />
+        {children}
+      </main>
       <Aviso mensaje={avisoPermiso} alCerrar={() => setAvisoPermiso(null)} />
     </div>
   );
