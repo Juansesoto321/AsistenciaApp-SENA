@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0e2310" />
+    <meta name="theme-color" content="#0c0d0d" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>AsistenciaApp SENA · Control de asistencia</title>
     <!-- Aplica el tema guardado antes de pintar, para que el modo oscuro no parpadee en claro (ver src/utilidades/tema.js) -->
     <script>
       try {
-        var p = localStorage.getItem("asistenciaapp.tema") || "sistema";
+        var p = localStorage.getItem("asistenciaapp.tema") || "oscuro";
         var o = p === "oscuro" || (p === "sistema" && window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.dataset.tema = o ? "oscuro" : "claro";
-      } catch (e) {}
+      } catch (e) { document.documentElement.dataset.tema = "oscuro"; }
     </script>
   </head>
   <body>

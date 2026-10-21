@@ -35,8 +35,10 @@
      igual en los dos temas, como el menú lateral */
   --escenario: #0e2310;
   --escenario-brillo: #1d4614;
-  --luz: #bfe8a3;
-  --cresta-apagada: #2c4a28;
+  /* La huella es de luz neón: apagada en verde tenue, encendida casi blanca */
+  --luz: #eafff1;
+  --cresta-apagada: rgba(62, 230, 122, 0.55);
+  --neon: #3ee67a;
   --presente: #4ade80;
   --alerta: #f87171;
   /* Texto sobre fondos siempre oscuros (menú, escenario, pantallas de acceso) */
@@ -49,32 +51,42 @@
   color-scheme: light;
 }
 
-/* ---- Modo oscuro ----
+/* ---- Modo oscuro (el de por defecto): vidrio sobre negro con luces neón ----
    Solo se redefinen los colores: todos los componentes usan estas variables.
-   "--blanco" es la superficie de tarjetas, tablas y modales (en oscuro, un
-   verde casi negro). El menú lateral ya era oscuro y no cambia. */
-:root[data-tema="oscuro"] {
-  --marca-950: #071209;
-  --marca-900: #0f2412;
-  --marca-700: #9be070;
-  --marca-600: #6fc93f;
-  --marca-500: #4fb81a;
-  --marca-100: #1f3a17;
-  --marca-50:  #152513;
-  --tinta: #e8f0e4;
-  --tinta-suave: #a3b39c;
-  --borde: #2a3a27;
-  --fondo: #0c130b;
-  --blanco: #141d13;
-  --verde: #4ade80;  --verde-suave: #10301d;
-  --ambar: #fbbf24;  --ambar-suave: #33280f;
-  --rojo: #f87171;   --rojo-suave: #3a1616;
-  --azul: #7ea6ff;   --azul-suave: #172446;
+   "--blanco" es la superficie sólida de modales, menús y celdas fijas (las
+   tarjetas usan "--vidrio", ver el final del archivo). Las pantallas de acceso
+   usan este tema siempre (.tema-oscuro), aunque la persona elija el claro. */
+:root[data-tema="oscuro"], .tema-oscuro {
+  --marca-950: #0b0d0c;
+  --marca-900: #141816;
+  --marca-700: #5fe08f;
+  --marca-600: #4fd47f;
+  --marca-500: #39c45f;
+  --marca-100: rgba(62, 230, 122, 0.14);
+  --marca-50:  rgba(255, 255, 255, 0.045);
+  --gradiente: linear-gradient(90deg, #39a900 0%, #1e8a2e 45%, #0e6a63 100%);
+  --tinta: #ececec;
+  --tinta-suave: #a4a9a6;
+  --borde: rgba(255, 255, 255, 0.11);
+  --fondo: #0c0d0d;
+  --blanco: #161918;
+  --verde: #4ade80;  --verde-suave: rgba(74, 222, 128, 0.13);
+  --ambar: #fbbf24;  --ambar-suave: rgba(251, 191, 36, 0.12);
+  --rojo: #f87171;   --rojo-suave: rgba(248, 113, 113, 0.12);
+  --azul: #7ea6ff;   --azul-suave: rgba(126, 166, 255, 0.13);
   --verde-solido: #16a34a; --ambar-solido: #c2610c; --rojo-solido: #dc2626; --azul-solido: #2563eb;
-  --fila-hover: #1a2618;
-  --ambar-borde: #5a4314;
-  --rojo-borde: #5c2222;
-  --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --fila-hover: rgba(255, 255, 255, 0.035);
+  --ambar-borde: rgba(251, 191, 36, 0.4);
+  --rojo-borde: rgba(248, 113, 113, 0.5);
+  --sombra: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --escenario: #0c0d0d;
+  --sobre-oscuro: #ececec;
+  --sobre-oscuro-suave: #c4c8c6;
+  --sobre-oscuro-tenue: #8d928f;
+  /* Vidrio: tarjetas translúcidas que dejan ver, borrosas, las luces del fondo */
+  --vidrio: rgba(24, 27, 26, 0.58);
+  --vidrio-borde: rgba(255, 255, 255, 0.12);
+  --neon: #3ee67a;
   color-scheme: dark;
 }
 * { box-sizing: border-box; margin: 0; }
@@ -138,58 +150,77 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .enlaces-acceso a { color: var(--sobre-oscuro-suave); }
 
 /* ---- Inicio de sesión ----
-   A la izquierda, la "pantalla del lector": hora, huella y estado (siempre
-   oscura, como el menú). A la derecha, el formulario con los colores del tema.
-   La huella reacciona a lo que pasa en el formulario (ver EscanerHuella.jsx). */
+   Siempre en el tema oscuro (.tema-oscuro), sobre el fondo neón. A la
+   izquierda, la "pantalla del lector": marca, hora junto a la huella y estado.
+   A la derecha, el formulario en una tarjeta de vidrio. La huella reacciona a
+   lo que pasa en el formulario (ver EscanerHuella.jsx). */
 .login {
   min-height: 100vh; display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 1fr);
-  background: var(--fondo);
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+  color: var(--tinta);
 }
 .login-escenario {
   /* Fija mientras el formulario largo (crear cuenta) se desplaza */
   position: sticky; top: 0; align-self: start; height: 100vh; overflow: hidden;
-  display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 18px;
-  padding: 32px 40px; color: var(--sobre-oscuro);
-  background: radial-gradient(900px 560px at 50% 62%, var(--escenario-brillo) 0%, transparent 65%), var(--escenario);
+  display: flex; flex-direction: column; justify-content: space-between; gap: 24px;
+  padding: clamp(28px, 9vh, 110px) clamp(24px, 7vw, 120px) clamp(28px, 17vh, 180px);
+  color: var(--sobre-oscuro); background: rgba(255, 255, 255, 0.022);
 }
-.login-marca { align-self: flex-start; display: flex; align-items: center; gap: 12px; }
-.login-marca .logo-acceso { width: 42px; height: 42px; margin: 0; border-radius: 12px; font-size: 22px; color: #fff; }
-.login-marca strong { display: block; font-size: 16px; }
-.login-marca small { display: block; color: var(--sobre-oscuro-tenue); font-size: 12.5px; }
+.login-marca { display: flex; align-items: center; gap: 16px; }
+.login-marca .logo-acceso {
+  width: 60px; height: 60px; margin: 0; border-radius: 16px; font-size: 30px; color: #fff; flex-shrink: 0;
+  box-shadow: 0 0 28px rgba(57, 169, 0, 0.35);
+}
+.login-marca strong { display: block; font-family: var(--fuente-lector); font-size: clamp(26px, 2.1vw, 34px); font-weight: 600; color: #fff; line-height: 1.15; }
+.login-marca small { display: block; color: var(--sobre-oscuro-suave); font-size: clamp(15px, 1.2vw, 19px); margin-top: 2px; }
+.login-lector { display: flex; align-items: center; justify-content: space-between; gap: 24px 32px; flex-wrap: wrap; }
 .login-reloj { text-align: center; }
 .login-hora {
   display: block; font-family: var(--fuente-lector); font-weight: 300; font-stretch: 85%;
-  font-size: clamp(56px, 7vw, 92px); line-height: 1; font-variant-numeric: tabular-nums; color: #fff;
+  font-size: clamp(64px, 6.5vw, 104px); line-height: 1; font-variant-numeric: tabular-nums; color: #fff;
 }
 .login-dos-puntos { animation: parpadeo 2s steps(1) infinite; }
 @keyframes parpadeo { 50% { opacity: 0.25; } }
-.login-fecha { display: block; margin-top: 8px; color: var(--sobre-oscuro-suave); font-size: 15px; }
+.login-fecha { display: block; margin-top: 10px; color: var(--sobre-oscuro-suave); font-size: 19px; }
 
 .login-estado {
-  display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 999px;
-  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: var(--sobre-oscuro); font-size: 14.5px;
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: 999px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: var(--sobre-oscuro); font-size: 17px;
 }
-.login-led { width: 9px; height: 9px; border-radius: 50%; background: var(--luz); box-shadow: 0 0 8px var(--luz); }
+.login-led { width: 11px; height: 11px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 10px var(--neon); }
 .login-estado-leyendo .login-led { animation: parpadeo 0.6s steps(1) infinite; }
 .login-estado-error .login-led { background: var(--alerta); box-shadow: 0 0 8px var(--alerta); }
 .login-estado-exito .login-led,
 .login-estado-enviado .login-led { background: var(--presente); box-shadow: 0 0 8px var(--presente); }
 .login-estado-exito { color: #fff; font-weight: 600; }
 
-/* La huella */
-.escaner { position: relative; width: clamp(180px, 25vw, 290px); aspect-ratio: 200 / 230; }
+/* La huella: trazos de luz neón con su resplandor */
+.escaner { --resplandor: rgba(62, 230, 122, 0.75); position: relative; width: clamp(170px, 16vw, 250px); aspect-ratio: 200 / 230; }
 .escaner::before {
   content: ""; position: absolute; inset: -20%; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(57, 169, 0, 0.5), transparent);
-  opacity: calc(0.2 + var(--brillo) * 0.8); transition: opacity 0.4s, background 0.4s;
+  background: radial-gradient(closest-side, rgba(62, 230, 122, 0.3), transparent);
+  opacity: calc(0.35 + var(--brillo) * 0.65); transition: opacity 0.4s, background 0.4s;
 }
-.escaner-huella { position: relative; width: 100%; height: 100%; overflow: visible; }
+.escaner-huella {
+  position: relative; width: 100%; height: 100%; overflow: visible;
+  filter: drop-shadow(0 0 3px var(--resplandor)) drop-shadow(0 0 12px var(--resplandor));
+}
 .cresta {
-  stroke: var(--cresta-apagada); stroke-width: 4.4;
+  stroke: var(--cresta-apagada); stroke-width: 3.6;
   transform-box: fill-box; transform-origin: center; transition: stroke 0.35s ease;
 }
+/* Algunas crestas apagadas brillan más, para que la huella no se vea plana */
+.cresta:nth-of-type(3n+2) { stroke: rgba(190, 255, 214, 0.8); }
 .cresta.encendida { stroke: var(--luz); }
+.escaner-linea { stroke: var(--neon); stroke-width: 2.4; stroke-linecap: round; transition: opacity 0.3s, stroke 0.3s; }
+.escaner-entrando .escaner-linea { animation: linea-entrar 1.1s ease-in-out 0.55s both; }
+.escaner-leyendo .escaner-linea { stroke: var(--luz); animation: linea-barrido 0.9s ease-in-out infinite alternate; }
+.escaner-marca .escaner-linea { animation: linea-entrar 1s ease-in-out both; }
+.escaner-error { --resplandor: rgba(248, 113, 113, 0.7); }
+.escaner-error .escaner-linea { stroke: var(--alerta); }
+.escaner-exito .escaner-linea, .escaner-registrada .escaner-linea { opacity: 0; }
+@keyframes linea-entrar { from { transform: translateY(-100px); opacity: 0; } 30% { opacity: 1; } }
+@keyframes linea-barrido { from { transform: translateY(-88px); } to { transform: translateY(88px); } }
 
 /* Al abrir: las crestas brotan del centro y el haz pasa una vez */
 .escaner-entrando .cresta { animation: brotar 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both; animation-delay: calc(var(--i) * 60ms); }
@@ -222,40 +253,69 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .escaner-exito .escaner-logo { opacity: 1; transform: none; animation: sellar 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) 0.3s both; }
 @keyframes sellar { from { opacity: 0; transform: scale(0.4); } }
 
-/* El formulario */
-.login-panel { display: grid; place-items: center; padding: 48px 28px; }
-.login-formulario { width: 100%; max-width: 360px; }
-.login-formulario h1 { font-family: var(--fuente-lector); font-size: 32px; font-weight: 600; letter-spacing: -0.01em; }
-.login-ayuda { color: var(--tinta-suave); margin: 8px 0 22px; line-height: 1.5; }
-.login-formulario label { margin-top: 16px; }
-.login-formulario input { padding: 12px 14px; }
-.login-clave { position: relative; }
-.login-clave input { padding-right: 48px; }
-.login-ver-clave {
-  position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 36px; height: 36px;
-  display: grid; place-items: center; border: none; border-radius: 8px; background: transparent; color: var(--tinta-suave);
+/* El formulario: tarjeta de vidrio */
+.login-panel { display: grid; place-items: center; padding: 48px clamp(20px, 4vw, 64px); }
+.login-formulario {
+  width: 100%; max-width: 660px; padding: clamp(28px, 4vw, 64px); border-radius: 30px;
+  background: rgba(38, 41, 40, 0.42); border: 1.5px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px) saturate(130%); -webkit-backdrop-filter: blur(18px) saturate(130%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
-.login-ver-clave svg { width: 20px; height: 20px; }
-.login-ver-clave:hover { color: var(--marca-600); background: var(--marca-50); }
+.login-formulario h1 { font-family: var(--fuente-lector); font-size: clamp(32px, 2.6vw, 42px); font-weight: 600; letter-spacing: -0.01em; color: #fff; }
+.login-ayuda { color: var(--tinta-suave); margin: 10px 0 26px; line-height: 1.5; font-size: clamp(15px, 1.2vw, 19px); }
+.login-formulario label { margin-top: 22px; color: #fff; font-size: clamp(15px, 1.15vw, 18px); font-weight: 500; }
+.login-formulario input:not([type="checkbox"]):not([type="radio"]), .login-formulario select {
+  height: clamp(52px, 4vw, 62px); padding: 0 18px; font-size: clamp(15px, 1.15vw, 18px); border-radius: 12px; color: #fff;
+  background: rgba(0, 0, 0, 0.28); border: 1.5px solid rgba(62, 230, 122, 0.45);
+}
+.login-formulario input::placeholder { color: #9ea3a0; }
+.login-formulario input:focus, .login-formulario select:focus {
+  outline: 2px solid var(--neon); outline-offset: 0; border-color: transparent; box-shadow: 0 0 0 5px rgba(62, 230, 122, 0.14);
+}
+/* Íconos dentro de los campos (correo, candado) */
+.login-campo, .login-clave { position: relative; }
+.login-campo input { padding-right: 54px !important; }
+.login-campo-icono {
+  position: absolute; right: 18px; top: 50%; translate: 0 -50%; width: 22px !important; height: 22px !important;
+  color: #d9dcda; pointer-events: none;
+}
+.login-campo-icono.junto-ojo { right: 58px; }
+.login-clave input { padding-right: 96px !important; }
+.login-ver-clave {
+  position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 40px; height: 40px;
+  display: grid; place-items: center; border: none; border-radius: 10px; background: transparent; color: #d9dcda;
+}
+.login-ver-clave svg { width: 22px; height: 22px; }
+.login-ver-clave:hover { color: var(--neon); background: rgba(255, 255, 255, 0.06); }
 .login-mayus { margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--ambar); }
-.login-boton { margin-top: 24px; padding: 13px 18px; font-size: 15.5px; }
+.login-boton {
+  margin-top: 32px; height: clamp(52px, 4vw, 62px); padding: 0 18px; font-size: clamp(16px, 1.25vw, 20px); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(57, 169, 0, 0.22);
+}
 .login-aviso { padding: 11px 14px; border-radius: 10px; border: 1px solid transparent; font-size: 14px; font-weight: 500; line-height: 1.45; }
 .login-aviso.error { background: var(--rojo-suave); color: var(--rojo); border-color: var(--rojo-borde); }
 .login-aviso.exito { background: var(--verde-suave); color: var(--verde); }
 .login-enlaces {
-  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;
-  margin-top: 18px; font-size: 14px; color: var(--tinta-suave);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+  margin-top: 28px; font-size: clamp(15px, 1.15vw, 18px); color: var(--tinta-suave);
 }
-.login-enlace { border: none; background: none; padding: 0; color: var(--marca-600); font-weight: 600; }
-.login-enlaces a { font-weight: 600; }
+.login-enlace { border: none; background: none; padding: 0; color: #d0d3d1; font-size: inherit; }
+.login-enlaces a { color: var(--neon); font-weight: 500; }
 .login-enlace:hover, .login-enlaces a:hover { text-decoration: underline; }
 
 @media (max-width: 860px) {
   .login { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-  .login-escenario { position: relative; height: auto; padding: 18px 16px 20px; gap: 14px; }
+  .login-escenario { position: relative; height: auto; padding: 20px 16px; gap: 16px; }
+  .login-marca .logo-acceso { width: 46px; height: 46px; border-radius: 13px; font-size: 23px; }
+  .login-marca strong { font-size: 22px; }
+  .login-marca small { font-size: 14px; }
   .login-reloj { display: none; }
+  .login-lector { justify-content: center; }
+  .login-estado { align-self: center; font-size: 15px; padding: 9px 16px; }
   .escaner { width: 130px; }
-  .login-panel { place-items: start center; padding: 28px 16px 40px; }
+  .login-panel { place-items: start center; padding: 8px 16px 40px; }
+  .login-formulario { padding: 26px 20px; border-radius: 22px; }
+  .login-formulario h1 { font-size: 30px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .login *, .login *::before, .escaner, .escaner *, .escaner::before { animation: none !important; transition: none !important; }
@@ -1033,7 +1093,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 }
 
 /* Requisitos de la contraseña (crear cuenta, nueva contraseña) */
-.login-formulario.ancho { max-width: 440px; }
+.login-formulario.ancho { max-width: 620px; }
 .reglas-clave {
   list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: 1fr 1fr;
   gap: 4px 12px; color: var(--tinta-suave); font-size: 13px;
@@ -1053,3 +1113,77 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
   .anillo-trazo { transition: none; }
   .saludo-llegada h1, .saludo-llegada p, .en-curso-marcas li { animation: none; }
 }
+
+/* ============================================================
+   Tema oscuro: vidrio y neón (el diseño principal de la app)
+   Las tarjetas son de vidrio (translúcidas y borrosas) sobre el fondo
+   neón (FondoNeon.jsx); el menú es una franja oscura translúcida y lo
+   activo brilla en verde. El tema claro no usa nada de esto.
+   ============================================================ */
+.fondo-neon { display: none; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--fondo); }
+.fondo-neon svg { display: block; width: 100%; height: 100%; }
+.fondo-neon.tenue svg { opacity: 0.5; }
+:root[data-tema="oscuro"] .fondo-neon, .tema-oscuro .fondo-neon { display: block; }
+.pantalla-acceso.tema-oscuro { background: none; }
+
+:root[data-tema="oscuro"] .tarjeta,
+:root[data-tema="oscuro"] .tarjeta-metrica,
+:root[data-tema="oscuro"] table.tabla,
+:root[data-tema="oscuro"] .tabla-desplazable {
+  background: var(--vidrio); border-color: var(--vidrio-borde);
+  backdrop-filter: blur(16px) saturate(125%); -webkit-backdrop-filter: blur(16px) saturate(125%);
+}
+/* Una tabla dentro de otro vidrio no suma otra capa */
+:root[data-tema="oscuro"] .tarjeta table.tabla,
+:root[data-tema="oscuro"] .tabla-desplazable > table.tabla { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
+:root[data-tema="oscuro"] .tarjeta-metrica.atencion { background: var(--ambar-suave); border-color: var(--ambar-borde); }
+:root[data-tema="oscuro"] .tarjeta-metrica.enlace:hover { border-color: rgba(62, 230, 122, 0.5); box-shadow: 0 0 22px rgba(62, 230, 122, 0.12); }
+:root[data-tema="oscuro"] .trimestre.en-curso { border-color: var(--marca-500); }
+:root[data-tema="oscuro"] .tarjeta-metrica .valor,
+:root[data-tema="oscuro"] .anillo-progreso .centro { text-shadow: 0 0 18px color-mix(in srgb, currentColor 40%, transparent); }
+:root[data-tema="oscuro"] .anillo-trazo { filter: drop-shadow(0 0 6px rgba(62, 230, 122, 0.5)); }
+
+/* Menú y barra superior */
+:root[data-tema="oscuro"] .barra-lateral {
+  background: rgba(14, 16, 15, 0.74); border-right: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+:root[data-tema="oscuro"] .barra-lateral nav a.activo {
+  background: linear-gradient(90deg, #2e9600, #238a1a); font-weight: 600;
+  box-shadow: 0 0 18px rgba(57, 169, 0, 0.35);
+}
+:root[data-tema="oscuro"] .barra-superior { background: rgba(14, 16, 15, 0.85); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+:root[data-tema="oscuro"] .marca .icono { box-shadow: 0 0 18px rgba(57, 169, 0, 0.3); }
+
+/* Botones suaves con borde verde, campos oscuros, superposiciones negras */
+:root[data-tema="oscuro"] .boton.suave { background: rgba(62, 230, 122, 0.08); border: 1px solid rgba(62, 230, 122, 0.35); }
+:root[data-tema="oscuro"] .boton.suave:hover { background: rgba(62, 230, 122, 0.14); filter: none; }
+:root[data-tema="oscuro"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-tema="oscuro"] select,
+:root[data-tema="oscuro"] textarea { background-color: rgba(0, 0, 0, 0.25); }
+:root[data-tema="oscuro"] .modal,
+:root[data-tema="oscuro"] .aviso-proceso,
+:root[data-tema="oscuro"] .menu-acciones-lista,
+:root[data-tema="oscuro"] .aviso-flotante { border: 1px solid var(--vidrio-borde); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+:root[data-tema="oscuro"] .panel-lateral { border-left: 1px solid var(--vidrio-borde); }
+:root[data-tema="oscuro"] .superposicion,
+:root[data-tema="oscuro"] .fondo-menu,
+:root[data-tema="oscuro"] .fondo-panel { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+
+/* Clase en curso y próxima clase: vidrio con borde de luz */
+:root[data-tema="oscuro"] .clase-en-curso,
+:root[data-tema="oscuro"] .proxima-clase {
+  background: radial-gradient(420px 260px at 12% 50%, rgba(62, 230, 122, 0.1), transparent 70%), var(--vidrio);
+  border: 1.5px solid rgba(62, 230, 122, 0.7);
+  box-shadow: 0 0 28px rgba(62, 230, 122, 0.25), inset 0 0 26px rgba(62, 230, 122, 0.06);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+:root[data-tema="oscuro"] .proxima-clase {
+  background: radial-gradient(420px 260px at 88% 50%, rgba(62, 230, 122, 0.1), transparent 70%), var(--vidrio);
+}
+:root[data-tema="oscuro"] .proxima-marca { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); }
+:root[data-tema="oscuro"] .proxima-marca.lista { background: rgba(74, 222, 128, 0.12); border-color: rgba(74, 222, 128, 0.35); }
+
+/* Ícono de cada métrica (panel del aprendiz) */
+.tarjeta-metrica { position: relative; }
+.metrica-icono { position: absolute; top: 14px; right: 14px; width: 20px !important; height: 20px !important; opacity: 0.9; }
