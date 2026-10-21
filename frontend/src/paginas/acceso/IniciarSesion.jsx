@@ -4,6 +4,7 @@ import { api } from "../../servicios/api";
 import { useAuth } from "../../contexto/AuthContext.jsx";
 import EscenarioLector from "../../componentes/EscenarioLector.jsx";
 import CampoContrasena from "../../componentes/CampoContrasena.jsx";
+import Icono from "../../componentes/Iconos.jsx";
 import { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { esperaMinima, reducirMovimiento } from "../../utilidades/movimiento";
 
@@ -116,10 +117,13 @@ export default function IniciarSesion() {
           )}
 
           <label htmlFor="login-correo">Correo</label>
-          <input
-            id="login-correo" type="email" autoComplete="username" inputMode="email" autoFocus
-            value={correo} onChange={escribir(setCorreo)} placeholder="tu.correo@sena.edu.co"
-          />
+          <div className="login-campo">
+            <input
+              id="login-correo" type="email" autoComplete="username" inputMode="email" autoFocus
+              value={correo} onChange={escribir(setCorreo)} placeholder="tu.correo@sena.edu.co"
+            />
+            <Icono nombre="correo" className="login-campo-icono" />
+          </div>
 
           {!recuperando && (<>
             <label htmlFor="login-contrasena">Contraseña</label>

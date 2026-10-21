@@ -36,8 +36,8 @@ function normalizarCuenta(datos) {
 function correoBienvenida(cuenta, temporal) {
   return {
     para: cuenta.correo,
-    asunto: "AsistenciaApp · Tu cuenta fue creada",
-    html: `<p>Hola ${escaparHtml(cuenta.nombres)},</p><p>Tu cuenta en AsistenciaApp está lista.</p>
+    asunto: "AsistenciaApp SENA · Tu cuenta fue creada",
+    html: `<p>Hola ${escaparHtml(cuenta.nombres)},</p><p>Tu cuenta en AsistenciaApp SENA está lista.</p>
            <p><b>Usuario:</b> ${escaparHtml(cuenta.correo)}<br/><b>Contraseña temporal:</b> ${temporal}</p>
            <p>Cámbiala al ingresar por primera vez, desde "Mi perfil".</p>`,
   };
@@ -87,7 +87,7 @@ async function cambiarEstado(idUsuario, estado, idActor) {
   if (estado === "activo") {
     await enviarCorreo({
       para: usuario.correo,
-      asunto: "AsistenciaApp · Cuenta aprobada",
+      asunto: "AsistenciaApp SENA · Cuenta aprobada",
       html: `<p>Hola ${escaparHtml(usuario.nombres)}, tu cuenta fue aprobada. Ya puedes iniciar sesión.</p>`,
     });
   }

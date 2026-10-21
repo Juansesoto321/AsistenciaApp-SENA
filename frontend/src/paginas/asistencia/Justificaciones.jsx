@@ -233,7 +233,7 @@ export default function Justificaciones() {
             </p>
 
             <label>Motivo descrito por el aprendiz</label>
-            <div className="tarjeta" style={{ background: "var(--violeta-50)" }}>
+            <div className="tarjeta" style={{ background: "var(--marca-50)" }}>
               {detalle.descripcion || "Sin descripción"}
             </div>
 

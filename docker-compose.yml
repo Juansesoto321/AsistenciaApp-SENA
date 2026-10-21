@@ -9,6 +9,10 @@
 #   docker compose exec backend npm run migrar              (al instalar y al actualizar)
 #   docker compose exec backend npm run crear-coordinador   (primera cuenta)
 # App: http://localhost:8080
+# Para correrla junto a otra copia que ya usa 4000, 8080 y 8081, pon otros
+# puertos en el .env de esta carpeta (PUERTO_API, PUERTO_WEB, PUERTO_VISOR_BD)
+# y URL_FRONTEND con el nuevo puerto web, para que los enlaces de los correos
+# apunten bien.
 # ============================================================
 services:
   basedatos:
@@ -29,7 +33,7 @@ services:
     build: ./backend
     restart: unless-stopped
     ports:
-      - "4000:4000"   # necesario para que el lector fisico real (ADMS) alcance el backend
+      - "${PUERTO_API:-4000}:4000"   # necesario para que el lector fisico real (ADMS) alcance el backend
     environment:
       # production: no arranca con las claves de ejemplo y no siembra datos de demostración
       NODE_ENV: ${NODE_ENV:-development}
@@ -42,7 +46,7 @@ services:
       CORREO_PUERTO: ${CORREO_PUERTO:-587}
       CORREO_USUARIO: ${CORREO_USUARIO:-}
       CORREO_CONTRASENA: ${CORREO_CONTRASENA:-}
-      CORREO_REMITENTE: ${CORREO_REMITENTE:-AsistenciaApp <no-responder@asistenciaapp.co>}
+      CORREO_REMITENTE: ${CORREO_REMITENTE:-AsistenciaApp SENA <no-responder@asistenciaapp.co>}
       # IP de los lectores reales, separadas por comas: solo ellos pueden enviar marcas (/iclock)
       IP_LECTORES: ${IP_LECTORES:-}
     volumes:
@@ -55,7 +59,7 @@ services:
     build: ./frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${PUERTO_WEB:-8080}:80"
     depends_on:
       - backend
 
@@ -92,7 +96,7 @@ services:
     profiles: ["herramientas"]
     command: ["pgweb", "--bind=0.0.0.0", "--listen=8081", "--readonly", "--url=postgres://postgres:postgres@basedatos:5432/asistenciaapp?sslmode=disable"]
     ports:
-      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:${PUERTO_VISOR_BD:-8081}:8081"
     depends_on:
       basedatos:
         condition: service_healthy

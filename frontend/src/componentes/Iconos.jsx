@@ -195,6 +195,34 @@ const TRAZOS = {
       <path d="M11 8.5h6M11 12h6M11 15.5h4" />
     </>
   ),
+  correo: (
+    <>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="m3.5 7 8.5 6.5L20.5 7" />
+    </>
+  ),
+  candado: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" />
+      <path d="M12 14.5v2.5" />
+    </>
+  ),
+  reloj: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2.5" />
+    </>
+  ),
+  "sin-huella": (
+    <>
+      <path d="M7.4 18.6A11 11 0 0 1 6 12.5a6 6 0 0 1 9.4-4.9" />
+      <path d="M17.9 11a8 8 0 0 1 .1 1.5 15 15 0 0 1-1.1 5.8" />
+      <path d="M10.2 19.6A20 20 0 0 1 9 12.5a3 3 0 0 1 4.4-2.6" />
+      <path d="M15 13.2a17 17 0 0 1-1.1 6.4" />
+      <line x1="4" y1="4" x2="20" y2="20" />
+    </>
+  ),
 };
 
 export default function Icono({ nombre, size = "1.05em", style, ...props }) {

@@ -112,7 +112,7 @@ async function solicitarRecuperacion(correo) {
   const enlace = `${urlFrontend}/restablecer/${token}`;
   await enviarCorreo({
     para: u.correo,
-    asunto: "AsistenciaApp · Recupera tu contraseña",
+    asunto: "AsistenciaApp SENA · Recupera tu contraseña",
     html: `<p>Hola ${escaparHtml(u.nombres)},</p>
            <p>Haz clic en el siguiente enlace para restablecer tu contraseña (válido por 1 hora):</p>
            <p><a href="${enlace}">${enlace}</a></p>`,

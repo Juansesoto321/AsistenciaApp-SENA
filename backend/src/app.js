@@ -29,7 +29,7 @@ app.use(cors({ origin: origenesPermitidos }));
 app.use(express.json({ limit: "10mb" })); // adjuntos de justificacion en base64
 
 // Salud del servicio (publica)
-app.get("/api/salud", (_req, res) => res.json({ ok: true, servicio: "AsistenciaApp", fecha: new Date() }));
+app.get("/api/salud", (_req, res) => res.json({ ok: true, servicio: "AsistenciaApp SENA", fecha: new Date() }));
 
 // Rutas con prefijo propio (el orden importa: las publicas primero)
 app.use("/api/auth", require("./rutas/auth"));
@@ -71,7 +71,7 @@ function iniciar(puerto = process.env.PUERTO || 4000) {
 
   tareasProgramadas.iniciar();
   servidor.listen(puerto, () => {
-    console.log(`\nAsistenciaApp backend escuchando en http://localhost:${puerto}`);
+    console.log(`\nAsistenciaApp SENA backend escuchando en http://localhost:${puerto}`);
     console.log("Socket.IO activo para supervisión en tiempo real\n");
   });
 }

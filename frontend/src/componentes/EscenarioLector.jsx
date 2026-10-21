@@ -1,11 +1,13 @@
 /**
  * Columna izquierda de las pantallas de acceso (iniciar sesión, crear cuenta,
- * nueva contraseña): la "pantalla del lector", con la marca, la hora, la
- * huella y una línea de estado con su luz.
+ * nueva contraseña): la "pantalla del lector", con la marca, la hora junto a
+ * la huella y una línea de estado con su luz. También pone el fondo neón de
+ * toda la pantalla.
  */
 import { useEffect, useState } from "react";
 import Logo from "./Logo.jsx";
 import EscanerHuella from "./EscanerHuella.jsx";
+import FondoNeon from "./FondoNeon.jsx";
 
 /** Hora y fecha como en la pantalla del lector. */
 function Reloj() {
@@ -32,24 +34,28 @@ function Reloj() {
  * huella: el estado de la huella, si es distinto (ver EscanerHuella)
  */
 export default function EscenarioLector({ estado = "espera", texto, encendidas = 0, intento = 0, huella }) {
-  return (
+  // El fondo va fuera de la sección: la sección es "sticky" y lo encerraría
+  // en su capa, por encima del formulario.
+  return (<>
+    <FondoNeon />
     <section className="login-escenario">
       <div className="login-marca">
         <span className="logo-acceso"><Logo size="1.15em" /></span>
         <span>
-          <strong>AsistenciaApp</strong>
-          <small>Control de asistencia del SENA</small>
+          <strong>AsistenciaApp SENA</strong>
+          <small>Servicio Nacional de Aprendizaje</small>
         </span>
       </div>
 
-      <Reloj />
-
-      <EscanerHuella estado={huella ?? estado} encendidas={encendidas} intento={intento} />
+      <div className="login-lector">
+        <Reloj />
+        <EscanerHuella estado={huella ?? estado} encendidas={encendidas} intento={intento} />
+      </div>
 
       <p className={`login-estado login-estado-${estado}`}>
         <span className="login-led" aria-hidden="true" />
         {texto}
       </p>
     </section>
-  );
+  </>);
 }

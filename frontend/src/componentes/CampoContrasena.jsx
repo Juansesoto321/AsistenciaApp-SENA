@@ -3,6 +3,7 @@
  * ocultarla y aviso de Bloq Mayús (la causa más común de "contraseña incorrecta").
  */
 import { useState } from "react";
+import Icono from "./Iconos.jsx";
 
 function IconoOjo({ tachado }) {
   return (
@@ -26,6 +27,7 @@ export default function CampoContrasena({ id, value, onChange, autoComplete = "c
         onBlur={() => setMayusculas(false)}
         {...props}
       />
+      <Icono nombre="candado" className="login-campo-icono junto-ojo" />
       <button
         type="button" className="login-ver-clave" onClick={() => setVisible(!visible)}
         aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={visible}

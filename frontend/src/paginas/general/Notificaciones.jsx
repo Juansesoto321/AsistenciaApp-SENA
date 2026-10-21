@@ -12,9 +12,9 @@ import { fechaHora, haceCuanto } from "../../utilidades/formato";
 const ESTILOS = {
   inasistencia: ["alerta", "rojo"],
   asistencia: ["asistencia", "verde"],
-  solicitud_registro: ["usuarios", "violeta"],
+  solicitud_registro: ["usuarios", "azul"],
   soporte: ["configuracion", "ambar"],
-  biometria: ["llave", "violeta"],
+  biometria: ["llave", "azul"],
   lector: ["ambientes", "rojo"],
 };
 
@@ -39,7 +39,7 @@ function estiloDe(n) {
     if (/aprobada/i.test(n.titulo)) return ["justificaciones", "verde"];
     return ["justificaciones", "ambar"]; // nueva por revisar
   }
-  return ESTILOS[n.tipo] || ["notificaciones", "violeta"];
+  return ESTILOS[n.tipo] || ["notificaciones", "azul"];
 }
 
 export default function Notificaciones() {

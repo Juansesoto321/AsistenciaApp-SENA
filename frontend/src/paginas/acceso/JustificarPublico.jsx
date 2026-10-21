@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../servicios/api";
 import Icono from "../../componentes/Iconos.jsx";
+import FondoNeon from "../../componentes/FondoNeon.jsx";
 import { fechaCorta, fechaHora } from "../../utilidades/formato";
 
 const TIPOS = [
@@ -13,7 +14,7 @@ const TIPOS = [
   { valor: "otro", etiqueta: "Otro" },
 ];
 const TIPOS_SIN_FOTO_OBLIGATORIA = ["calamidad_domestica", "duelo"];
-const ESTILO_CAMPO = { background: "rgba(255,255,255,.09)", borderColor: "rgba(255,255,255,.18)", color: "#fff" };
+const ESTILO_CAMPO = { background: "var(--campo-fondo)", borderColor: "var(--campo-borde)", color: "var(--tinta)" };
 
 export default function JustificarPublico() {
   const { token } = useParams();
@@ -62,6 +63,7 @@ export default function JustificarPublico() {
 
   return (
     <div className="pantalla-acceso">
+      <FondoNeon />
       <div className="tarjeta-acceso" style={{ maxWidth: 500 }}>
         <div className="logo-acceso"><Icono nombre="justificaciones" size="1em" /></div>
         <h1>Justificar inasistencia</h1>

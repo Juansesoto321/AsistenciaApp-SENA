@@ -1,8 +1,9 @@
 /**
  * Huella grande de la pantalla de inicio de sesión, inspirada en la pantalla
- * del lector: las crestas se encienden a medida que la persona escribe, un haz
- * la recorre mientras se verifican los datos, tiembla en rojo si no se pudo
- * entrar y, al entrar, se recoge y aparece el logo (el visto de "presente").
+ * del lector y dibujada con luz neón: las crestas se encienden a medida que la
+ * persona escribe, una línea de escaneo la cruza (y la recorre mientras se
+ * verifican los datos), tiembla en rojo si no se pudo entrar y, al entrar, se
+ * recoge y aparece el logo (el visto de "presente").
  *
  * Es decorativa (aria-hidden): lo que pasa se anuncia en el formulario.
  * Las animaciones viven en estilos.css y se apagan con "reducir movimiento".
@@ -52,8 +53,8 @@ export default function EscanerHuella({ estado = "espera", encendidas = 0, inten
             <ellipse cx="100" cy="118" rx="86" ry="104" />
           </clipPath>
           <linearGradient id={`haz-${id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#c9bcff" stopOpacity="0" />
-            <stop offset="0.6" stopColor="#c9bcff" stopOpacity="0.5" />
+            <stop offset="0" stopColor="#d4efc2" stopOpacity="0" />
+            <stop offset="0.6" stopColor="#d4efc2" stopOpacity="0.5" />
             <stop offset="1" stopColor="#ffffff" stopOpacity="0.9" />
           </linearGradient>
         </defs>
@@ -69,9 +70,11 @@ export default function EscanerHuella({ estado = "espera", encendidas = 0, inten
         <g clipPath={`url(#forma-${id})`}>
           <rect className="escaner-haz" x="0" y="-36" width="200" height="36" fill={`url(#haz-${id})`} />
         </g>
+        {/* Línea de escaneo: cruza la huella de lado a lado y se sale un poco */}
+        <line className="escaner-linea" x1="-26" y1="118" x2="226" y2="118" />
       </svg>
       <div className="escaner-logo">
-        <Logo size="100%" colorVisto="var(--escenario)" />
+        <Logo size="100%" colorVisto="var(--fondo)" />
       </div>
     </div>
   );

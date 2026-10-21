@@ -7,6 +7,7 @@ import Logo from "./Logo.jsx";
 import IconoSoporte from "./IconoSoporte.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
+import FondoNeon from "./FondoNeon.jsx";
 import { useTema } from "../utilidades/tema";
 
 const SOPORTE = <IconoSoporte />;
@@ -171,6 +172,7 @@ export default function Diseno({ children }) {
 
   return (
     <div className={`aplicacion${compacto ? " compacta" : ""}`}>
+      <FondoNeon tenue />
       {/* Barra superior: solo se ve en celulares y tabletas (ver estilos.css) */}
       <header className="barra-superior">
         <button className="boton-menu" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú" aria-expanded={menuAbierto}>
@@ -178,7 +180,7 @@ export default function Diseno({ children }) {
         </button>
         <Link to="/panel" className="marca-mini">
           <span className="icono"><Logo size="1.25em" /></span>
-          AsistenciaApp
+          AsistenciaApp SENA
         </Link>
         <Link to="/notificaciones" className="boton-menu campana" aria-label={`Notificaciones: ${notifPendientes} sin leer`}>
           <Icono nombre="notificaciones" size="1.3em" />
@@ -191,9 +193,11 @@ export default function Diseno({ children }) {
       <aside className={`barra-lateral ${menuAbierto ? "abierta" : ""}`} aria-label="Menú principal">
         <div className="marca">
           <div className="icono"><Logo size="1.45em" /></div>
+          {/* El menú es angosto: "SENA" va en su propia línea, como parte del
+              nombre; el nombre completo de la entidad sale en el inicio de sesión */}
           <div className="marca-texto">
             AsistenciaApp
-            <small>SENA · Control de asistencia</small>
+            <small className="marca-sena">SENA</small>
           </div>
           <button type="button" className="boton-salir boton-compacto" onClick={alternarCompacto}
             title={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"} aria-label={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"}>

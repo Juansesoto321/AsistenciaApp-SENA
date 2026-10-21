@@ -117,13 +117,13 @@ async function validarJustificacion(idJustificacion, usuario, { estado, observac
   if (estado === "aprobada") {
     await enviarCorreo({
       para: u.correo,
-      asunto: "AsistenciaApp · Justificación aprobada",
+      asunto: "AsistenciaApp SENA · Justificación aprobada",
       html: `<p>Hola ${escaparHtml(u.nombres)},</p><p>Tu justificación fue <b>aprobada</b>. La inasistencia quedó marcada como "justificada".</p>`,
     });
   } else {
     await enviarCorreo({
       para: u.correo,
-      asunto: "AsistenciaApp · Justificación rechazada",
+      asunto: "AsistenciaApp SENA · Justificación rechazada",
       html: `<p>Hola ${escaparHtml(u.nombres)},</p>
              <p>Tu justificación fue <b>rechazada</b>.</p>
              <p><b>Motivo:</b> ${escaparHtml(observacion.trim())}</p>

@@ -51,8 +51,9 @@ const ACCESOS = {
   ],
 };
 
-function Metrica({ valor, nombre, color, a, atencion }) {
+function Metrica({ valor, nombre, color, a, atencion, icono }) {
   const contenido = (<>
+    {icono && <Icono nombre={icono} className="metrica-icono" style={color ? { color } : undefined} />}
     <div className="valor" style={color ? { color } : undefined}>
       {atencion && <span className="pulso" style={{ background: "var(--ambar)" }} />}
       <Contador valor={valor} />
@@ -471,10 +472,10 @@ function PanelAprendiz({ alError }) {
           </div>
         </div>
         <div className="metricas-2x2">
-          <Metrica valor={r.presentes} nombre="Presentes" color="var(--verde)" />
-          <Metrica valor={r.tardanzas} nombre="Tardanzas" color="var(--ambar)" />
-          <Metrica valor={r.justificadas} nombre="Justificadas" color="var(--azul)" />
-          <Metrica valor={r.ausencias} nombre="Ausencias" color="var(--rojo)" />
+          <Metrica valor={r.presentes} nombre="Presentes" color="var(--verde)" icono="verificado" />
+          <Metrica valor={r.tardanzas} nombre="Tardanzas" color="var(--ambar)" icono="reloj" />
+          <Metrica valor={r.justificadas} nombre="Justificadas" color="var(--azul)" icono="justificaciones" />
+          <Metrica valor={r.ausencias} nombre="Ausencias" color="var(--rojo)" icono="sin-huella" />
         </div>
       </div>
     ) : (
