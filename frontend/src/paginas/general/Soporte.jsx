@@ -88,7 +88,7 @@ export default function Soporte() {
   return (
     <>
       <div className="cabecera-pagina">
-        <div><h1>Soporte</h1><p>Reporta problemas con tu huella, errores de asistencia o dudas del sistema. Una captura de pantalla ayuda a resolverlo más rápido.</p></div>
+        <div><h1>Soporte</h1><p>Reporta un problema del sistema, de la asistencia o de tu cuenta. Una captura de pantalla ayuda a resolverlo más rápido.</p></div>
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 
