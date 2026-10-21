@@ -11,8 +11,8 @@
 -- 1. Cómo está hoy
 SELECT id_usuario, nombres, apellidos, correo FROM usuario WHERE apellidos ILIKE '%villalobo%';
 
--- 2. Corrección (solo esa cuenta: por documento y correo)
+-- 2. Corrección (solo esa cuenta: por apellido y correo)
 BEGIN;
 UPDATE usuario SET apellidos = 'Becerra Villalobos'
-WHERE apellidos = 'Becerra Villalobo' AND documento = '1027524931' AND correo = 'becerravillalobos08@gmail.com';
+WHERE apellidos = 'Becerra Villalobo' AND correo = 'becerravillalobos08@gmail.com';
 COMMIT;
