@@ -8,6 +8,9 @@ import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
 import { colorAsistencia } from "../../componentes/AnilloAsistencia.jsx";
 
+// Una sigla (ADSO, TDS…) en vez del nombre del programa: queda distinto de las demás fichas
+const pareceSigla = (texto) => /^[A-ZÁÉÍÓÚÑ]{2,8}$/.test(texto.trim());
+
 const VACIA = { numero_ficha: "", programa: "", jornada: "mañana", fecha_inicio: "", fecha_fin: "", id_periodo: "", id_instructor: "", trimestres: "7" };
 
 export default function Fichas() {
@@ -74,20 +77,20 @@ export default function Fichas() {
 
       <div className="tabla-desplazable">
       <table className="tabla">
-        <thead><tr>{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("programa", "Programa")}{tabla.encabezado("jornada", "Jornada")}{tabla.encabezado("instructor", "Instructor")}{tabla.encabezado("total_aprendices", "Aprendices")}{tabla.encabezado("porcentaje_asistencia", "Asistencia")}{tabla.encabezado("estado", "Estado")}<th></th></tr></thead>
+        <thead><tr>{tabla.encabezado("numero_ficha", "Ficha")}{tabla.encabezado("programa", "Programa")}{tabla.encabezado("jornada", "Jornada", { className: "col-secundaria" })}{tabla.encabezado("instructor", "Instructor")}{tabla.encabezado("total_aprendices", "Aprendices")}{tabla.encabezado("porcentaje_asistencia", "Asistencia")}{tabla.encabezado("estado", "Estado")}<th className="col-acciones"><span className="sr-only">Acciones</span></th></tr></thead>
         <tbody>
           {tabla.visibles.map((x) => (
             <tr key={x.id_ficha}>
               <td><b>{x.numero_ficha}</b></td>
               <td>{x.programa}</td>
-              <td style={{ textTransform: "capitalize" }}>{x.jornada}</td>
+              <td className="col-secundaria" style={{ textTransform: "capitalize" }}>{x.jornada}</td>
               <td>{x.instructor}</td>
               <td>{x.total_aprendices}</td>
               <td>{x.porcentaje_asistencia === null
                 ? <span className="texto-suave">Sin clases</span>
                 : <b style={{ color: colorAsistencia(x.porcentaje_asistencia) }}>{x.porcentaje_asistencia} %</b>}</td>
               <td><span className={`insignia ${x.estado}`}>{x.estado}</span></td>
-              <td><Link className="boton mini suave" to={`/fichas/${x.id_ficha}`}>Ver detalles →</Link></td>
+              <td className="col-acciones"><Link className="boton mini suave" to={`/fichas/${x.id_ficha}`}>Ver detalles →</Link></td>
             </tr>
           ))}
           {fichas === null && <tr><td colSpan={8}><Cargando /></td></tr>}
@@ -115,7 +118,13 @@ export default function Fichas() {
             <div className="rejilla-2">
               <div>
                 <label>Programa de formación *</label>
-                <input required value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+                <input required list="programas-existentes" value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+                <datalist id="programas-existentes">
+                  {[...new Set((fichas || []).map((x) => x.programa).filter((p) => !pareceSigla(p)))].map((p) => <option key={p} value={p} />)}
+                </datalist>
+                {pareceSigla(f.programa) && (
+                  <p className="nota-estado">Escribe el nombre completo del programa, no la sigla, para que coincida con las demás fichas.</p>
+                )}
               </div>
               <div>
                 <label>Trimestres</label>

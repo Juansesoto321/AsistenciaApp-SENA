@@ -39,7 +39,7 @@ async function editarCompetencia(id, { codigo, nombre }) {
 }
 
 async function eliminarCompetencia(id) {
-  const r = await pool.query("DELETE FROM competencia WHERE id_competencia = $1 RETURNING id_competencia", [id]);
+  const r = await pool.query("DELETE FROM competencia WHERE id_competencia = $1 RETURNING id_competencia, nombre", [id]);
   return r.rows[0] || null;
 }
 
@@ -89,7 +89,7 @@ async function editarRap(id, { idCompetencia, codigo, nombre }) {
 }
 
 async function eliminarRap(id) {
-  const r = await pool.query("DELETE FROM resultado_aprendizaje WHERE id_rap = $1 RETURNING id_rap", [id]);
+  const r = await pool.query("DELETE FROM resultado_aprendizaje WHERE id_rap = $1 RETURNING id_rap, 'RAP ' || codigo AS nombre", [id]);
   return r.rows[0] || null;
 }
 
@@ -111,7 +111,7 @@ async function crearTematica({ idRap, nombre }, cliente = pool) {
 }
 
 async function eliminarTematica(id) {
-  const r = await pool.query("DELETE FROM tematica WHERE id_tematica = $1 RETURNING id_tematica", [id]);
+  const r = await pool.query("DELETE FROM tematica WHERE id_tematica = $1 RETURNING id_tematica, nombre", [id]);
   return r.rows[0] || null;
 }
 

@@ -9,6 +9,10 @@ const { error } = require("../utilidades/errores");
  */
 const PARAMETROS = {
   minutos_tolerancia: { etiqueta: "Minutos de tolerancia", min: 0, max: 120 },
+  // Ventana de marcación: el lector solo acepta huellas desde N minutos antes
+  // del inicio hasta N minutos después del fin de la clase
+  minutos_antes_marcar: { etiqueta: "Minutos antes del inicio para marcar", min: 0, max: 120, defecto: 15 },
+  minutos_despues_marcar: { etiqueta: "Minutos después del fin para marcar", min: 0, max: 120, defecto: 10 },
   porcentaje_minimo: { etiqueta: "Porcentaje mínimo de asistencia", min: 1, max: 100 },
   horas_justificacion: { etiqueta: "Horas para justificar", min: 1, max: 720 },
   nombre_institucion: { etiqueta: "Nombre de la institución", texto: true, maxLargo: 150 },
@@ -36,8 +40,19 @@ function validarCambios(cambios) {
   return limpios;
 }
 
+// Lo que aún no se ha guardado nunca toma su valor por defecto
+const POR_DEFECTO = Object.fromEntries(
+  Object.entries(PARAMETROS).filter(([, regla]) => regla.defecto !== undefined).map(([clave, regla]) => [clave, String(regla.defecto)])
+);
+
 async function obtener() {
-  return modelo.obtenerTodo();
+  return { ...POR_DEFECTO, ...(await modelo.obtenerTodo()) };
+}
+
+/** Minutos antes del inicio y después del fin en los que una huella cuenta para la clase. */
+async function ventanaMarcacion() {
+  const conf = await obtener();
+  return { antes: Number(conf.minutos_antes_marcar), despues: Number(conf.minutos_despues_marcar) };
 }
 
 async function actualizar(cambios, idUsuario) {
@@ -48,4 +63,4 @@ async function actualizar(cambios, idUsuario) {
   await auditar(idUsuario, "actualizar_configuracion", "configuracion", null, limpios);
 }
 
-module.exports = { obtener, actualizar, validarCambios };
+module.exports = { obtener, actualizar, validarCambios, ventanaMarcacion };

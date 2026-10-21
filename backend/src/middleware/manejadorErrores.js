@@ -20,6 +20,7 @@ const ESTADOS_POR_TIPO = {
   no_encontrado: 404,
   no_reconocida: 404,
   sin_sesion: 409,
+  fuera_de_horario: 409,
   vencida: 410,
   demasiadas_peticiones: 429,
 };

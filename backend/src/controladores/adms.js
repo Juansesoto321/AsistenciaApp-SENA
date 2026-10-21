@@ -5,7 +5,7 @@ const marcacionServicio = require("../servicios/marcacion");
 // siguiente línea. Cualquier otro error (p. ej. la base de datos caída) se
 // propaga para responder 500: así el equipo reintenta el lote más tarde en vez
 // de darlo por entregado (los repetidos se descartan por la restricción UNIQUE).
-const RECHAZOS_ESPERADOS = ["sin_sesion", "no_reconocida"];
+const RECHAZOS_ESPERADOS = ["sin_sesion", "fuera_de_horario", "no_reconocida"];
 
 async function procesarLineaAttlog(pin, fechaHora, idAmbiente) {
   try {
@@ -16,6 +16,7 @@ async function procesarLineaAttlog(pin, fechaHora, idAmbiente) {
   } catch (e) {
     if (!RECHAZOS_ESPERADOS.includes(e.tipo)) throw e;
     if (e.tipo === "sin_sesion") console.warn(`[ADMS] PIN ${pin} marco a las ${fechaHora} pero no habia sesion activa en ese ambiente`);
+    else if (e.tipo === "fuera_de_horario") console.warn(`[ADMS] PIN ${pin} marco a las ${fechaHora}, fuera del horario de la clase abierta`);
     else console.warn(`[ADMS] PIN ${pin} no corresponde a ningun aprendiz matriculado en la ficha de esta sesion`);
   }
 }

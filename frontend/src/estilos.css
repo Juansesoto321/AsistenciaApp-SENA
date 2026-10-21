@@ -85,6 +85,18 @@ input, select, textarea {
    quede texto invisible (blanco sobre blanco) en ningún desplegable. */
 select option { background: var(--blanco); color: var(--tinta); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--violeta-500); border-color: transparent; }
+/* Selector de archivo: zona punteada con un botón de la app, en vez del
+   control gris del navegador */
+input[type="file"] {
+  padding: 8px; border-style: dashed; color: var(--tinta-suave); font-size: 13.5px; cursor: pointer;
+}
+input[type="file"]::file-selector-button {
+  margin-right: 12px; padding: 8px 14px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--violeta-100); color: var(--violeta-700); font: inherit; font-weight: 600;
+  transition: background .15s;
+}
+input[type="file"]:hover { border-color: var(--violeta-500); }
+input[type="file"]:hover::file-selector-button { background: var(--violeta-50); }
 /* Foco visible al navegar con teclado (no aparece al hacer clic) */
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--violeta-500); outline-offset: 2px; }
 label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }
@@ -265,19 +277,25 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .marca .icono { width: 38px; height: 38px; border-radius: 11px; background: var(--gradiente); display: grid; place-items: center; font-size: 19px; flex-shrink: 0; }
 .marca small { display: block; color: #9d90da; font-size: 11px; font-weight: 500; }
 .marca .boton-compacto { margin-left: auto; }
-/* min-height: 0 + overflow: el menú se desplaza solo en pantallas bajas, sin empujar el pie.
-   La barra de desplazamiento es delgada, del color del menú, y solo se nota al pasar el mouse
-   (antes era la barra blanca del sistema). */
+/* min-height: 0 + overflow: el menú se desplaza en pantallas bajas y el pie del usuario
+   queda fijo abajo. La barra es delgada y del color del menú, pero siempre se ve: antes
+   era transparente hasta pasar el mouse y "Soporte" parecía tapado por el pie. */
 .barra-lateral nav {
   display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0;
   overflow-y: auto; overflow-x: hidden; margin-right: -8px; /* la barra queda en el borde, sin angostar los enlaces */
-  scrollbar-width: thin; scrollbar-color: transparent transparent; scrollbar-gutter: stable;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.16) transparent; scrollbar-gutter: stable;
 }
-.barra-lateral nav:hover, .barra-lateral nav:focus-within { scrollbar-color: rgba(255,255,255,0.22) transparent; }
+.barra-lateral nav:hover, .barra-lateral nav:focus-within { scrollbar-color: rgba(255,255,255,0.3) transparent; }
 .barra-lateral nav::-webkit-scrollbar { width: 6px; }
 .barra-lateral nav::-webkit-scrollbar-track { background: transparent; }
-.barra-lateral nav::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; }
-.barra-lateral nav:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); }
+.barra-lateral nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 99px; }
+.barra-lateral nav:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); }
+/* Quedan opciones más abajo (Diseno.jsx lo calcula): el final del menú se desvanece */
+.barra-lateral nav.hay-mas {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+.barra-lateral .marca, .pie-usuario { flex-shrink: 0; }
 .barra-lateral nav a {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 10px;
   color: #cfc6ff; font-size: 14px; font-weight: 500; flex-shrink: 0;
@@ -286,14 +304,24 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
   margin: 12px 12px 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
   text-transform: uppercase; color: #8a80c9; flex-shrink: 0;
 }
-/* Pantallas bajas (portátiles de 13"): el menú se aprieta un poco para no tener que desplazarlo */
+/* Pantallas bajas (portátiles de 13"): el menú se aprieta para que quepa sin desplazarlo.
+   El del coordinador es el más largo (16 opciones): con 660 px de alto cabe entero. */
 @media (max-height: 800px) and (min-width: 861px) {
   .barra-lateral { padding-top: 14px; padding-bottom: 14px; }
   .barra-lateral nav a { padding-top: 6px; padding-bottom: 6px; }
   .grupo-menu { margin-top: 8px; }
+  .marca { padding-bottom: 10px; }
 }
 @media (max-height: 720px) and (min-width: 861px) {
-  .barra-lateral nav a { padding-top: 5px; padding-bottom: 5px; }
+  .barra-lateral { padding-top: 10px; padding-bottom: 10px; }
+  .barra-lateral nav a { padding-top: 4px; padding-bottom: 4px; }
+  .grupo-menu { margin: 6px 12px 2px; }
+  .marca { padding-bottom: 8px; }
+  .marca .icono { width: 34px; height: 34px; }
+  .pie-usuario { padding-top: 10px; }
+  .avatar { width: 32px; height: 32px; }
+  .compacta .barra-lateral nav a { padding-top: 6px; padding-bottom: 6px; }
+  .compacta .grupo-menu { margin: 6px 10px; }
 }
 .barra-lateral nav a:hover { background: rgba(255,255,255,0.07); }
 .barra-lateral nav a.activo { background: var(--gradiente); color: #fff; }
@@ -361,8 +389,8 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .tarjeta-metrica .nombre { color: var(--tinta-suave); font-size: 13px; font-weight: 600; }
 
 table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco); border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
-.tabla th { text-align: left; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--tinta-suave); background: var(--violeta-50); padding: 11px 14px; }
-.tabla td { padding: 11px 14px; border-top: 1px solid var(--borde); font-size: 14.5px; }
+.tabla th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--tinta-suave); background: var(--violeta-50); padding: 10px 12px; }
+.tabla td { padding: 10px 12px; border-top: 1px solid var(--borde); font-size: 14.5px; }
 .tabla tr:hover td { background: var(--fila-hover); }
 .tabla td .boton { white-space: nowrap; }
 /* Encabezados que ordenan la tabla al tocarlos */
@@ -376,11 +404,24 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .paginacion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 13.5px; color: var(--tinta-suave); }
 .paginacion div { display: flex; align-items: center; gap: 10px; }
 .paginacion b { color: var(--tinta); font-variant-numeric: tabular-nums; }
-.tabla-desplazable .tabla td:first-child { min-width: 170px; } /* nombres legibles, sin partirse en 4 líneas */
+/* Anchos: los nombres no se parten en 4 líneas, los correos se cortan donde haga falta
+   y lo secundario se esconde en pantallas medianas, para que en ~880 px de ancho útil
+   se vea todo sin desplazar la tabla de lado. */
+.tabla .col-nombre { min-width: 150px; }
+.tabla .col-correo { max-width: 190px; overflow-wrap: anywhere; }
+@media (max-width: 1200px) { .tabla .col-secundaria { display: none; } }
+/* Columna de acciones fija a la derecha: se ve aunque la tabla se desplace de lado */
+.tabla .col-acciones {
+  position: sticky; right: 0; z-index: 1; white-space: nowrap;
+  background: var(--blanco); box-shadow: inset 1px 0 0 var(--borde);
+}
+.tabla th.col-acciones { background: var(--violeta-50); }
+.tabla tr:hover td.col-acciones { background: var(--fila-hover); }
+.acciones-celda { display: flex; gap: 6px; }
 /* Tablas anchas: se desplazan de lado dentro de su recuadro en vez de salirse
    de la página (antes se cortaba la columna de acciones en pantallas medianas) */
 .tabla-desplazable { overflow-x: auto; border-radius: var(--radio); box-shadow: var(--sombra); background: var(--blanco); }
-.tabla-desplazable > table.tabla { box-shadow: none; border-radius: 0; }
+.tabla-desplazable > table.tabla { box-shadow: none; border-radius: 0; overflow: visible; } /* con overflow hidden la columna fija no se pega */
 
 /* ---- Insignias de estado ---- */
 .insignia { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
@@ -481,6 +522,8 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .accesos { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .accesos .boton { justify-content: flex-start; }
 .alerta-banda { display: flex; align-items: flex-start; gap: 10px; }
+.alerta-banda .boton-banda { margin-left: auto; flex-shrink: 0; align-self: center; }
+.texto-completo { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 860px) {
   .resumen-panel, .dos-columnas { grid-template-columns: 1fr; }
 }
@@ -528,6 +571,9 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .barra-filtro { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
 .barra-filtro select { width: auto; min-width: 240px; max-width: 100%; }
 .barra-filtro .buscador { width: auto; flex: 1 1 260px; max-width: 420px; }
+.casilla-filtro { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; color: var(--tinta); white-space: nowrap; cursor: pointer; }
+.casilla-filtro input { width: auto; margin: 0; }
+.casilla-filtro:has(input:disabled) { color: var(--tinta-suave); cursor: default; }
 
 /* Justificaciones: conteo en las pestañas, visor del soporte y decisión tomada */
 .cuenta-pestana {
@@ -601,10 +647,11 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 /* Reportes: resumen por ficha y rankings */
 .texto-suave { color: var(--tinta-suave); font-size: 13px; }
 .sub-celda { display: block; color: var(--tinta-suave); font-size: 12.5px; margin-top: 2px; }
+.sub-celda.texto-rojo { color: var(--rojo); font-weight: 600; }
 .dos-columnas.iguales { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 860px) { .dos-columnas.iguales { grid-template-columns: 1fr; } }
 .porcentaje-celda { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
-.mini-barra { width: 70px; height: 6px; border-radius: 99px; background: var(--borde); overflow: hidden; display: inline-block; }
+.mini-barra { width: 56px; height: 6px; border-radius: 99px; background: var(--borde); overflow: hidden; display: inline-block; }
 .mini-barra span { display: block; height: 100%; border-radius: 99px; }
 .ranking { list-style: none; padding: 0; margin: 8px 0 0; counter-reset: puesto; }
 .ranking li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--borde); counter-increment: puesto; }
@@ -629,6 +676,10 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .grafica-tendencia .linea { fill: none; stroke: var(--violeta-600); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .grafica-tendencia .punto { fill: var(--blanco); stroke: var(--violeta-600); stroke-width: 2; }
 .grafica-tendencia .punto.bajo { stroke: var(--rojo); }
+.acciones-notificacion { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.grafica-tendencia .barra-dia { fill: var(--violeta-600); opacity: .85; }
+.grafica-tendencia .barra-dia.bajo { fill: var(--rojo); }
+.grafica-tendencia .valor-barra { fill: var(--tinta); font-size: 13px; font-weight: 700; }
 
 /* ---- Calendario interactivo del panel ---- */
 .calendario-panel { padding: 18px 20px 20px; }
@@ -688,7 +739,16 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .bloque-clase:hover { filter: brightness(0.96); box-shadow: var(--sombra); }
 .bloque-clase .hora { font-weight: 700; }
 .bloque-clase .sec  { color: var(--tinta-suave); }
-.bloque-clase .sin-asignar { color: var(--tinta-suave); font-style: italic; }
+.etiqueta-festivo { display: inline-block; margin-top: 3px; padding: 0 6px; border-radius: 999px; background: var(--rojo-suave); color: var(--rojo); font-size: 10.5px; font-weight: 700; }
+.etiqueta-festivo.en-linea { margin: 0 0 0 6px; }
+.bloque-clase .sin-asignar { color: var(--ambar); font-weight: 600; }
+/* Clases sin competencia (anteriores a que fuera obligatoria): aviso para la coordinación */
+.aviso-sin-competencia {
+  margin-bottom: 14px; padding: 12px 16px; border-radius: 12px; font-size: 14px;
+  background: var(--ambar-suave); color: var(--ambar); border: 1px solid var(--ambar-borde);
+}
+.aviso-sin-competencia p { line-height: 1.5; }
+.lista-sin-competencia { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
 .dia-hoy { background: var(--azul-suave); }
 
@@ -891,18 +951,18 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .aviso-atencion b { font-family: var(--fuente-lector); font-size: 24px; font-weight: 600; line-height: 1; }
 
 /* Superficie oscura "del lector" en el panel: clase en curso y próxima clase */
-.en-curso, .proxima-clase {
+.clase-en-curso, .proxima-clase {
   position: relative; overflow: hidden; display: grid; align-items: center; gap: 18px 30px;
   padding: 22px 28px; margin-bottom: 14px; border-radius: var(--radio); color: #ece8ff; box-shadow: var(--sombra);
   background: radial-gradient(520px 320px at 12% 50%, #2a1f6b 0%, transparent 70%), var(--escenario);
 }
-.en-curso { grid-template-columns: auto minmax(0, 1fr); }
+.clase-en-curso { grid-template-columns: auto minmax(0, 1fr); }
 .proxima-clase {
   grid-template-columns: minmax(0, 1fr) auto;
   background: radial-gradient(520px 320px at 88% 50%, #2a1f6b 0%, transparent 70%), var(--escenario);
 }
 .en-curso-lista { display: grid; gap: 14px; margin-bottom: 14px; }
-.en-curso-lista .en-curso { margin-bottom: 0; }
+.en-curso-lista .clase-en-curso { margin-bottom: 0; }
 .escaner.en-curso-huella, .escaner.proxima-huella { width: 150px; }
 .escaner-marca .escaner-haz { animation: barrido 1s ease-in-out both; } /* una marca: el haz pasa una vez */
 .escaner-registrada .cresta { stroke: var(--presente); }
@@ -974,7 +1034,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .reglas-clave li.cumple svg { opacity: 1; }
 
 @media (max-width: 700px) {
-  .en-curso, .proxima-clase { grid-template-columns: 1fr; padding: 18px; }
+  .clase-en-curso, .proxima-clase { grid-template-columns: 1fr; padding: 18px; }
   .escaner.en-curso-huella { width: 110px; }
   .escaner.proxima-huella { order: -1; width: 84px; }
   .en-curso-cifra b { font-size: 46px; }

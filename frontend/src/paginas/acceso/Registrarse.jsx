@@ -8,6 +8,9 @@ import { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { esperaMinima } from "../../utilidades/movimiento";
 
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Instructores y programadores usan el correo institucional; los aprendices, el que tengan
+const ROLES_CORREO_INSTITUCIONAL = ["instructor", "programador"];
+const esInstitucional = (correo) => /@sena\.edu\.co$/i.test(correo.trim());
 
 const TEXTO_ESTADO = {
   espera: "Completa tus datos",
@@ -18,6 +21,7 @@ const TEXTO_ESTADO = {
 
 export default function Registrarse() {
   const [f, setF] = useState({ nombres: "", apellidos: "", tipo_documento: "CC", documento: "", correo: "", telefono: "", contrasena: "", rol: "aprendiz" });
+  const [confirmar, setConfirmar] = useState("");
   const [mensaje, setMensaje] = useState(null);
   const [estado, setEstado] = useState("espera");
   const [intento, setIntento] = useState(0);
@@ -29,7 +33,13 @@ export default function Registrarse() {
   async function enviar(e) {
     e.preventDefault();
     if (estado === "leyendo") return;
-    setMensaje(null); setEstado("leyendo");
+    setMensaje(null);
+    if (f.contrasena !== confirmar) {
+      setEstado("error");
+      setIntento((n) => n + 1);
+      return setMensaje({ tipo: "error", texto: "Las contraseñas no coinciden" });
+    }
+    setEstado("leyendo");
     const minimo = esperaMinima(650);
     try {
       const r = await api("/auth/registro", { method: "POST", body: f });
@@ -47,8 +57,9 @@ export default function Registrarse() {
   // Cada dato obligatorio completo enciende una parte de la huella
   const completos = [
     f.nombres.trim(), f.apellidos.trim(), f.documento.trim(),
-    FORMATO_CORREO.test(f.correo.trim()), contrasenaValida(f.contrasena),
+    FORMATO_CORREO.test(f.correo.trim()), contrasenaValida(f.contrasena) && confirmar === f.contrasena,
   ].filter(Boolean).length;
+  const avisarDominio = ROLES_CORREO_INSTITUCIONAL.includes(f.rol) && FORMATO_CORREO.test(f.correo.trim()) && !esInstitucional(f.correo);
   const encendidas = estado === "leyendo" || estado === "exito" ? TOTAL_CRESTAS : Math.round((completos / 5) * TOTAL_CRESTAS);
 
   return (
@@ -97,6 +108,11 @@ export default function Registrarse() {
             </div>
             <label htmlFor="reg-correo">Correo</label>
             <input id="reg-correo" type="email" autoComplete="email" inputMode="email" value={f.correo} onChange={c("correo")} placeholder="usuario@soy.sena.edu.co" />
+            {avisarDominio && (
+              <p className="nota-estado" role="status">
+                Las cuentas de {f.rol} suelen usar el correo institucional <b>@sena.edu.co</b>. Revisa que este sea el correo correcto.
+              </p>
+            )}
             <div className="rejilla-2">
               <div>
                 <label htmlFor="reg-telefono">Teléfono (opcional)</label>
@@ -114,6 +130,12 @@ export default function Registrarse() {
             <label htmlFor="reg-contrasena">Contraseña</label>
             <CampoContrasena id="reg-contrasena" autoComplete="new-password" value={f.contrasena} onChange={c("contrasena")} />
             <ReglasContrasena contrasena={f.contrasena} />
+            <label htmlFor="reg-confirmar">Confirma la contraseña</label>
+            <CampoContrasena
+              id="reg-confirmar" autoComplete="new-password" value={confirmar}
+              onChange={(e) => { setConfirmar(e.target.value); if (estado === "error") setEstado("espera"); }}
+            />
+            {confirmar && confirmar !== f.contrasena && <p className="login-mayus">Las contraseñas no coinciden</p>}
 
             <button type="submit" className="boton ancho login-boton" disabled={estado === "leyendo"}>
               {estado === "leyendo" ? "Enviando…" : "Enviar solicitud"}

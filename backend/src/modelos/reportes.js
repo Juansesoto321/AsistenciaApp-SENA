@@ -61,12 +61,16 @@ async function historialFicha(idAprendiz, idFicha) {
   const r = await pool.query(
     `SELECT s.fecha, a.estado, TO_CHAR(a.hora_marca AT TIME ZONE 'America/Bogota','HH24:MI') AS hora,
             a.metodo, a.observacion,
-            j.estado AS estado_soporte, j.token AS token_soporte, j.expira_en AS soporte_expira,
+            CASE WHEN j.estado = 'pendiente' AND j.expira_en < NOW() THEN 'vencida' ELSE j.estado END AS estado_soporte,
+            j.token AS token_soporte, j.expira_en AS soporte_expira,
             j.nombre_archivo AS soporte_archivo, j.tipo AS soporte_tipo, j.descripcion AS soporte_descripcion,
-            j.observacion_validacion AS soporte_observacion
+            j.observacion_validacion AS soporte_observacion,
+            TO_CHAR(h.hora_inicio, 'HH24:MI') AS hora_inicio, TO_CHAR(h.hora_fin, 'HH24:MI') AS hora_fin,
+            c.nombre AS competencia
      FROM asistencia a
      JOIN sesion_clase s ON s.id_sesion = a.id_sesion
      JOIN horario h ON h.id_horario = s.id_horario
+     LEFT JOIN competencia c ON c.id_competencia = h.id_competencia
      LEFT JOIN justificacion j ON j.id_asistencia = a.id_asistencia
      WHERE a.id_aprendiz = $1 AND h.id_ficha = $2
      ORDER BY s.fecha DESC`,
@@ -96,7 +100,21 @@ async function estadisticas(usuario) {
       (SELECT ROUND(AVG(CASE WHEN a.estado IN ('presente','tardanza','justificada') THEN 100 ELSE 0 END))
         FROM asistencia a JOIN sesion_clase s ON s.id_sesion = a.id_sesion
         JOIN horario h ON h.id_horario = s.id_horario WHERE s.estado = 'cerrada' ${filtro}) AS promedio_asistencia,
-      (SELECT COALESCE(MAX(valor::int), 80) FROM configuracion WHERE clave = 'porcentaje_minimo') AS minimo`,
+      (SELECT COALESCE(MAX(valor::int), 80) FROM configuracion WHERE clave = 'porcentaje_minimo') AS minimo,
+      -- Aprendices activos sin huella: ni plantilla en la app ni marcas del lector real
+      (SELECT COUNT(DISTINCT m.id_aprendiz)::int FROM matricula m JOIN ficha f ON f.id_ficha = m.id_ficha
+        WHERE m.estado = 'activa' AND f.estado = 'activa' ${usuario.rol === "instructor" ? "AND f.id_instructor = $1" : ""}
+          AND NOT EXISTS (SELECT 1 FROM plantilla_biometrica pb WHERE pb.id_aprendiz = m.id_aprendiz)
+          AND NOT EXISTS (SELECT 1 FROM asistencia x WHERE x.id_aprendiz = m.id_aprendiz AND x.metodo = 'huella')
+      ) AS huellas_sin_registrar,
+      -- Inasistencias cuyo plazo para justificar venció en los últimos 30 días
+      (SELECT COUNT(*)::int FROM justificacion j
+        JOIN asistencia a ON a.id_asistencia = j.id_asistencia
+        JOIN sesion_clase s ON s.id_sesion = a.id_sesion
+        JOIN horario h ON h.id_horario = s.id_horario
+        WHERE (j.estado = 'vencida' OR (j.estado = 'pendiente' AND j.expira_en < NOW()))
+          AND j.expira_en >= NOW() - INTERVAL '30 days' ${filtro}
+      ) AS justificaciones_vencidas`,
     valores
   );
   return r.rows[0];

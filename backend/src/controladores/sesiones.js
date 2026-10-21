@@ -8,6 +8,14 @@ async function horariosDeHoy(req, res, next) {
   }
 }
 
+async function historialDeClases(req, res, next) {
+  try {
+    res.json(await servicio.historialDeClases(req.usuario, req.query.dias));
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function iniciarSesion(req, res, next) {
   try {
     res.json(await servicio.iniciarSesion(req.body.id_horario, req.usuario));
@@ -48,4 +56,4 @@ async function eliminarSesion(req, res, next) {
   }
 }
 
-module.exports = { horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };
+module.exports = { historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };

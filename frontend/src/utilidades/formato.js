@@ -2,13 +2,18 @@
  * Formato de textos compartido por las páginas.
  */
 
-/** Plazo en horas como texto: "1 día", "3 días", "1 hora" o "18 horas". */
+/**
+ * Plazo en horas como texto. Configuración lo guarda en horas; si son días
+ * exactos se dicen las dos cosas para que se reconozca el valor configurado:
+ * "3 días (72 horas)", "1 día (24 horas)", "18 horas".
+ */
 export function textoPlazo(horas) {
+  const enHoras = `${horas} ${horas === 1 ? "hora" : "horas"}`;
   if (horas % 24 === 0) {
     const dias = horas / 24;
-    return `${dias} ${dias === 1 ? "día" : "días"}`;
+    return `${dias} ${dias === 1 ? "día" : "días"} (${enHoras})`;
   }
-  return `${horas} ${horas === 1 ? "hora" : "horas"}`;
+  return enHoras;
 }
 
 /** Solo la primera letra en mayúscula: "miércoles, 23 de septiembre" -> "Miércoles, 23 de septiembre". */
@@ -43,6 +48,16 @@ export function haceCuanto(fecha, ahora = new Date()) {
   const dias = Math.floor(horas / 24);
   if (dias < 7) return `hace ${dias} ${dias === 1 ? "día" : "días"}`;
   return fechaCorta(fecha);
+}
+
+/** Lo que falta para una fecha: "quedan 3 días", "quedan 5 h", "quedan 20 min". */
+export function faltaCuanto(fecha, ahora = new Date()) {
+  const minutos = Math.max(0, Math.round((new Date(fecha) - ahora) / 60000));
+  if (minutos < 60) return `quedan ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `quedan ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return `quedan ${dias} ${dias === 1 ? "día" : "días"}`;
 }
 
 /** "Buenos días", "Buenas tardes" o "Buenas noches" según la hora. */

@@ -13,9 +13,11 @@ import GraficaTendencia from "../../componentes/GraficaTendencia.jsx";
 import Tendencia from "../../componentes/Tendencia.jsx";
 import Contador from "../../componentes/Contador.jsx";
 import ClaseEnCurso from "../../componentes/ClaseEnCurso.jsx";
+import SinClasesHoy from "../../componentes/SinClasesHoy.jsx";
 import EscanerHuella, { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { horaCorta, mayusculaInicial, saludo } from "../../utilidades/formato";
-import { nombreDelDia, proximaClase } from "../../utilidades/fechas";
+import { diaYFecha, mismoDia, proximaClase } from "../../utilidades/fechas";
+import { useFestivos } from "../../utilidades/festivos";
 
 const MAX_EN_RIESGO = 6;
 const MAX_MARCAS = 4; // marcas recientes que se muestran por clase en curso
@@ -77,9 +79,18 @@ function Accesos({ rol, enFila }) {
 // ---------- Coordinador, programador e instructor ----------
 
 /** Lo que pide acción hoy. Solo aparece lo que tiene algo pendiente. */
-function Atencion({ pendientes, lectoresSinSenal, enRiesgo, puedeVerLectores }) {
+function Atencion({ pendientes, lectoresSinSenal, enRiesgo, puedeVerLectores, sinHuella, vencidas }) {
   const avisos = [
     pendientes > 0 && { a: "/justificaciones", tono: "ambar", valor: pendientes, texto: pendientes === 1 ? "justificación por revisar" : "justificaciones por revisar" },
+    sinHuella > 0 && {
+      a: "/fichas", tono: "ambar", valor: sinHuella, texto: sinHuella === 1 ? "huella sin registrar" : "huellas sin registrar",
+      titulo: "Aprendices activos sin huella en la app ni marcas del lector",
+    },
+    vencidas > 0 && {
+      a: "/justificaciones?estado=vencida", tono: "ambar", valor: vencidas,
+      texto: vencidas === 1 ? "justificación vencida" : "justificaciones vencidas",
+      titulo: "Inasistencias cuyo plazo para justificar venció en los últimos 30 días",
+    },
     lectoresSinSenal > 0 && { a: puedeVerLectores ? "/ambientes" : "/sesiones", tono: "rojo", valor: lectoresSinSenal, texto: lectoresSinSenal === 1 ? "lector sin señal" : "lectores sin señal" },
     enRiesgo > 0 && { a: "/reportes", tono: "rojo", valor: enRiesgo, texto: enRiesgo === 1 ? "aprendiz bajo el mínimo" : "aprendices bajo el mínimo" },
   ].filter(Boolean);
@@ -87,7 +98,7 @@ function Atencion({ pendientes, lectoresSinSenal, enRiesgo, puedeVerLectores }) 
   return (
     <div className="atencion-fila" role="status">
       {avisos.map((v) => (
-        <Link key={v.a + v.texto} to={v.a} className={`aviso-atencion ${v.tono}`}>
+        <Link key={v.a + v.texto} to={v.a} className={`aviso-atencion ${v.tono}`} title={v.titulo}>
           <Icono nombre="alerta" /> <b>{v.valor}</b> {v.texto} <span aria-hidden="true">→</span>
         </Link>
       ))}
@@ -224,7 +235,10 @@ function PanelSupervision({ rol, alError }) {
       </div>
     )}
 
-    <Atencion pendientes={pendientes} lectoresSinSenal={sinSenal} enRiesgo={enRiesgo.length} puedeVerLectores={!esInstructor} />
+    <Atencion
+      pendientes={pendientes} lectoresSinSenal={sinSenal} enRiesgo={enRiesgo.length} puedeVerLectores={!esInstructor}
+      sinHuella={datos.huellas_sin_registrar} vencidas={datos.justificaciones_vencidas}
+    />
 
     <div className="resumen-panel">
       <div className="tarjeta tarjeta-anillo">
@@ -259,7 +273,7 @@ function PanelSupervision({ rol, alError }) {
           {clases?.length > 0 && <Link to="/sesiones" style={{ fontSize: 13.5 }}>Ver todas →</Link>}
         </div>
         {clases === null ? <Cargando /> : clases.length === 0 ? (
-          <Vacio icono="sesiones" titulo="No hay clases programadas para hoy" />
+          <SinClasesHoy titulo={esInstructor ? "No tienes clases hoy" : "No hay clases programadas para hoy"} />
         ) : (
           <>
             <ul className="lista-clases">
@@ -354,7 +368,7 @@ function marcaDeHoy(detalle, horario, ahora) {
 }
 
 /** La próxima clase en grande, con cuenta regresiva y la huella del lector. */
-function ProximaClase({ horarios, detalle }) {
+function ProximaClase({ horarios, detalle, festivos }) {
   const [ahora, setAhora] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setAhora(new Date()), 30_000);
@@ -362,7 +376,7 @@ function ProximaClase({ horarios, detalle }) {
   }, []);
 
   if (horarios === null) return <div className="tarjeta" style={{ marginBottom: 14 }}><Cargando /></div>;
-  const siguiente = proximaClase(horarios, ahora);
+  const siguiente = proximaClase(horarios, ahora, festivos);
   if (!siguiente) {
     return (
       <div className="tarjeta" style={{ marginBottom: 14 }}>
@@ -382,12 +396,12 @@ function ProximaClase({ horarios, detalle }) {
         </p>
         <p className="proxima-hora">{horaCorta(horario.hora_inicio)} – {horaCorta(horario.hora_fin)}</p>
         <p className="proxima-cuando">
-          {mayusculaInicial(nombreDelDia(siguiente.fecha, ahora))}{cuando ? `, ${cuando}` : ""}
+          {mismoDia(siguiente.fecha, ahora) ? "Hoy" : diaYFecha(siguiente.fecha)}{cuando ? `, ${cuando}` : ""}
         </p>
         <p className="proxima-detalle">
           Ambiente <b>{horario.numero_ambiente}</b>{horario.sede_centro ? `, ${horario.sede_centro}` : ""}<br />
-          Instructor: {horario.instructor}<br />
-          {horario.tematica || horario.competencia || "Tema por asignar"}
+          Instructor: {horario.instructor}
+          {(horario.tematica || horario.competencia) && <><br />{horario.tematica || horario.competencia}</>}
         </p>
         {siguiente.enCurso && (
           <p className={`proxima-marca${marca ? " lista" : ""}`} role="status">
@@ -403,9 +417,20 @@ function ProximaClase({ horarios, detalle }) {
   );
 }
 
+/** Lleva a Mis justificaciones; si hay faltas por justificar, dice cuántas. */
+function BotonJustificar({ detalle }) {
+  const porCargar = detalle.filter((d) => d.estado_soporte === "pendiente").length;
+  return (
+    <Link className="boton mini boton-banda" to="/mis-justificaciones">
+      Justificar{porCargar > 0 ? ` (${porCargar})` : ""}
+    </Link>
+  );
+}
+
 function PanelAprendiz({ alError }) {
   const [historial, setHistorial] = useState(null);
   const [horarios, setHorarios] = useState(null);
+  const festivos = useFestivos();
 
   useEffect(() => {
     api("/reportes/mi-historial").then(setHistorial).catch((e) => alError(e.message));
@@ -428,10 +453,11 @@ function PanelAprendiz({ alError }) {
           Tu asistencia ({r.porcentaje} %) está por debajo del mínimo ({r.minimo} %). Habla con tu instructor y
           justifica tus inasistencias a tiempo.
         </span>
+        <BotonJustificar detalle={detalle} />
       </div>
     )}
 
-    <ProximaClase horarios={horarios} detalle={detalle} />
+    <ProximaClase horarios={horarios} detalle={detalle} festivos={festivos} />
 
     {r ? (
       <div className="resumen-panel">

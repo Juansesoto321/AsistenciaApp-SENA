@@ -125,7 +125,9 @@ que para una existente, y nunca crea cuentas ni datos.
 Con Docker: `docker compose exec backend npm run migrar`.
 
 Los roles son `coordinador`, `programador`, `instructor` y `aprendiz`. El programador
-tiene las mismas atribuciones del coordinador **salvo administrar usuarios**.
+tiene las mismas atribuciones del coordinador **salvo administrar usuarios**. Las clases
+y las justificaciones solo las **consulta**: no las inicia, no las cierra, no registra
+asistencia a mano ni aprueba o rechaza justificaciones (eso es del instructor y la coordinación).
 
 Las fichas pasan automáticamente a `finalizada` cuando termina su `fecha_fin`; sus
 matrículas activas también se marcan como `finalizada`.

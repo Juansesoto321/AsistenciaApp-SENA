@@ -8,7 +8,7 @@ async function horariosDeHoy(usuario) {
   const filtro = usuario.rol === "instructor" ? "AND h.id_instructor = $1" : "";
   const valores = usuario.rol === "instructor" ? [usuario.id] : [];
   const r = await pool.query(
-    `SELECT h.id_horario, h.hora_inicio, h.hora_fin,
+    `SELECT h.id_horario, h.hora_inicio, h.hora_fin, h.excluir_festivos,
             f.numero_ficha, f.programa,
             a.numero_ambiente,
             u.nombres || ' ' || u.apellidos AS instructor,
@@ -57,6 +57,25 @@ async function buscarHorarioConLector(idHorario) {
   return r.rows[0] || null;
 }
 
+/**
+ * Una sesión de hoy de la MISMA ficha, en otra clase que se cruza en horas con
+ * esta. Pasa si el horario tiene clases duplicadas: cada una abría su propia
+ * sesión y los aprendices quedaban con la misma clase dos veces.
+ */
+async function buscarSesionCruzadaHoy(idHorario) {
+  const r = await pool.query(
+    `SELECT s.id_sesion, otro.id_horario
+     FROM horario h
+     JOIN horario otro ON otro.id_ficha = h.id_ficha AND otro.id_horario <> h.id_horario
+     JOIN sesion_clase s ON s.id_horario = otro.id_horario AND s.fecha = CURRENT_DATE
+     WHERE h.id_horario = $1
+       AND (h.hora_inicio, h.hora_fin) OVERLAPS (otro.hora_inicio, otro.hora_fin)
+     LIMIT 1`,
+    [idHorario]
+  );
+  return r.rows[0] || null;
+}
+
 async function crearOReanudarSesion(idHorario) {
   const r = await pool.query(
     `INSERT INTO sesion_clase (id_horario, fecha)
@@ -89,7 +108,9 @@ async function buscarAprendicesDeSesion(idSesion) {
   const r = await pool.query(
     `SELECT u.id_usuario, u.nombres, u.apellidos, u.documento,
             asi.estado, asi.hora_marca, asi.metodo, asi.observacion,
-            (pb.id_plantilla IS NOT NULL) AS tiene_huella
+            -- huella_en_lector: el lector real la guarda en el equipo, no en la app
+            (pb.id_plantilla IS NOT NULL) AS tiene_huella,
+            EXISTS (SELECT 1 FROM asistencia x WHERE x.id_aprendiz = u.id_usuario AND x.metodo = 'huella') AS huella_en_lector
      FROM matricula m
      JOIN usuario u ON u.id_usuario = m.id_aprendiz
      JOIN sesion_clase s ON s.id_sesion = $1
@@ -115,7 +136,7 @@ async function esInstructorDeSesion(idSesion, idUsuario) {
 // Datos para validar un registro manual: dueño de la clase y hace cuanto se cerro
 async function buscarSesionParaRegistroManual(idSesion) {
   const r = await pool.query(
-    `SELECT s.estado, s.fecha, h.id_instructor, h.id_ficha, f.numero_ficha,
+    `SELECT s.estado, s.fecha, h.id_instructor, h.id_ficha, f.numero_ficha, h.hora_inicio, h.hora_fin,
             (s.hora_cierre IS NOT NULL AND s.hora_cierre < NOW() - INTERVAL '24 hours') AS cerrada_hace_mas_de_24h
      FROM sesion_clase s
      JOIN horario h ON h.id_horario = s.id_horario
@@ -167,7 +188,7 @@ async function buscarNombreUsuario(idUsuario) {
 
 async function buscarSesionParaCerrar(idSesion) {
   const r = await pool.query(
-    `SELECT s.*, h.id_ficha, h.id_instructor, f.numero_ficha
+    `SELECT s.*, h.id_ficha, h.id_instructor, f.numero_ficha, h.hora_inicio, h.hora_fin
      FROM sesion_clase s
      JOIN horario h ON h.id_horario = s.id_horario
      JOIN ficha f ON f.id_ficha = h.id_ficha
@@ -210,7 +231,13 @@ async function eliminarSesion(cliente, idSesion) {
     [idSesion]
   );
   await cliente.query("DELETE FROM asistencia WHERE id_sesion = $1", [idSesion]);
-  const r = await cliente.query("DELETE FROM sesion_clase WHERE id_sesion = $1 RETURNING id_sesion", [idSesion]);
+  const r = await cliente.query(
+    `DELETE FROM sesion_clase WHERE id_sesion = $1
+     RETURNING id_sesion, 'Ficha ' || (SELECT f.numero_ficha FROM horario h JOIN ficha f ON f.id_ficha = h.id_ficha
+                                      WHERE h.id_horario = sesion_clase.id_horario)
+       || ' · clase del ' || to_char(fecha, 'DD/MM/YYYY') AS nombre`,
+    [idSesion]
+  );
   return r.rows[0] || null;
 }
 
@@ -238,15 +265,47 @@ async function buscarUsuarioParaCorreo(cliente, idAprendiz) {
 
 async function insertarNotificacionInasistencia(cliente, idAprendiz, mensaje) {
   await cliente.query(
-    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
-     VALUES ($1, 'inasistencia', 'Inasistencia registrada', $2)`,
+    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje, enlace)
+     VALUES ($1, 'inasistencia', 'Inasistencia registrada', $2, '/mis-justificaciones')`,
     [idAprendiz, mensaje]
   );
 }
 
+/**
+ * Clases de días anteriores (las de hoy ya salen en horariosDeHoy), con cómo
+ * les fue. El instructor solo ve las suyas. Antes solo se llegaba a una clase
+ * pasada si se tenía su dirección.
+ */
+async function historialDeClases(usuario, dias) {
+  const filtro = usuario.rol === "instructor" ? "AND h.id_instructor = $2" : "";
+  const valores = usuario.rol === "instructor" ? [dias, usuario.id] : [dias];
+  const r = await pool.query(
+    `SELECT s.id_sesion, s.fecha, s.estado, h.hora_inicio, h.hora_fin,
+            f.numero_ficha, f.programa, a.numero_ambiente,
+            u.nombres || ' ' || u.apellidos AS instructor,
+            COUNT(x.id_asistencia) FILTER (WHERE x.estado IN ('presente', 'tardanza', 'justificada'))::int AS asistieron,
+            COUNT(x.id_asistencia) FILTER (WHERE x.estado = 'ausente')::int AS ausentes,
+            COUNT(x.id_asistencia)::int AS registros
+     FROM sesion_clase s
+     JOIN horario h ON h.id_horario = s.id_horario
+     JOIN ficha f ON f.id_ficha = h.id_ficha
+     JOIN ambiente a ON a.id_ambiente = h.id_ambiente
+     JOIN usuario u ON u.id_usuario = h.id_instructor
+     LEFT JOIN asistencia x ON x.id_sesion = s.id_sesion
+     WHERE s.fecha < CURRENT_DATE AND s.fecha >= CURRENT_DATE - $1::int ${filtro}
+     GROUP BY s.id_sesion, h.id_horario, f.id_ficha, a.id_ambiente, u.id_usuario
+     ORDER BY s.fecha DESC, h.hora_inicio DESC
+     LIMIT 300`,
+    valores
+  );
+  return r.rows;
+}
+
 module.exports = {
+  historialDeClases,
   horariosDeHoy,
   buscarHorarioConLector,
+  buscarSesionCruzadaHoy,
   crearOReanudarSesion,
   buscarDetalle,
   buscarAprendicesDeSesion,

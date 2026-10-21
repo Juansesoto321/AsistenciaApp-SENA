@@ -8,7 +8,8 @@ import { textoPlazo } from "../utilidades/formato";
  * Registro manual de asistencia (CU-15) en un panel que entra desde la derecha:
  * la lista de la clase sigue a la vista, el estado se elige con una barra
  * deslizante y el motivo con un toque. El motivo es obligatorio (queda en la
- * auditoría); "Otro" pide escribirlo.
+ * auditoría); "Otro" pide escribirlo. Con la clase ya cerrada es una
+ * corrección: además del motivo, hay que explicarla por escrito.
  */
 const ESTADOS = [
   { valor: "presente", texto: "Presente", color: "var(--verde-solido)" },
@@ -32,9 +33,17 @@ const MOTIVOS = [
   "Otro",
 ];
 
-export default function PanelRegistroManual({ aprendiz, plazoHoras, alGuardar, alCerrar }) {
+const MOTIVOS_CORRECCION = [
+  "Error al registrar durante la clase",
+  "El lector no envió la marca",
+  "Presentó soporte en coordinación",
+  "Otro",
+];
+const MINIMO_EXPLICACION = 10; // caracteres
+
+export default function PanelRegistroManual({ aprendiz, plazoHoras, alGuardar, alCerrar, correccion = false }) {
   const [estado, setEstado] = useState(aprendiz.estado || "presente");
-  const [motivo, setMotivo] = useState(aprendiz.tiene_huella ? null : "Aún no tiene huella registrada");
+  const [motivo, setMotivo] = useState(aprendiz.tiene_huella || correccion ? null : "Aún no tiene huella registrada");
   const [detalle, setDetalle] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -44,11 +53,13 @@ export default function PanelRegistroManual({ aprendiz, plazoHoras, alGuardar, a
     return () => window.removeEventListener("keydown", alTeclear);
   }, [guardando, alCerrar]);
 
-  const requiereDetalle = motivo === "Otro";
-  const motivoFinal = requiereDetalle
+  const motivos = correccion ? MOTIVOS_CORRECCION : MOTIVOS;
+  const requiereDetalle = motivo === "Otro" || correccion;
+  const motivoFinal = motivo === "Otro"
     ? detalle.trim()
     : [motivo, detalle.trim()].filter(Boolean).join(": ");
-  const puedeGuardar = !!motivoFinal && !guardando;
+  const explicacionCorta = correccion && detalle.trim().length < MINIMO_EXPLICACION;
+  const puedeGuardar = !!motivo && !!motivoFinal && !explicacionCorta && !guardando;
 
   async function guardar() {
     setGuardando(true);
@@ -62,7 +73,7 @@ export default function PanelRegistroManual({ aprendiz, plazoHoras, alGuardar, a
       <aside className="panel-lateral" role="dialog" aria-modal="true" aria-labelledby="titulo-registro-manual">
         <header>
           <div>
-            <small>Registro manual</small>
+            <small>{correccion ? "Corrección con la clase cerrada" : "Registro manual"}</small>
             <h2 id="titulo-registro-manual">{aprendiz.nombres} {aprendiz.apellidos}</h2>
             <p>
               Documento {aprendiz.documento} ·{" "}
@@ -86,9 +97,9 @@ export default function PanelRegistroManual({ aprendiz, plazoHoras, alGuardar, a
             <p className="nota-estado">{AYUDA_ESTADO[estado]}</p>
           )}
 
-          <label className="titulo-campo">¿Por qué es manual? <span>(obligatorio)</span></label>
+          <label className="titulo-campo">{correccion ? "¿Por qué la corriges?" : "¿Por qué es manual?"} <span>(obligatorio)</span></label>
           <div className="chips">
-            {MOTIVOS.map((m) => (
+            {motivos.map((m) => (
               <button key={m} type="button" className="chip" aria-pressed={motivo === m}
                       onClick={() => setMotivo(motivo === m ? null : m)}>
                 {m}
@@ -97,15 +108,25 @@ export default function PanelRegistroManual({ aprendiz, plazoHoras, alGuardar, a
           </div>
 
           <label className="titulo-campo" htmlFor="detalle-registro">
-            {requiereDetalle ? "Escribe el motivo" : "Detalle"} <span>{requiereDetalle ? "(obligatorio)" : "(opcional)"}</span>
+            {correccion ? "Explica la corrección" : requiereDetalle ? "Escribe el motivo" : "Detalle"}{" "}
+            <span>{requiereDetalle ? "(obligatorio)" : "(opcional)"}</span>
           </label>
           <textarea
             id="detalle-registro"
             rows={2}
             value={detalle}
             onChange={(e) => setDetalle(e.target.value)}
-            placeholder={requiereDetalle ? "Ej.: se presentó en coordinación antes de la clase" : "Ej.: tres intentos fallidos en el lector"}
+            placeholder={correccion
+              ? "Ej.: estuvo en clase; el lector estaba sin red y no envió su huella"
+              : requiereDetalle ? "Ej.: se presentó en coordinación antes de la clase" : "Ej.: tres intentos fallidos en el lector"}
           />
+          {correccion && (
+            <p className="nota-estado">
+              {explicacionCorta
+                ? `Escribe al menos ${MINIMO_EXPLICACION} caracteres.`
+                : "El cambio queda en el registro del sistema con tu nombre, la hora y este motivo."}
+            </p>
+          )}
         </div>
 
         <footer>

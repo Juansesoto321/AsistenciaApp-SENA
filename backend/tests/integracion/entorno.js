@@ -44,6 +44,7 @@ async function cargarDatos(pool) {
   ids.ausente = await crearUsuario(pool, { nombres: "Beto", documento: "900011", correo: "beto@prueba.co", rol: "aprendiz" });
   ids.ajeno = await crearUsuario(pool, { nombres: "Ciro", documento: "900012", correo: "ciro@prueba.co", rol: "aprendiz" });
   ids.bloqueable = await crearUsuario(pool, { nombres: "Dora", documento: "900013", correo: "dora@prueba.co", rol: "aprendiz" });
+  ids.programador = await crearUsuario(pool, { nombres: "Programador", documento: "900004", correo: "programador@prueba.co", rol: "programador" });
 
   const periodo = await pool.query(
     `INSERT INTO periodo (nombre, fecha_inicio, fecha_fin)

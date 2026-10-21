@@ -20,7 +20,7 @@ export default function ClaseEnCurso({ clase, marcas = [], recibidas = 0, verIns
   const encendidas = total ? Math.round((marcaron / total) * TOTAL_CRESTAS) : 0;
 
   return (
-    <section className="en-curso">
+    <section className="clase-en-curso">
       <EscanerHuella
         className="en-curso-huella"
         estado={recibidas ? "marca" : "espera"}

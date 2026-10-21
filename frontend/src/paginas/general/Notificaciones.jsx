@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../../servicios/api";
+import { useAuth } from "../../contexto/AuthContext.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
@@ -13,7 +15,24 @@ const ESTILOS = {
   solicitud_registro: ["usuarios", "violeta"],
   soporte: ["configuracion", "ambar"],
   biometria: ["llave", "violeta"],
+  lector: ["ambientes", "rojo"],
 };
+
+const COORDINACION = ["coordinador", "programador"];
+/**
+ * A dónde lleva el aviso: el enlace que trae (p. ej. la justificación que hay
+ * que revisar) o, en los avisos anteriores a los enlaces, la página de su tipo.
+ */
+function enlaceDe(n, rol) {
+  if (n.enlace) return n.enlace;
+  const personal = rol !== "aprendiz";
+  if (n.tipo === "justificacion" || n.tipo === "inasistencia") return personal ? (n.tipo === "justificacion" ? "/justificaciones" : null) : "/mis-justificaciones";
+  if (n.tipo === "asistencia") return personal ? null : "/mi-asistencia";
+  if (n.tipo === "solicitud_registro") return rol === "coordinador" ? "/usuarios" : null;
+  if (n.tipo === "soporte") return "/soporte";
+  if (n.tipo === "lector") return COORDINACION.includes(rol) ? "/ambientes" : "/sesiones";
+  return null;
+}
 function estiloDe(n) {
   if (n.tipo === "justificacion") {
     if (/rechazada/i.test(n.titulo)) return ["justificaciones", "rojo"];
@@ -24,6 +43,7 @@ function estiloDe(n) {
 }
 
 export default function Notificaciones() {
+  const rol = useAuth().sesion.usuario.rol;
   const [lista, setLista] = useState(null);
   const [mensaje, setMensaje] = useState(null);
 
@@ -67,6 +87,7 @@ export default function Notificaciones() {
         <div style={{ display: "grid", gap: 10 }}>
           {lista.map((n) => {
             const [icono, tono] = estiloDe(n);
+            const enlace = enlaceDe(n, rol);
             return (
               <div key={n.id_notificacion} className={`tarjeta notificacion${n.leida ? " leida" : ""}`}>
                 <span className={`icono-notificacion ${tono}`} aria-hidden="true"><Icono nombre={icono} size="1.2em" /></span>
@@ -75,7 +96,13 @@ export default function Notificaciones() {
                   <p>{n.mensaje}</p>
                   <small><span title={fechaHora(n.creado_en)}>{haceCuanto(n.creado_en)}</span>{!n.leida && <> · <span className="sin-leer">Sin leer</span></>}</small>
                 </div>
-                {!n.leida && <button className="boton mini suave" onClick={() => marcarLeida(n)}>Marcar leída</button>}
+                <div className="acciones-notificacion">
+                  {enlace && (
+                    // Abrirla también la marca como leída
+                    <Link className="boton mini" to={enlace} onClick={() => { if (!n.leida) marcarLeida(n); }}>Ver →</Link>
+                  )}
+                  {!n.leida && <button className="boton mini suave" onClick={() => marcarLeida(n)}>Marcar leída</button>}
+                </div>
               </div>
             );
           })}

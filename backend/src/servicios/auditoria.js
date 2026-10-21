@@ -16,13 +16,25 @@ async function auditar(idUsuario, accion, entidad = null, idEntidad = null, deta
 }
 
 /** Registro de actividad para la coordinación (quién hizo qué y cuándo). */
-async function listar({ texto, accion, desde, hasta, limite } = {}) {
+async function listar({ texto, accion, desde, hasta, sinLogin, limite } = {}) {
   const tope = Math.min(Number(limite) || LIMITE_POR_DEFECTO, LIMITE_MAXIMO);
   const [registros, acciones] = await Promise.all([
-    modelo.listar({ texto: texto?.trim() || null, accion: accion || null, desde: desde || null, hasta: hasta || null, limite: tope }),
+    modelo.listar({
+      texto: texto?.trim() || null, accion: accion || null, desde: desde || null, hasta: hasta || null,
+      sinLogin: !!sinLogin, limite: tope,
+    }),
     modelo.acciones(),
   ]);
   return { registros, acciones };
 }
 
-module.exports = { auditar, listar };
+/** El CSV se arma en el navegador; aquí queda quién se llevó el registro y con qué filtros. */
+async function registrarExportacion(usuario, { filas, filtros }) {
+  await auditar(usuario.id, "exportar_auditoria", null, null, {
+    formato: "csv",
+    filas: Number(filas) || 0,
+    filtros: filtros && typeof filtros === "object" ? filtros : {},
+  });
+}
+
+module.exports = { auditar, listar, registrarExportacion };

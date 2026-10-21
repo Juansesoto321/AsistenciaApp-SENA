@@ -7,7 +7,7 @@ const { enviarCorreo } = require("./correo");
 const { auditar } = require("./auditoria");
 const { emitirNotificacionAdmins } = require("./tiempoReal");
 const { error } = require("../utilidades/errores");
-const { escaparHtml } = require("../utilidades/formato");
+const { escaparHtml, TIPOS_DOCUMENTO } = require("../utilidades/formato");
 
 const MAX_INTENTOS = 5; // regla CU-01: bloqueo tras 5 intentos fallidos
 const MAX_CORREOS_RECUPERACION_POR_HORA = 3;
@@ -81,6 +81,8 @@ async function registrar(entrada) {
   if (!datos.nombres?.trim() || !datos.apellidos?.trim() || !String(datos.documento || "").trim())
     throw error("Nombres, apellidos y documento son obligatorios", "validacion");
   if (!FORMATO_CORREO.test(datos.correo)) throw error("Escribe un correo electrónico válido", "validacion");
+  if (datos.tipoDocumento && !TIPOS_DOCUMENTO.includes(datos.tipoDocumento))
+    throw error("Tipo de documento inválido", "validacion");
   if (!ROLES_AUTOREGISTRO.includes(datos.rol))
     throw error("Rol inválido: solo aprendiz, instructor o programador", "validacion");
   if (!validarContrasena(datos.contrasena))
