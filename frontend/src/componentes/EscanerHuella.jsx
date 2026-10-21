@@ -74,7 +74,7 @@ export default function EscanerHuella({ estado = "espera", encendidas = 0, inten
         <line className="escaner-linea" x1="-26" y1="118" x2="226" y2="118" />
       </svg>
       <div className="escaner-logo">
-        <Logo size="100%" colorVisto="var(--escenario)" />
+        <Logo size="100%" colorVisto="var(--fondo)" />
       </div>
     </div>
   );

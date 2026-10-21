@@ -63,7 +63,7 @@ export default function Registrarse() {
   const encendidas = estado === "leyendo" || estado === "exito" ? TOTAL_CRESTAS : Math.round((completos / 5) * TOTAL_CRESTAS);
 
   return (
-    <div className="login tema-oscuro">
+    <div className="login">
       <EscenarioLector estado={estado} texto={TEXTO_ESTADO[estado]} encendidas={encendidas} intento={intento} />
 
       <main className="login-panel">
