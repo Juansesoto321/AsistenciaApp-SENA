@@ -51,7 +51,7 @@ async function enviarAvisosDeInasistencia(avisos) {
     const enlace = `${urlFrontend}/justificar/${a.token}`;
     await enviarCorreo({
       para: a.correo,
-      asunto: `AsistenciaApp · Inasistencia registrada (ficha ${a.numeroFicha})`,
+      asunto: `AsistenciaApp SENA · Inasistencia registrada (ficha ${a.numeroFicha})`,
       html: `<p>Hola ${escaparHtml(a.nombres)},</p>
              <p>Se registró tu <b>inasistencia</b> a la clase del ${a.fechaClase} (${a.horaClase}) de la ficha ${a.numeroFicha}.</p>
              <p>Si tienes una excusa (por ejemplo, cita médica), cárgala en el siguiente enlace.

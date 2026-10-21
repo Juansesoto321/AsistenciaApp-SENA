@@ -1,4 +1,4 @@
-# Cómo ejecutar AsistenciaApp (guía para el equipo)
+# Cómo ejecutar AsistenciaApp SENA (guía para el equipo)
 
 Solo necesitas **Docker Desktop**. No hace falta instalar Node, PostgreSQL ni nada más por separado.
 
@@ -14,13 +14,13 @@ Solo necesitas **Docker Desktop**. No hace falta instalar Node, PostgreSQL ni na
 Necesitas tener [Git](https://git-scm.com/downloads) instalado (el instalador de Docker Desktop no lo incluye). Luego, abre una terminal (PowerShell o Git Bash) y ejecuta:
 
 ```bash
-git clone https://github.com/Juansesoto321/asistenciaapp.git
-cd asistenciaapp
+git clone https://github.com/Juansesoto321/AsistenciaApp-SENA.git
+cd AsistenciaApp-SENA
 ```
 
 ## 3. Levantar la aplicación
 
-En esa misma terminal, dentro de la carpeta `asistenciaapp`:
+En esa misma terminal, dentro de la carpeta `AsistenciaApp-SENA`:
 
 ```bash
 docker compose up -d --build

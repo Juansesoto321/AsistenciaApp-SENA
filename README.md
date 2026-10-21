@@ -1,4 +1,4 @@
-# AsistenciaApp 🫆
+# AsistenciaApp SENA 🫆
 
 **Sistema de Control de Asistencia con Lector de Huella Digital**
 SENA · Análisis y Desarrollo de Software · Bogotá D.C. · 2026

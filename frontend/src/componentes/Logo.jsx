@@ -1,10 +1,11 @@
 /**
- * Logo de AsistenciaApp: un pin de ubicación con un visto, "presente, estoy
- * aquí". El pin toma el color del texto (blanco sobre el recuadro violeta) y
- * el visto va en el violeta de la marca. Se lee bien incluso a 16 px.
- * El mismo dibujo está en public/favicon.svg (ícono de la pestaña).
+ * Ícono de AsistenciaApp SENA: un pin de ubicación con un visto, "presente,
+ * estoy aquí". El pin toma el color del texto (blanco sobre el recuadro verde)
+ * y el visto va en el verde SENA, como si estuviera recortado. Se lee bien
+ * incluso a 16 px. El mismo dibujo está en public/favicon.svg (ícono de la
+ * pestaña). No es el logosímbolo del SENA: ese se usa con su archivo oficial.
  */
-export default function Logo({ size = "1em", colorVisto = "var(--violeta-600)", style, ...props }) {
+export default function Logo({ size = "1em", colorVisto = "var(--verde-sena)", style, ...props }) {
   return (
     <svg
       viewBox="0 0 24 24"

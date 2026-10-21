@@ -52,8 +52,8 @@ export default function EscanerHuella({ estado = "espera", encendidas = 0, inten
             <ellipse cx="100" cy="118" rx="86" ry="104" />
           </clipPath>
           <linearGradient id={`haz-${id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#c9bcff" stopOpacity="0" />
-            <stop offset="0.6" stopColor="#c9bcff" stopOpacity="0.5" />
+            <stop offset="0" stopColor="#d4efc2" stopOpacity="0" />
+            <stop offset="0.6" stopColor="#d4efc2" stopOpacity="0.5" />
             <stop offset="1" stopColor="#ffffff" stopOpacity="0.9" />
           </linearGradient>
         </defs>

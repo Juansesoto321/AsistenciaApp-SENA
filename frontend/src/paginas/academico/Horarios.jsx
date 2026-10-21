@@ -14,7 +14,7 @@ const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "
 const ORDEN_SEMANA = [1, 2, 3, 4, 5, 6, 0];
 
 // Paleta estable por ficha, para distinguir bloques de un vistazo
-const COLORES = ["#6d4aff", "#0e9f6e", "#d97706", "#dc2626", "#0284c7", "#7c3aed", "#be185d"];
+const COLORES = ["#2b8000", "#0f766e", "#d97706", "#dc2626", "#0284c7", "#7c3aed", "#be185d"];
 const colorDe = (idFicha) => COLORES[Number(idFicha) % COLORES.length];
 
 const CLAVE_FICHA = "asistenciaapp.calendario-ficha"; // última ficha que miró la coordinación
@@ -324,7 +324,7 @@ export default function Horarios() {
                     <div key={fecha.toISOString()} title={festivo ? `Festivo: ${festivo}` : undefined} style={{
                       position: "relative", height: horasEje.length * ALTO_HORA, marginTop: 8,
                       borderLeft: "1px solid var(--borde)",
-                      background: mismoDia(fecha, hoy) ? "var(--azul-suave)" : festivo ? "var(--violeta-50)" : "transparent",
+                      background: mismoDia(fecha, hoy) ? "var(--azul-suave)" : festivo ? "var(--marca-50)" : "transparent",
                     }}>
                       {horasEje.map((m, i) => (
                         <div key={m} style={{ position: "absolute", top: i * ALTO_HORA, left: 0, right: 0, borderTop: "1px solid var(--borde)", opacity: 0.5 }} />

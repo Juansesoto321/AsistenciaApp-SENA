@@ -4,9 +4,9 @@
  *
  * secciones: [{ titulo, columnas: ["Ficha", …], filas: [["3311983", …], …] }]
  */
-const VIOLETA = [91, 63, 212];
-const TINTA = [29, 26, 51];
-const SUAVE = [107, 102, 144];
+const VERDE = [43, 128, 0]; // verde SENA oscurecido: el texto blanco encima se lee bien
+const TINTA = [27, 35, 25];
+const SUAVE = [94, 107, 89];
 
 // Las fuentes estándar del PDF no traen todos los signos tipográficos
 const limpiar = (valor) => String(valor ?? "").replace(/[–—]/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
@@ -17,8 +17,8 @@ export async function descargarPdf({ titulo, subtitulo, institucion, generadoPor
   const ancho = doc.internal.pageSize.getWidth();
   const margen = 40;
 
-  // Encabezado: franja violeta con el nombre de la institución y el título
-  doc.setFillColor(...VIOLETA);
+  // Encabezado: franja verde con el nombre de la institución y el título
+  doc.setFillColor(...VERDE);
   doc.rect(0, 0, ancho, 74, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
@@ -26,7 +26,7 @@ export async function descargarPdf({ titulo, subtitulo, institucion, generadoPor
   doc.text(limpiar(titulo), margen, 34);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(limpiar(`${institucion || "SENA"} · AsistenciaApp`), margen, 54);
+  doc.text(limpiar(`${institucion || "SENA"} · AsistenciaApp SENA`), margen, 54);
 
   doc.setTextColor(...SUAVE);
   doc.setFontSize(9.5);
@@ -48,8 +48,8 @@ export async function descargarPdf({ titulo, subtitulo, institucion, generadoPor
       body: seccion.filas.length ? seccion.filas.map((fila) => fila.map(limpiar)) : [[{ content: "Sin datos", colSpan: seccion.columnas.length }]],
       theme: "striped",
       styles: { font: "helvetica", fontSize: 8.5, cellPadding: 4, textColor: TINTA },
-      headStyles: { fillColor: VIOLETA, textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [246, 244, 255] },
+      headStyles: { fillColor: VERDE, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [242, 248, 236] },
     });
     y = doc.lastAutoTable.finalY + 28;
   }

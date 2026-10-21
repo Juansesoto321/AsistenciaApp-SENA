@@ -37,8 +37,8 @@ export default function EscenarioLector({ estado = "espera", texto, encendidas =
       <div className="login-marca">
         <span className="logo-acceso"><Logo size="1.15em" /></span>
         <span>
-          <strong>AsistenciaApp</strong>
-          <small>Control de asistencia del SENA</small>
+          <strong>AsistenciaApp SENA</strong>
+          <small>Servicio Nacional de Aprendizaje</small>
         </span>
       </div>
 

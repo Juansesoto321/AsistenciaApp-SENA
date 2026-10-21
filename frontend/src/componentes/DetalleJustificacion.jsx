@@ -36,7 +36,7 @@ export default function DetalleJustificacion({ d, alCerrar }) {
           {ETIQUETA_SOPORTE[d.estado_soporte] || d.estado_soporte}
         </span>
         <label style={{ marginTop: 14 }}>Lo que describiste</label>
-        <div className="tarjeta" style={{ background: "var(--violeta-50)" }}>{d.soporte_descripcion || "Sin descripción"}</div>
+        <div className="tarjeta" style={{ background: "var(--marca-50)" }}>{d.soporte_descripcion || "Sin descripción"}</div>
         {d.soporte_observacion && (
           <>
             <label style={{ marginTop: 14 }}>Observación del instructor</label>

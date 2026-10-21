@@ -181,7 +181,7 @@ export default function DetalleFicha() {
 
             {pasoEnrolar === 1 && (<>
               <p style={{ fontSize: 13, color: "var(--tinta-suave)", margin: "8px 0" }}>Paso 1 de 3 · Consentimiento informado ({consentimiento?.version})</p>
-              <div className="tarjeta" style={{ background: "var(--violeta-50)", fontSize: 13.5, lineHeight: 1.55 }}>
+              <div className="tarjeta" style={{ background: "var(--marca-50)", fontSize: 13.5, lineHeight: 1.55 }}>
                 {consentimiento?.texto}
               </div>
               <div className="acciones-modal">

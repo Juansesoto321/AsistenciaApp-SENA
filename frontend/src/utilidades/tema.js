@@ -21,7 +21,7 @@ export function leerPreferencia() {
 export function aplicarTema(preferencia = leerPreferencia()) {
   const oscuro = preferencia === "oscuro" || (preferencia === "sistema" && !!consultaOscuro()?.matches);
   document.documentElement.dataset.tema = oscuro ? "oscuro" : "claro";
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", oscuro ? "#0d0a20" : "#17123a");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", oscuro ? "#071209" : "#0e2310");
 }
 
 export function cambiarPreferencia(preferencia) {
