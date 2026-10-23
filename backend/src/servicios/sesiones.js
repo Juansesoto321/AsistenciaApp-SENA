@@ -8,6 +8,8 @@ const modelo = require("../modelos/sesiones");
 const { enTransaccion } = require("../modelos/transaccion");
 const { enviarCorreo } = require("./correo");
 const { auditar } = require("./auditoria");
+const { ventanaMarcacion } = require("./configuracion");
+const logs = require("./logs");
 const { emitirASesion, emitirNotificacionNueva } = require("./tiempoReal");
 const { error } = require("../utilidades/errores");
 const { escaparHtml, fechaLarga, textoPlazo } = require("../utilidades/formato");
@@ -176,16 +178,16 @@ async function registrarAsistenciaManual(idSesion, usuario, { id_aprendiz, estad
   return { mensaje: "Asistencia registrada manualmente" };
 }
 
-// Cierre de sesion: marca ausentes + genera enlaces de justificacion (72h) + notifica
-async function cerrarSesion(idSesion, usuario) {
-  const s = await modelo.buscarSesionParaCerrar(idSesion);
-  if (!s) throw error("Sesión no encontrada", "no_encontrado");
-  if (s.estado === "cerrada") throw error("La sesión ya está cerrada", "validacion");
-  verificarTitular(usuario, s.id_instructor, "cerrar la sesión");
-
-  const { ausentes, avisos } = await enTransaccion(async (cliente) => {
-    const sinRegistro = await modelo.marcarAusentesSinRegistro(cliente, idSesion, s.id_ficha);
-    await modelo.cerrarSesion(cliente, idSesion, usuario.id);
+/**
+ * Núcleo del cierre, manual o automático: marca ausentes a quienes no
+ * registraron, genera sus enlaces de justificación y, ya confirmado, los avisa.
+ * Devuelve cuántos quedaron ausentes, o null si otra petición la cerró antes.
+ */
+async function cerrarYAvisar(s, cerradaPor) {
+  const resultado = await enTransaccion(async (cliente) => {
+    // Primero el cierre: bloquea la fila, así dos cierres a la vez no duplican avisos
+    if (!(await modelo.cerrarSesion(cliente, s.id_sesion, cerradaPor))) return null;
+    const sinRegistro = await modelo.marcarAusentesSinRegistro(cliente, s.id_sesion, s.id_ficha);
 
     const horas = await modelo.obtenerHorasJustificacion(cliente);
     const pendientes = [];
@@ -198,12 +200,50 @@ async function cerrarSesion(idSesion, usuario) {
     }
     return { ausentes: sinRegistro.length, avisos: pendientes };
   });
+  if (!resultado) return null;
 
   // Ya confirmado el cierre: correos y avisos en vivo
-  await enviarAvisosDeInasistencia(avisos);
+  await enviarAvisosDeInasistencia(resultado.avisos);
+  emitirASesion(s.id_sesion, "sesion_cerrada", { automatico: cerradaPor === null, ausentes: resultado.ausentes });
+  return resultado.ausentes;
+}
+
+// Cierre de sesion: marca ausentes + genera enlaces de justificacion (72h) + notifica
+async function cerrarSesion(idSesion, usuario) {
+  const s = await modelo.buscarSesionParaCerrar(idSesion);
+  if (!s) throw error("Sesión no encontrada", "no_encontrado");
+  if (s.estado === "cerrada") throw error("La sesión ya está cerrada", "validacion");
+  verificarTitular(usuario, s.id_instructor, "cerrar la sesión");
+
+  const ausentes = await cerrarYAvisar(s, usuario.id);
+  if (ausentes === null) throw error("La sesión ya está cerrada", "validacion");
   await auditar(usuario.id, "cerrar_sesion_clase", "sesion_clase", Number(idSesion), { ausentes });
 
   return { mensaje: `Sesión cerrada. ${ausentes} aprendiz(es) marcados como ausentes y notificados` };
+}
+
+/**
+ * Cierra solas las clases que nadie cerró, igual que el cierre manual, cuando
+ * pasa la hora de fin más los minutos en que el lector todavía acepta huellas
+ * (Configuración). Antes quedaban abiertas para siempre: nadie quedaba ausente
+ * y la clase no contaba en reportes ni porcentajes. Devuelve cuántas cerró.
+ */
+async function cerrarSesionesVencidas() {
+  const { despues } = await ventanaMarcacion();
+  let cerradas = 0;
+  for (const s of await modelo.buscarSesionesVencidas(despues)) {
+    // Una sesión que falla no frena el cierre de las demás
+    try {
+      const ausentes = await cerrarYAvisar(s, null);
+      if (ausentes === null) continue;
+      cerradas++;
+      await auditar(null, "cerrar_sesion_clase", "sesion_clase", s.id_sesion, { ausentes, automatico: true });
+    } catch (e) {
+      console.error(`Cierre automático de la sesión ${s.id_sesion}:`, e.message);
+      logs.registrar({ mensaje: `Cierre automático de la sesión ${s.id_sesion}: ${e.message}`, ruta: "tareasProgramadas", traza: e.stack });
+    }
+  }
+  return cerradas;
 }
 
 // Elimina permanentemente una sesion y su asistencia/justificaciones asociadas.
@@ -220,4 +260,7 @@ async function eliminarSesion(idSesion, usuario) {
   return { mensaje: "Sesión eliminada permanentemente, junto con su asistencia y justificaciones" };
 }
 
-module.exports = { historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };
+module.exports = {
+  historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual,
+  cerrarSesion, cerrarSesionesVencidas, eliminarSesion,
+};

@@ -186,16 +186,36 @@ async function buscarNombreUsuario(idUsuario) {
   return r.rows[0] || null;
 }
 
+// Lo que necesita el cierre de una sesión, sea manual o automático
+const SESION_PARA_CERRAR =
+  `SELECT s.*, h.id_ficha, h.id_instructor, f.numero_ficha, h.hora_inicio, h.hora_fin
+   FROM sesion_clase s
+   JOIN horario h ON h.id_horario = s.id_horario
+   JOIN ficha f ON f.id_ficha = h.id_ficha`;
+
 async function buscarSesionParaCerrar(idSesion) {
-  const r = await pool.query(
-    `SELECT s.*, h.id_ficha, h.id_instructor, f.numero_ficha, h.hora_inicio, h.hora_fin
-     FROM sesion_clase s
-     JOIN horario h ON h.id_horario = s.id_horario
-     JOIN ficha f ON f.id_ficha = h.id_ficha
-     WHERE s.id_sesion = $1`,
-    [idSesion]
-  );
+  const r = await pool.query(`${SESION_PARA_CERRAR} WHERE s.id_sesion = $1`, [idSesion]);
   return r.rows[0] || null;
+}
+
+/**
+ * Sesiones abiertas cuya clase ya terminó: pasó la hora de fin más los minutos
+ * en que el lector todavía acepta huellas. Fecha y hora se comparan en la zona
+ * de la conexión (America/Bogota, ver config/db.js), igual que CURRENT_DATE.
+ * Una sesión abierta después de ese momento (para registrar a mano una clase
+ * que nadie inició) no se cierra en el acto: espera a que termine el día.
+ */
+async function buscarSesionesVencidas(minutosDespues) {
+  const r = await pool.query(
+    `${SESION_PARA_CERRAR}
+     WHERE s.estado = 'activa'
+       AND LOCALTIMESTAMP >= s.fecha + h.hora_fin + make_interval(mins => $1)
+       AND (s.hora_apertura::timestamp < s.fecha + h.hora_fin + make_interval(mins => $1)
+            OR s.fecha < CURRENT_DATE)
+     ORDER BY s.fecha, h.hora_fin`,
+    [minutosDespues]
+  );
+  return r.rows;
 }
 
 // Marca ausentes a quienes no registraron (CU-14 paso 5)
@@ -213,11 +233,15 @@ async function marcarAusentesSinRegistro(cliente, idSesion, idFicha) {
   return r.rows;
 }
 
+// Solo cierra si sigue abierta y dice si la cerró. Si el instructor y el cierre
+// automático coinciden, el segundo no marca ausentes ni manda correos otra vez.
+// cerradaPor es NULL cuando la cierra el sistema.
 async function cerrarSesion(cliente, idSesion, cerradaPor) {
-  await cliente.query(
-    "UPDATE sesion_clase SET estado = 'cerrada', hora_cierre = NOW(), cerrada_por = $1 WHERE id_sesion = $2",
+  const r = await cliente.query(
+    "UPDATE sesion_clase SET estado = 'cerrada', hora_cierre = NOW(), cerrada_por = $1 WHERE id_sesion = $2 AND estado = 'activa'",
     [cerradaPor, idSesion]
   );
+  return r.rowCount > 0;
 }
 
 // Elimina permanentemente una sesion y su asistencia/justificaciones asociadas.
@@ -316,6 +340,7 @@ module.exports = {
   insertarCambioAsistencia,
   buscarNombreUsuario,
   buscarSesionParaCerrar,
+  buscarSesionesVencidas,
   marcarAusentesSinRegistro,
   cerrarSesion,
   eliminarSesion,
