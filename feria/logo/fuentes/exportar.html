@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Exportar logo</title>
+<!-- Una sola página para todas las versiones: ?v=icono|horizontal-oscuro|horizontal-claro|vertical-oscuro|vertical-claro
+     y &fondo=1 para ponerle el fondo del color correspondiente (sin él, el PNG queda transparente). -->
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; background: transparent; }
+  body { display: grid; place-items: center; font-family: "Bahnschrift", "Segoe UI", sans-serif; }
+  body.fondo-oscuro { background: #0c0d0d; }
+  body.fondo-claro { background: #f3f6f0; }
+  img { display: block; }
+  .icono img { width: 100vmin; height: 100vmin; }
+  .horizontal { display: flex; align-items: center; gap: 70px; }
+  .horizontal img { width: 380px; height: 380px; }
+  .vertical { display: grid; justify-items: center; gap: 56px; text-align: center; }
+  .vertical img { width: 420px; height: 420px; }
+  .nombre { font-size: 200px; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
+  .nombre b { background: linear-gradient(180deg, #46ef7d, #0e9f6e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sena { margin-top: 30px; font-size: 76px; font-weight: 700; letter-spacing: 0.42em; }
+  .vertical .sena { margin-right: -0.42em; }
+  .oscuro { color: #ffffff; } .oscuro .sena { color: #4ade80; }
+  .claro { color: #14201a; } .claro .sena { color: #1f9d4a; }
+</style>
+</head>
+<body>
+<script>
+  const q = new URLSearchParams(location.search);
+  const v = q.get("v") || "icono";
+  const tono = v.endsWith("claro") ? "claro" : "oscuro";
+  if (q.get("fondo")) document.body.classList.add(`fondo-${tono}`);
+  const texto = `<div><div class="nombre">Asistencia<b>App</b></div><div class="sena">SENA</div></div>`;
+  document.body.innerHTML = v === "icono"
+    ? `<div class="icono"><img src="../logo-icono.svg" alt=""></div>`
+    : `<div class="${v.split("-")[0]} ${tono}"><img src="../logo-icono.svg" alt="">${texto}</div>`;
+</script>
+</body>
+</html>
