@@ -470,8 +470,10 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .barra-superior, .fondo-menu, .boton-menu.cerrar-menu { display: none; }
 .boton-menu:hover { background: var(--capa); }
 
-/* min-width: 0 evita que un contenido ancho (el calendario) empuje la página hacia la derecha */
-.contenido { position: relative; padding: 28px 32px; max-width: 1200px; min-width: 0; }
+/* min-width: 0 evita que un contenido ancho (el calendario) empuje la página hacia la derecha.
+   Ocupa todo el ancho hasta 1680 px (una pantalla de 1920 queda llena); en pantallas más
+   anchas, o al alejar el zoom, se centra en vez de quedarse pegado a la izquierda. */
+.contenido { position: relative; padding: 28px 32px; width: 100%; max-width: 1680px; margin: 0 auto; min-width: 0; }
 .cabecera-pagina { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 14px; flex-wrap: wrap; }
 
 /* ---- Acciones de la cuenta (AccionesCuenta.jsx) ----
