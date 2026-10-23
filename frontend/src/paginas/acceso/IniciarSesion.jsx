@@ -7,6 +7,7 @@ import CampoContrasena from "../../componentes/CampoContrasena.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { esperaMinima, reducirMovimiento } from "../../utilidades/movimiento";
+import { useTitulo } from "../../utilidades/titulo";
 
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LECTURA_MINIMA_MS = 650;
@@ -38,6 +39,7 @@ export default function IniciarSesion() {
   const [intento, setIntento] = useState(0);
   const [nombre, setNombre] = useState("");
   const temporizador = useRef(null);
+  useTitulo(recuperando ? "Recupera tu contraseña" : "Inicia sesión");
 
   useEffect(() => () => clearTimeout(temporizador.current), []);
 

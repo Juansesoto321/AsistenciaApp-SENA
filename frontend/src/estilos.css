@@ -2,8 +2,9 @@
    AsistenciaApp SENA · Sistema de diseño
    Identidad: verde institucional del SENA (#39A900, Manual de Identidad
    Visual, Resolución 1825 de 2024). El verde oficial va en el recuadro del
-   logo y al final del degradado; texto y enlaces usan tonos más oscuros
-   del mismo verde para leerse bien sobre blanco (contraste AA).
+   logo, los brillos y los arcos del fondo; texto, enlaces y los degradados
+   con texto blanco encima usan tonos más oscuros del mismo verde para
+   leerse bien (contraste AA, 4,5:1).
    Estilo: vidrio y luz. Las tarjetas, el menú y las pantallas de acceso son
    de vidrio (translúcido y borroso) sobre un fondo con arcos de luz
    (FondoNeon.jsx). El tema oscuro (el de por defecto) es negro con luces
@@ -17,12 +18,15 @@
   --marca-500: #39a900;
   --marca-100: #e2f2d6;
   --marca-50:  #f2f8ec;
-  --gradiente: linear-gradient(120deg, #236c00 0%, #2b8300 55%, #39a900 100%);
+  /* Fondo de botones y avatar: el texto blanco queda en 4,5:1 o más en todo el degradado */
+  --gradiente: linear-gradient(120deg, #236c00 0%, #2b8000 55%, #2e8700 100%);
   --tinta-fuerte: #101a12;
   --tinta: #1b2319;
   --tinta-media: #3f4b3b;
   --tinta-suave: #5e6b59;
   --borde: #dfe6da;
+  /* Borde de los campos de formulario: 3:1 contra el vidrio para que se vean (WCAG 1.4.11) */
+  --borde-campo: #869281;
   --fondo: #f3f6f0;
   --blanco: #ffffff;
   --verde: #15803d;  --verde-suave: #dcfce7;
@@ -44,7 +48,7 @@
   --sombra-acceso: 0 30px 80px rgba(20, 60, 15, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --menu-fondo: rgba(255, 255, 255, 0.68);
   --menu-borde: rgba(20, 60, 15, 0.08);
-  --menu-activo: linear-gradient(90deg, #2e9600, #238a1a);
+  --menu-activo: linear-gradient(90deg, #2a8500, #1f7a17); /* texto blanco a 4,7:1 o más */
   /* Capas tenues sobre el menú y las pantallas del lector (botones, bordes, píldoras) */
   --capa: rgba(20, 60, 15, 0.05);
   --capa-borde: rgba(20, 60, 15, 0.12);
@@ -85,19 +89,21 @@
   --marca-500: #39c45f;
   --marca-100: rgba(62, 230, 122, 0.14);
   --marca-50:  rgba(255, 255, 255, 0.045);
-  --gradiente: linear-gradient(90deg, #39a900 0%, #1e8a2e 45%, #0e6a63 100%);
+  --gradiente: linear-gradient(90deg, #2a8500 0%, #1e7a2c 45%, #0e6a63 100%);
   --tinta-fuerte: #ffffff;
   --tinta: #ececec;
   --tinta-media: #c4c8c6;
   --tinta-suave: #a4a9a6;
   --borde: rgba(255, 255, 255, 0.11);
+  --borde-campo: rgba(255, 255, 255, 0.38);
   --fondo: #0c0d0d;
   --blanco: #161918;
   --verde: #4ade80;  --verde-suave: rgba(74, 222, 128, 0.13);
   --ambar: #fbbf24;  --ambar-suave: rgba(251, 191, 36, 0.12);
   --rojo: #f87171;   --rojo-suave: rgba(248, 113, 113, 0.12);
   --azul: #7ea6ff;   --azul-suave: rgba(126, 166, 255, 0.13);
-  --verde-solido: #16a34a; --ambar-solido: #c2610c; --rojo-solido: #dc2626; --azul-solido: #2563eb;
+  /* El verde y el ámbar sólidos quedan los del tema claro: más claros, el texto blanco no llega a 4,5:1 */
+  --rojo-solido: #dc2626; --azul-solido: #2563eb;
   --fila-hover: rgba(255, 255, 255, 0.035);
   --ambar-borde: rgba(251, 191, 36, 0.4);
   --rojo-borde: rgba(248, 113, 113, 0.5);
@@ -140,14 +146,15 @@ h1,h2,h3 { font-weight: 700; letter-spacing: -0.02em; }
 a { color: var(--marca-600); text-decoration: none; }
 button { font: inherit; cursor: pointer; }
 input, select, textarea {
-  font: inherit; width: 100%; padding: 10px 12px; border: 1.5px solid var(--borde);
+  font: inherit; width: 100%; padding: 10px 12px; border: 1.5px solid var(--borde-campo);
   border-radius: 10px; background: var(--blanco); color: var(--tinta);
 }
 /* El navegador pinta las <option> con su propio fondo del sistema, sin heredar
    fondos translúcidos/oscuros del <select> — se fija explícito para que nunca
    quede texto invisible (blanco sobre blanco) en ningún desplegable. */
 select option { background: var(--blanco); color: var(--tinta); }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--marca-500); border-color: transparent; }
+/* Los contornos de foco usan --marca-600: en claro #39a900 no llega a 3:1 sobre el fondo */
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--marca-600); border-color: transparent; }
 /* Selector de archivo: zona punteada con un botón de la app, en vez del
    control gris del navegador */
 input[type="file"] {
@@ -161,7 +168,7 @@ input[type="file"]::file-selector-button {
 input[type="file"]:hover { border-color: var(--marca-500); }
 input[type="file"]:hover::file-selector-button { background: var(--marca-50); }
 /* Foco visible al navegar con teclado (no aparece al hacer clic) */
-a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--marca-500); outline-offset: 2px; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--marca-600); outline-offset: 2px; }
 label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }
 
 /* ---- Pantallas de acceso ---- */
@@ -217,7 +224,8 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
   display: block; font-family: var(--fuente-lector); font-weight: 300; font-stretch: 85%;
   font-size: clamp(64px, 6.5vw, 104px); line-height: 1; font-variant-numeric: tabular-nums; color: var(--tinta-fuerte);
 }
-.login-dos-puntos { animation: parpadeo 2s steps(1) infinite; }
+/* Parpadea dos veces y se queda fijo: un parpadeo de más de 5 s distrae (WCAG 2.2.2) */
+.login-dos-puntos { animation: parpadeo 2s steps(1) 2; }
 @keyframes parpadeo { 50% { opacity: 0.25; } }
 .login-fecha { display: block; margin-top: 10px; color: var(--tinta-media); font-size: 19px; }
 
@@ -320,7 +328,7 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .login-campo-icono.junto-ojo { right: 58px; }
 .login-clave input { padding-right: 96px !important; }
 .login-ver-clave {
-  position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 40px; height: 40px;
+  position: absolute; right: 4px; top: 50%; translate: 0 -50%; width: 44px; height: 44px;
   display: grid; place-items: center; border: none; border-radius: 10px; background: transparent; color: var(--tinta-media);
 }
 .login-ver-clave svg { width: 22px; height: 22px; }
@@ -385,7 +393,7 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .marca .icono { width: 38px; height: 38px; border-radius: 11px; background: var(--verde-sena); color: #fff; display: grid; place-items: center; font-size: 19px; flex-shrink: 0; }
 .marca small { display: block; color: var(--tinta-suave); font-size: 11px; font-weight: 500; }
 .marca .marca-sena { color: var(--marca-600); font-size: 12px; font-weight: 700; letter-spacing: .12em; }
-.marca .boton-compacto { margin-left: auto; }
+.marca .boton-compacto { margin-left: auto; width: 44px; height: 44px; flex-shrink: 0; }
 /* min-height: 0 + overflow: el menú se desplaza en pantallas bajas y el pie del usuario
    queda fijo abajo. La barra es delgada y del color del menú, pero siempre se ve: antes
    era transparente hasta pasar el mouse y "Soporte" parecía tapado por el pie. */
@@ -432,6 +440,9 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 }
 .barra-lateral nav a:hover { background: var(--capa); }
 .barra-lateral nav a.activo { background: var(--menu-activo); color: #fff; font-weight: 600; box-shadow: 0 0 18px rgba(57, 169, 0, 0.3); }
+/* El foco va por dentro del enlace: por fuera lo cortaba el borde del menú (overflow) */
+.barra-lateral nav a:focus-visible { outline-offset: -2px; }
+.barra-lateral nav a.activo:focus-visible { outline-color: #fff; }
 .enlace-menu { display: inline-flex; align-items: center; gap: 10px; }
 .contador-notif {
   background: var(--rojo-solido); color: #fff; border-radius: 999px; min-width: 18px; height: 18px;
@@ -470,10 +481,19 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .barra-superior, .fondo-menu, .boton-menu.cerrar-menu { display: none; }
 .boton-menu:hover { background: var(--capa); }
 
+/* Saltar al contenido: el primer Tab de cada página; escondido arriba hasta recibir el foco */
+.saltar-contenido {
+  position: fixed; top: 10px; left: 10px; z-index: 80; padding: 10px 16px; border-radius: 10px;
+  background: var(--blanco); color: var(--tinta-fuerte); font-weight: 600; box-shadow: var(--sombra);
+  border: 1px solid var(--vidrio-borde); transform: translateY(-200%);
+}
+.saltar-contenido:focus { transform: none; }
+
 /* min-width: 0 evita que un contenido ancho (el calendario) empuje la página hacia la derecha.
    Ocupa todo el ancho hasta 1680 px (una pantalla de 1920 queda llena); en pantallas más
    anchas, o al alejar el zoom, se centra en vez de quedarse pegado a la izquierda. */
 .contenido { position: relative; padding: 28px 32px; width: 100%; max-width: 1680px; margin: 0 auto; min-width: 0; }
+.contenido:focus-visible { outline: none; } /* recibe el foco desde "Saltar al contenido" */
 .cabecera-pagina { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 14px; flex-wrap: wrap; }
 
 /* ---- Acciones de la cuenta (AccionesCuenta.jsx) ----
@@ -533,23 +553,31 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
   background: none; color: var(--tinta); font: inherit; font-size: 14px; font-weight: 500; text-align: left;
 }
 .opcion-cuenta svg { width: 18px !important; height: 18px !important; color: var(--tinta-suave); }
-.opcion-cuenta:hover, .opcion-cuenta:focus-visible { background: var(--capa); outline: none; }
+.opcion-cuenta:hover, .opcion-cuenta:focus-visible { background: var(--capa); }
+/* El fondo tenue solo no se distingue al usar el teclado: también lleva el contorno */
+.opcion-cuenta:focus-visible { outline: 2px solid var(--marca-600); outline-offset: -2px; }
 .opcion-cuenta.salir, .opcion-cuenta.salir svg { color: var(--rojo); }
 .opcion-cuenta.salir:hover, .opcion-cuenta.salir:focus-visible { background: var(--rojo-suave); }
 
 @media (max-width: 860px) {
   /* En celular van dentro de la barra superior, sin la píldora */
   .acciones-cuenta {
-    position: fixed; top: 9px; right: 8px; z-index: 31; padding: 0; gap: 2px;
+    position: fixed; top: 9px; right: 8px; z-index: 31; padding: 0; gap: 8px;
     background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
   }
   /* Tres botones de 36 px: el nombre "AsistenciaApp SENA" cabe entero en 375 px */
-  .barra-superior { padding-right: 126px !important; }
+  .barra-superior { padding-right: 140px !important; }
   .marca-mini { min-width: 0; }
   .marca-mini-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .separador-acciones { display: none; }
   .contenido .cabecera-pagina { padding-right: 0; min-height: 0; }
   .accion-cuenta, .avatar-cuenta { width: 36px; height: 36px; }
+  /* Área táctil de 44 px (WCAG 2.5.5) sin agrandar los círculos: el ::after la extiende
+     4 px por lado; con 8 px entre botones las áreas se tocan sin montarse */
+  button.avatar-cuenta { position: relative; }
+  .barra-superior .boton-menu::after, .accion-cuenta::after, button.avatar-cuenta::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  }
 }
 @media (prefers-reduced-motion: reduce) { .menu-cuenta { animation: none; } }
 .cabecera-pagina h1 { font-size: 23px; }
@@ -625,20 +653,26 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
      páginas cortas, sin esto la barra se estiraba para llenar la pantalla) */
   .aplicacion { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .barra-superior {
-    display: flex; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 4px; position: sticky; top: 0; z-index: 30;
     background: var(--menu-fondo); border-bottom: 1px solid var(--menu-borde); color: var(--tinta-fuerte); padding: 8px 10px;
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
-  .marca-mini { flex: 1; display: flex; align-items: center; gap: 9px; color: var(--tinta-fuerte); font-weight: 700; font-size: 16px; }
+  .marca-mini { flex: 1; display: flex; align-items: center; gap: 7px; color: var(--tinta-fuerte); font-weight: 700; font-size: 15px; }
   .marca-mini .icono { width: 32px; height: 32px; border-radius: 9px; background: var(--verde-sena); color: #fff; display: grid; place-items: center; }
-  /* El menú lateral pasa a ser un cajón que entra desde la izquierda */
+  /* El menú lateral pasa a ser un cajón que entra desde la izquierda. Cerrado
+     queda oculto (visibility) para que el teclado no recorra enlaces que no se
+     ven; al cerrar, se oculta cuando termina de salir. */
   .barra-lateral {
     position: fixed; top: 0; left: 0; bottom: 0; height: auto; width: min(280px, 84vw); z-index: 50;
-    overflow-y: auto; transform: translateX(-100%); transition: transform .22s ease;
+    overflow-y: auto; transform: translateX(-100%); visibility: hidden;
+    transition: transform .22s ease, visibility 0s linear .22s;
   }
-  .barra-lateral.abierta { transform: translateX(0); box-shadow: 10px 0 34px rgba(0,0,0,.35); }
+  .barra-lateral.abierta {
+    transform: translateX(0); visibility: visible; transition: transform .22s ease;
+    box-shadow: 10px 0 34px rgba(0,0,0,.35);
+  }
   .marca { position: relative; }
-  .boton-menu.cerrar-menu { display: grid; margin-left: auto; }
+  .boton-menu.cerrar-menu { display: grid; margin-left: auto; width: 44px; height: 44px; }
   .fondo-menu {
     display: block; position: fixed; inset: 0; z-index: 45; background: var(--velo);
     opacity: 0; pointer-events: none; transition: opacity .2s;
@@ -767,7 +801,8 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 
 /* Notificaciones: ícono por tipo de aviso */
 .notificacion { display: flex; align-items: center; gap: 14px; }
-.notificacion.leida { opacity: .62; }
+/* Leída: solo se apaga el ícono; el texto conserva su contraste ("Sin leer" marca las otras) */
+.notificacion.leida .icono-notificacion { opacity: .5; }
 .icono-notificacion { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
 .icono-notificacion.rojo { background: var(--rojo-suave); color: var(--rojo); }
 .icono-notificacion.verde { background: var(--verde-suave); color: var(--verde); }
@@ -1032,7 +1067,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
   background: var(--marca-50); border: 1.5px solid var(--borde); border-radius: 999px; padding: 4px;
   cursor: pointer; touch-action: none; user-select: none;
 }
-.barra-deslizante:focus-visible { outline: 2px solid var(--marca-500); outline-offset: 3px; }
+.barra-deslizante:focus-visible { outline: 2px solid var(--marca-600); outline-offset: 3px; }
 .barra-deslizante .pulgar {
   position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n));
   transform: translateX(calc(100% * var(--i))); background: var(--color); border-radius: 999px;

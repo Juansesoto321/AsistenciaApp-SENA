@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../servicios/api";
 import { conectarTiempoReal } from "../servicios/socket";
 import { useAuth } from "../contexto/AuthContext.jsx";
+import { useTitulo } from "../utilidades/titulo";
 import Logo from "./Logo.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
@@ -72,6 +73,8 @@ const MENUS = {
 const NOMBRE_PAGINA = Object.fromEntries(
   Object.values(MENUS).flat().filter(Array.isArray).map(([ruta, , nombre]) => [ruta, nombre])
 );
+// Páginas que no están en el menú (se abren desde las acciones de la cuenta), para el título
+const OTRAS_PAGINAS = { "/notificaciones": "Notificaciones", "/perfil": "Mi perfil", "/soporte": "Soporte" };
 
 const CLAVE_COMPACTO = "asistenciaapp.menu-compacto";
 function leerCompacto() {
@@ -96,7 +99,16 @@ export default function Diseno({ children }) {
   const [compacto, setCompacto] = useState(() => leerCompacto()); // menú solo con íconos (computador)
   const [hayMas, setHayMas] = useState(false); // quedan opciones del menú más abajo
   const menuRef = useRef(null);
+  const abrirMenuRef = useRef(null);
+  const cerrarMenuRef = useRef(null);
+  const contenidoRef = useRef(null);
+  const devolverFoco = useRef(false); // al cerrar el cajón con Escape o la X, el foco vuelve a "Abrir menú"
   const revisaJustificaciones = ["instructor", "coordinador"].includes(usuario.rol); // el programador solo las consulta
+
+  // Título de la pestaña: el nombre de la página en el menú de este rol; las de
+  // detalle (/fichas/12, /sesiones/5) toman el de su sección
+  const paginaActual = menu.find((e) => Array.isArray(e) && (pathname === e[0] || pathname.startsWith(`${e[0]}/`)));
+  useTitulo(paginaActual?.[2] || OTRAS_PAGINAS[pathname]);
 
   function alternarCompacto() {
     const nuevo = !compacto;
@@ -144,21 +156,54 @@ export default function Diseno({ children }) {
     navegar(pathname, { replace: true, state: null }); // que no se repita al recargar
   }, [state]);
 
+  function cerrarMenu() {
+    devolverFoco.current = true;
+    setMenuAbierto(false);
+  }
+
+  function saltarAlContenido(e) {
+    e.preventDefault();
+    contenidoRef.current?.focus();
+  }
+
   // En celular el menú se cierra al cambiar de página o con la tecla Escape
   useEffect(() => { setMenuAbierto(false); }, [pathname]);
   useEffect(() => {
     if (!menuAbierto) return undefined;
-    const alTeclear = (e) => { if (e.key === "Escape") setMenuAbierto(false); };
+    const alTeclear = (e) => { if (e.key === "Escape") cerrarMenu(); };
     window.addEventListener("keydown", alTeclear);
     return () => window.removeEventListener("keydown", alTeclear);
   }, [menuAbierto]);
 
+  // Al abrir el cajón el foco entra en él (el resto queda inerte detrás del velo);
+  // al cerrarlo vuelve al botón que lo abrió
+  useEffect(() => {
+    if (menuAbierto) cerrarMenuRef.current?.focus();
+    else if (devolverFoco.current) {
+      devolverFoco.current = false;
+      abrirMenuRef.current?.focus();
+    }
+  }, [menuAbierto]);
+
+  // Si la pantalla se ensancha con el cajón abierto (al girar una tableta), se
+  // cierra: en computador no hay cajón y la página quedaría inerte
+  useEffect(() => {
+    const ancha = window.matchMedia("(min-width: 861px)");
+    const alCambiar = () => { if (ancha.matches) setMenuAbierto(false); };
+    ancha.addEventListener("change", alCambiar);
+    return () => ancha.removeEventListener("change", alCambiar);
+  }, []);
+
+  // "inert" (atributo HTML): React 18 no lo conoce como booleano, va como texto vacío
+  const inerte = menuAbierto ? "" : undefined;
+
   return (
     <div className={`aplicacion${compacto ? " compacta" : ""}`}>
+      <a href="#contenido" className="saltar-contenido" onClick={saltarAlContenido}>Saltar al contenido</a>
       <FondoNeon tenue />
       {/* Barra superior: solo se ve en celulares y tabletas (ver estilos.css) */}
-      <header className="barra-superior">
-        <button className="boton-menu" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú" aria-expanded={menuAbierto}>
+      <header className="barra-superior" inert={inerte}>
+        <button ref={abrirMenuRef} className="boton-menu" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú" aria-expanded={menuAbierto}>
           <Icono nombre="menu" size="1.4em" />
         </button>
         <Link to="/panel" className="marca-mini">
@@ -167,7 +212,7 @@ export default function Diseno({ children }) {
         </Link>
       </header>
 
-      <div className={`fondo-menu ${menuAbierto ? "visible" : ""}`} onClick={() => setMenuAbierto(false)} aria-hidden="true" />
+      <div className={`fondo-menu ${menuAbierto ? "visible" : ""}`} onClick={cerrarMenu} aria-hidden="true" />
 
       <aside className={`barra-lateral ${menuAbierto ? "abierta" : ""}`} aria-label="Menú principal">
         <div className="marca">
@@ -182,7 +227,7 @@ export default function Diseno({ children }) {
             title={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"} aria-label={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"}>
             <Icono nombre={compacto ? "expandir" : "contraer"} size="1.15em" />
           </button>
-          <button className="boton-menu cerrar-menu" onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú">
+          <button ref={cerrarMenuRef} className="boton-menu cerrar-menu" onClick={cerrarMenu} aria-label="Cerrar menú">
             <Icono nombre="cerrar" size="1.2em" />
           </button>
         </div>
@@ -190,9 +235,11 @@ export default function Diseno({ children }) {
           {menu.map((entrada) => {
             if (typeof entrada === "string") return <p key={entrada} className="grupo-menu">{entrada}</p>;
             const [ruta, icono, nombre] = entrada;
+            // Solo con íconos el nombre va en aria-label, que tapa el número: se incluye aquí
+            const etiqueta = contadores[ruta] ? `${nombre}: ${contadores[ruta]} por revisar` : nombre;
             return (
               <NavLink key={ruta} to={ruta} className={({ isActive }) => (isActive ? "activo" : "")}
-                title={compacto ? nombre : undefined} aria-label={compacto ? nombre : undefined}>
+                title={compacto ? etiqueta : undefined} aria-label={compacto ? etiqueta : undefined}>
                 <span className="enlace-menu">{icono} <span className="texto-menu">{nombre}</span></span>
                 <Contador valor={contadores[ruta]} />
               </NavLink>
@@ -200,7 +247,7 @@ export default function Diseno({ children }) {
           })}
         </nav>
       </aside>
-      <main className="contenido">
+      <main className="contenido" id="contenido" ref={contenidoRef} tabIndex={-1} inert={inerte}>
         <AccionesCuenta notificaciones={notifPendientes} />
         {children}
       </main>

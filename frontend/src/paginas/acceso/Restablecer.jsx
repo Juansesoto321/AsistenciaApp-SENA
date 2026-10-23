@@ -6,6 +6,7 @@ import CampoContrasena from "../../componentes/CampoContrasena.jsx";
 import ReglasContrasena, { REGLAS_CONTRASENA, reglasCumplidas } from "../../componentes/ReglasContrasena.jsx";
 import { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { esperaMinima } from "../../utilidades/movimiento";
+import { useTitulo } from "../../utilidades/titulo";
 
 const TEXTO_ESTADO = {
   espera: "Crea tu nueva contraseña",
@@ -21,6 +22,7 @@ export default function Restablecer() {
   const [mensaje, setMensaje] = useState(null);
   const [estado, setEstado] = useState("espera");
   const [intento, setIntento] = useState(0);
+  useTitulo("Nueva contraseña");
 
   const escribir = (cambiar) => (e) => {
     cambiar(e.target.value);
