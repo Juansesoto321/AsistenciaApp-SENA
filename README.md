@@ -327,6 +327,17 @@ simulador por defecto), ambiente 305, ficha 3141592.
 7. **Instructor** → Justificaciones → *Aprobar* → la ausencia pasa a **justificada**.
 8. **Aprendiz** (Julieth Camila) → *Mi asistencia*: anillo de porcentaje y alerta si baja del 80 %.
 
+## Cierre automático de clases
+
+Si nadie cierra la clase, el backend la cierra solo cuando termina: al pasar la hora de fin del horario más los *minutos después del fin para marcar* (Configuración, 10 por defecto), que es cuando el lector deja de aceptar huellas para esa clase. Lo revisa cada minuto y hace lo mismo que el cierre manual:
+
+- los aprendices que no marcaron quedan ausentes y reciben por correo el enlace para justificar (sin `CORREO_HOST`, el correo solo se imprime en la consola del backend);
+- la clase empieza a contar en reportes y porcentajes, que solo tienen en cuenta clases cerradas;
+- queda en la auditoría como `cerrar_sesion_clase` sin usuario y con `automatico: true`, y en la sesión `cerrada_por` queda en NULL;
+- si el instructor tiene abierta la clase en vivo, la pantalla se actualiza sola.
+
+Una clase que se abre cuando ya terminó, por ejemplo para registrar a mano una clase que nadie inició, no se cierra en el acto: espera hasta el día siguiente.
+
 ## Del simulador al lector real
 
 El backend expone dos contratos que puede consumir un dispositivo:

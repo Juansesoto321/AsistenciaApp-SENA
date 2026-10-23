@@ -908,3 +908,71 @@ prueba("un apellido largo se guarda completo (no se recorta)", async () => {
   const { rows } = await e.pool.query("SELECT apellidos FROM usuario WHERE correo = 'largo@prueba.co'");
   assert.equal(rows[0].apellidos, apellidos);
 });
+
+// ---------- Cierre automático de clases ----------
+
+prueba("la clase que terminó y nadie cerró se cierra sola, como la manual; la que sigue o se abrió tarde hoy, no", async () => {
+  const { cerrarSesionesVencidas } = require("../../src/servicios/sesiones");
+  // Clases sueltas de la ficha, en horas que ninguna otra prueba usa
+  const clase = async (inicio, fin) => (await e.pool.query(
+    `INSERT INTO horario (id_ficha, id_ambiente, id_instructor, id_periodo, dia_semana, hora_inicio, hora_fin)
+     VALUES ($1, $2, $3, $4, 0, $5, $6) RETURNING id_horario`,
+    [e.ids.ficha, e.ids.otroAmbiente, e.ids.instructor, e.ids.periodo, inicio, fin]
+  )).rows[0].id_horario;
+  const abrir = async (idHorario, fecha, apertura) => (await e.pool.query(
+    `INSERT INTO sesion_clase (id_horario, fecha, hora_apertura) VALUES ($1, ${fecha}, ${apertura}) RETURNING id_sesion`,
+    [idHorario]
+  )).rows[0].id_sesion;
+
+  // Ayer de 07:00 a 09:00, abierta a tiempo y nunca cerrada: Ana marcó, Beto no
+  const terminada = await abrir(await clase("07:00", "09:00"), "CURRENT_DATE - 1", "(CURRENT_DATE - 1) + TIME '07:05'");
+  await e.pool.query(
+    "INSERT INTO asistencia (id_sesion, id_aprendiz, estado, hora_marca, metodo) VALUES ($1, $2, 'presente', NOW(), 'huella')",
+    [terminada, e.ids.aprendiz]
+  );
+  // Abierta ayer cuando la clase ya había terminado (para registrar a mano): espera al día siguiente
+  const tardeAyer = await abrir(await clase("00:02", "00:03"), "CURRENT_DATE - 1", "(CURRENT_DATE - 1) + TIME '20:00'");
+  // Hoy: una que todavía no termina y otra abierta tarde, que se cierran después
+  const enCurso = await abrir(await clase("00:00", "23:58"), "CURRENT_DATE", "NOW()");
+  const tardeHoy = await abrir(await clase("00:00", "00:01"), "CURRENT_DATE", "NOW()");
+
+  await cerrarSesionesVencidas();
+
+  const estado = async (id) =>
+    (await e.pool.query("SELECT estado, cerrada_por FROM sesion_clase WHERE id_sesion = $1", [id])).rows[0];
+  assert.deepEqual(await estado(terminada), { estado: "cerrada", cerrada_por: null }); // la cerró el sistema
+  assert.equal((await estado(tardeAyer)).estado, "cerrada");
+  assert.equal((await estado(enCurso)).estado, "activa");
+  assert.equal((await estado(tardeHoy)).estado, "activa");
+
+  // Igual que el cierre manual: Beto queda ausente con enlace y aviso; Ana conserva su marca
+  const { rows } = await e.pool.query(
+    `SELECT a.id_aprendiz, a.estado, a.metodo, j.token IS NOT NULL AS con_enlace
+     FROM asistencia a LEFT JOIN justificacion j ON j.id_asistencia = a.id_asistencia
+     WHERE a.id_sesion = $1`,
+    [terminada]
+  );
+  assert.equal(rows.find((r) => r.id_aprendiz === e.ids.aprendiz).estado, "presente");
+  const beto = rows.find((r) => r.id_aprendiz === e.ids.ausente);
+  assert.deepEqual([beto.estado, beto.metodo, beto.con_enlace], ["ausente", "sistema", true]);
+  const aviso = await e.pool.query(
+    "SELECT 1 FROM notificacion WHERE id_usuario = $1 AND titulo = 'Inasistencia registrada' AND mensaje LIKE '%(07:00–09:00, ficha 999999)%'",
+    [e.ids.ausente]
+  );
+  assert.equal(aviso.rows.length, 1);
+  const auditoria = await e.pool.query(
+    "SELECT id_usuario, detalle FROM auditoria WHERE accion = 'cerrar_sesion_clase' AND id_entidad = $1", [terminada]
+  );
+  assert.equal(auditoria.rows.length, 1);
+  assert.equal(auditoria.rows[0].id_usuario, null);
+  assert.deepEqual(auditoria.rows[0].detalle, { ausentes: rows.filter((r) => r.estado === "ausente").length, automatico: true });
+
+  // El minuto siguiente no vuelve a cerrarlas ni a avisar, y el instructor ya no puede cerrarla
+  await cerrarSesionesVencidas();
+  const cierres = await e.pool.query(
+    "SELECT COUNT(*)::int AS n FROM auditoria WHERE accion = 'cerrar_sesion_clase' AND id_entidad = ANY($1)", [[terminada, tardeAyer]]
+  );
+  assert.equal(cierres.rows[0].n, 2);
+  const manual = await e.peticion("POST", `/api/sesiones/${terminada}/cerrar`, { token: tokens.instructor });
+  assert.equal(manual.estado, 400);
+});

@@ -69,6 +69,12 @@ export default function SesionEnVivo() {
     socket.on("huella_no_reconocida", () => {
       alertar("Huella no reconocida en el lector. Si el aprendiz insiste, usa el registro manual.");
     });
+    // La cerró el sistema al terminar la clase (o el instructor desde otra pantalla)
+    socket.on("sesion_cerrada", (c) => {
+      if (c.automatico)
+        setMensaje({ tipo: "exito", texto: `La clase terminó y se cerró sola: ${c.ausentes} aprendiz(es) quedaron ausentes y recibieron el enlace para justificar.` });
+      cargar();
+    });
     // La sesión está abierta, pero la huella llegó fuera del horario de la clase
     socket.on("marca_fuera_de_horario", (m) => {
       alertar(
