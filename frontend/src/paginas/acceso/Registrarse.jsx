@@ -6,6 +6,7 @@ import CampoContrasena from "../../componentes/CampoContrasena.jsx";
 import ReglasContrasena, { contrasenaValida } from "../../componentes/ReglasContrasena.jsx";
 import { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { esperaMinima } from "../../utilidades/movimiento";
+import { useTitulo } from "../../utilidades/titulo";
 
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Instructores y programadores usan el correo institucional; los aprendices, el que tengan
@@ -25,6 +26,7 @@ export default function Registrarse() {
   const [mensaje, setMensaje] = useState(null);
   const [estado, setEstado] = useState("espera");
   const [intento, setIntento] = useState(0);
+  useTitulo("Crea tu cuenta");
   const c = (k) => (e) => {
     setF({ ...f, [k]: e.target.value });
     if (estado === "error") setEstado("espera");

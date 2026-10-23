@@ -4,6 +4,7 @@ import { api } from "../../servicios/api";
 import Icono from "../../componentes/Iconos.jsx";
 import FondoNeon from "../../componentes/FondoNeon.jsx";
 import { fechaCorta, fechaHora } from "../../utilidades/formato";
+import { useTitulo } from "../../utilidades/titulo";
 
 const TIPOS = [
   { valor: "cita_medica", etiqueta: "Cita médica" },
@@ -25,6 +26,7 @@ export default function JustificarPublico() {
   const [archivo, setArchivo] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  useTitulo("Justificar inasistencia");
 
   useEffect(() => {
     api(`/justificaciones/token/${token}`).then(setInfo).catch((e) => setError(e.message));
