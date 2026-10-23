@@ -5,6 +5,7 @@
 const justificacionesModelo = require("../modelos/justificaciones");
 const dispositivoModelo = require("../modelos/dispositivo");
 const academicoModelo = require("../modelos/academico");
+const sesiones = require("./sesiones");
 const logs = require("./logs");
 const { emitirNotificacionNueva } = require("./tiempoReal");
 
@@ -26,6 +27,7 @@ async function ejecutar() {
     await justificacionesModelo.vencerExpiradas();           // justificaciones fuera de plazo
     await avisarLectoresCaidos(await dispositivoModelo.marcarFueraDeLineaSinHeartbeat()); // CU-09: lectores caidos
     await academicoModelo.finalizarFichasVencidas();          // fichas que pasaron su fecha fin
+    await sesiones.cerrarSesionesVencidas();                  // clases que terminaron y nadie cerró
   } catch (e) {
     console.error("Error en tareas programadas:", e.message);
     logs.registrar({

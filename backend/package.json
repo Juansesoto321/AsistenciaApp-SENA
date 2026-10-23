@@ -8,6 +8,7 @@
     "start": "node src/app.js",
     "migrar": "node src/scripts/migrar.js",
     "sembrar": "node src/scripts/sembrar.js",
+    "sembrar-feria": "node src/scripts/sembrar-feria.js",
     "crear-coordinador": "node src/scripts/crear-coordinador.js",
     "nueva-clave": "node src/scripts/nueva-clave.js",
     "test": "node --test"

@@ -1,7 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Ícono de la pestaña: el logo (huella, marco de escáner y línea de escaneo) con dos crestas
+       y trazos gruesos, para que se lea a 16 px. El de la app está en src/componentes/Logo.jsx. -->
   <rect width="32" height="32" rx="8" fill="#39a900"/>
-  <g transform="translate(4 4)">
-    <path fill="#fff" d="M12 2.3c-4.3 0-7.7 3.3-7.7 7.5 0 5.5 7.7 12 7.7 12s7.7-6.5 7.7-12c0-4.2-3.4-7.5-7.7-7.5z"/>
-    <path d="M8.6 9.9l2.3 2.3 4.5-4.7" fill="none" stroke="#39a900" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(4 4)" fill="none" stroke="#fff" stroke-linecap="round">
+    <path stroke-width="2.6" d="M2.6 7.8V5a2.4 2.4 0 0 1 2.4-2.4h2.8M16.2 2.6H19A2.4 2.4 0 0 1 21.4 5v2.8M21.4 16.2V19a2.4 2.4 0 0 1-2.4 2.4h-2.8M7.8 21.4H5A2.4 2.4 0 0 1 2.6 19v-2.8"/>
+    <ellipse cx="12" cy="13" rx="3.2" ry="4.2" stroke-width="2.3" pathLength="100" stroke-dasharray="66 34" stroke-dashoffset="-42"/>
+    <ellipse cx="12" cy="13" rx="6.8" ry="8.2" stroke-width="2.3" pathLength="100" stroke-dasharray="40 7 37 16" stroke-dashoffset="-33"/>
+    <line x1="1.4" y1="10.4" x2="22.6" y2="10.4" stroke-width="2.1"/>
   </g>
 </svg>
