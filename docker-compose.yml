@@ -22,8 +22,10 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: asistenciaapp
+    # Para conectarse desde este computador (DBeaver, pgAdmin): localhost:5433.
+    # Solo en 127.0.0.1: la clave es la de ejemplo y no debe quedar abierta en la red.
     ports:
-      - "${PUERTO_BD:-5433}:5432"
+      - "127.0.0.1:${PUERTO_BD:-5433}:5432"
     volumes:
       - datos_pg:/var/lib/postgresql/data
     healthcheck:

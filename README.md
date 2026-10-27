@@ -88,6 +88,10 @@ docker compose exec backend npm run sembrar   # solo la primera vez (datos de de
 node simulador-lector/simulador.js http://localhost:8080
 ```
 
+La base de datos queda disponible **solo en este computador** en `localhost:5433`
+(variable `PUERTO_BD`), para conectarse con DBeaver o pgAdmin (usuario y clave
+`postgres`, base `asistenciaapp`). No se abre a la red porque la clave es la de ejemplo.
+
 ### En un servidor real (producción)
 
 Un servidor real **no lleva datos de demostración** y usa los ajustes de
