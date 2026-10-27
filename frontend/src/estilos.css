@@ -4,10 +4,12 @@
    color de la asistencia. El verde oficial va en el recuadro del logo y en
    la huella; texto, enlaces y botones con texto blanco encima usan tonos más
    oscuros del mismo verde para leerse bien (contraste AA, 4,5:1).
-   Estilo: superficies sólidas y tranquilas, sin vidrio ni brillos. El menú
-   lateral es azul en los dos temas; el tema oscuro (el de por defecto) es
-   azul noche y el claro, gris azulado con tinta azul. La única pieza vistosa
-   es la huella (inicio de sesión y clase en curso).
+   Estilo "verde eléctrico": azul noche casi negro (tema por defecto) con el
+   verde SENA como protagonista en un degradado verde → menta → cian que se
+   mueve en lo importante: botones, cifras, el anillo de asistencia, la barra
+   de la página abierta y el borde de la clase en curso. Las tarjetas encienden
+   un borde de luz que recorre su contorno al pasar el mouse. Lo demás queda
+   sólido y tranquilo para que eso resalte (ver el bloque del final).
    Letra: Work Sans en toda la app (va dentro de la compilación, funciona sin
    internet), con cifras tabulares en los números.
    ============================================================ */
@@ -90,10 +92,10 @@
    pantalla de un lector, aunque la persona haya elegido el claro. */
 :root[data-tema="oscuro"], .tema-oscuro {
   --marca-900: #0a1f2e;
-  --marca-700: #8ae36b;
-  --marca-600: #6dd64a;
-  --marca-500: #4cc22a;
-  --marca-100: rgba(109, 214, 74, 0.14);
+  --marca-700: #7ff0a8;
+  --marca-600: #3ee67a;
+  --marca-500: #39c45f;
+  --marca-100: rgba(62, 230, 122, 0.13);
   --marca-50:  rgba(255, 255, 255, 0.045);
   --gradiente: #39a900;
   --boton-hover: #4cc71a;
@@ -103,8 +105,8 @@
   --tinta-suave: #8ea3b2;
   --borde: rgba(255, 255, 255, 0.09);
   --borde-campo: #5d7586;
-  --fondo: #071a28;
-  --blanco: #0d2638;
+  --fondo: #050d14;
+  --blanco: #0a1824;
   --verde: #5fe08a;  --verde-suave: rgba(95, 224, 138, 0.13);
   --ambar: #fcc838;  --ambar-suave: rgba(252, 200, 56, 0.12);
   --rojo: #ff8f87;   --rojo-suave: rgba(255, 143, 135, 0.13);
@@ -115,30 +117,30 @@
   --ambar-borde: rgba(252, 200, 56, 0.4);
   --rojo-borde: rgba(255, 143, 135, 0.45);
   --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.22);
-  --vidrio: #0d2638;
-  --vidrio-borde: rgba(255, 255, 255, 0.08);
-  --vidrio-acceso: #0d2638;
+  --vidrio: #0a1824;
+  --vidrio-borde: rgba(255, 255, 255, 0.07);
+  --vidrio-acceso: #0a1824;
   --vidrio-acceso-borde: rgba(255, 255, 255, 0.1);
   --sombra-acceso: 0 24px 60px rgba(0, 0, 0, 0.4);
-  --menu-fondo: #051521;
+  --menu-fondo: #040b11;
   --menu-borde: rgba(255, 255, 255, 0.06);
-  --menu-activo: #0f2f45;
+  --menu-activo: rgba(62, 230, 122, 0.1);
   --capa: rgba(255, 255, 255, 0.06);
   --capa-borde: rgba(255, 255, 255, 0.12);
   --capa-fuerte: rgba(255, 255, 255, 0.3);
   --escenario-capa: transparent;
   --velo: rgba(2, 10, 16, 0.65);
-  --campo-fondo: #0a2030;
+  --campo-fondo: #071420;
   --campo-borde: var(--borde-campo);
-  --borde-marca: rgba(109, 214, 74, 0.35);
-  /* La huella: apagada en verde, encendida casi blanca */
-  --neon: #6dd64a;
-  --luz: #effbe9;
-  --cresta-apagada: rgba(109, 214, 74, 0.5);
-  --cresta-brillo: rgba(205, 245, 190, 0.8);
-  --resplandor: rgba(109, 214, 74, 0.35);
-  --halo: rgba(109, 214, 74, 0.08);
-  --borde-luz: rgba(109, 214, 74, 0.4);
+  --borde-marca: rgba(62, 230, 122, 0.35);
+  /* La huella: apagada en verde, encendida casi blanca, con el brillo del lector */
+  --neon: #3ee67a;
+  --luz: #eafff4;
+  --cresta-apagada: rgba(62, 230, 122, 0.55);
+  --cresta-brillo: rgba(47, 211, 224, 0.75);
+  --resplandor: rgba(62, 230, 122, 0.55);
+  --halo: rgba(62, 230, 122, 0.1);
+  --borde-luz: rgba(62, 230, 122, 0.45);
   --sombra-luz: var(--sombra);
   --enlace-fuerte: var(--neon);
   --presente: #5fe08a;
@@ -396,7 +398,7 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 .barra-lateral, .barra-superior {
   --tinta-fuerte: #ffffff; --tinta: #e3ebf0; --tinta-media: #c3d1db; --tinta-suave: #8fa5b4;
   --capa: rgba(255, 255, 255, 0.07); --capa-borde: rgba(255, 255, 255, 0.12); --capa-fuerte: rgba(255, 255, 255, 0.3);
-  --marca-600: #6dd64a;
+  --marca-600: #3ee67a;
 }
 .barra-lateral {
   background: var(--menu-fondo); border-right: 1px solid var(--menu-borde);
@@ -1319,7 +1321,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .fondo-huella svg { display: block; width: 100%; height: 100%; }
 .fondo-cresta { fill: none; stroke: var(--fondo-cresta); stroke-width: 2; stroke-linecap: round; }
 :root { --fondo-cresta: rgba(11, 34, 51, 0.07); }
-:root[data-tema="oscuro"], .tema-oscuro { --fondo-cresta: rgba(109, 214, 74, 0.09); }
+:root[data-tema="oscuro"], .tema-oscuro { --fondo-cresta: rgba(62, 230, 122, 0.1); }
 
 .tarjeta, .tarjeta-metrica, table.tabla, .tabla-desplazable {
   background: var(--vidrio); border-color: var(--vidrio-borde); box-shadow: var(--sombra);
@@ -1342,7 +1344,7 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 :root[data-tema="oscuro"] .boton.suave:hover { filter: brightness(1.15); }
 :root[data-tema="oscuro"] input:not([type="checkbox"]):not([type="radio"]),
 :root[data-tema="oscuro"] select,
-:root[data-tema="oscuro"] textarea { background-color: #0a2030; }
+:root[data-tema="oscuro"] textarea { background-color: #071420; }
 :root[data-tema="oscuro"] .modal,
 :root[data-tema="oscuro"] .aviso-proceso,
 :root[data-tema="oscuro"] .menu-acciones-lista,
@@ -1357,3 +1359,91 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 /* Ícono de cada métrica (panel del aprendiz) */
 .tarjeta-metrica { position: relative; }
 .metrica-icono { position: absolute; top: 14px; right: 14px; width: 20px !important; height: 20px !important; opacity: 0.9; }
+
+/* ============================================================
+   Verde eléctrico
+   El degradado del SENA (verde → menta → cian) es la firma: se mueve en los
+   botones, las cifras, el anillo y la clase en curso. En claro, las cifras van
+   con un degradado más oscuro (verde y azul petróleo) para leerse sobre blanco.
+   Todo lo que se mueve se apaga con "reducir movimiento".
+   ============================================================ */
+@property --angulo { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+:root {
+  --electrico: linear-gradient(110deg, #39a900 0%, #3ee67a 45%, #2fd3e0 100%);
+  --electrico-texto: linear-gradient(110deg, #2a7a00, #0e7490);
+  --brillo: 0 10px 28px -12px rgba(57, 169, 0, 0.55);
+  --aurora: radial-gradient(1100px 520px at 88% -12%, rgba(47, 211, 224, 0.07), transparent 62%),
+            radial-gradient(900px 480px at 8% -8%, rgba(57, 169, 0, 0.08), transparent 60%);
+}
+:root[data-tema="oscuro"], .tema-oscuro {
+  --electrico-texto: var(--electrico);
+  --brillo: 0 0 0 1px rgba(62, 230, 122, 0.3), 0 12px 34px -10px rgba(62, 230, 122, 0.55);
+  --aurora: radial-gradient(1100px 520px at 88% -12%, rgba(47, 211, 224, 0.11), transparent 62%),
+            radial-gradient(900px 480px at 8% -8%, rgba(57, 169, 0, 0.14), transparent 60%);
+}
+/* Un resplandor tenue arriba, detrás de todo: le da profundidad al fondo */
+body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
+
+/* Botón principal: el degradado se desliza y brilla al pasar el mouse */
+.boton:not(.suave, .peligro, .exito, .peligro-solido) {
+  background-image: var(--electrico); background-size: 220% 100%; background-position: 0% 50%;
+  transition: background-position .6s var(--frenar), box-shadow .25s, transform .12s var(--frenar);
+}
+.boton:not(.suave, .peligro, .exito, .peligro-solido):hover:not(:disabled) { background-position: 100% 50%; box-shadow: var(--brillo); }
+.avatar, .avatar-cuenta { background-image: var(--electrico); }
+
+/* Borde de luz que recorre la tarjeta al pasar el mouse. Las tarjetas con
+   tablas no lo llevan: son grandes y se pasa el mouse por ellas todo el rato. */
+.tarjeta { position: relative; }
+.tarjeta:not(:has(table))::after, .tarjeta-metrica::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--angulo), transparent 0 60%, #39a900 70%, #3ee67a 80%, #2fd3e0 88%, transparent 96%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  opacity: 0; transition: opacity .35s;
+}
+.tarjeta:not(:has(table)):hover::after, .tarjeta-metrica:hover::after { opacity: 1; animation: girar-luz 2.8s linear infinite; }
+@keyframes girar-luz { to { --angulo: 360deg; } }
+
+/* La clase en curso lleva la luz siempre: es lo que está pasando ahora */
+.clase-en-curso::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--angulo), transparent 0 55%, #39a900 68%, #3ee67a 78%, #2fd3e0 88%, transparent 97%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  animation: girar-luz 4s linear infinite;
+}
+.en-curso-marcas li:first-child { animation: llegar-marca-luz 0.9s var(--frenar); }
+@keyframes llegar-marca-luz {
+  from { opacity: 0; transform: translateY(-8px); box-shadow: 0 0 0 1px #3ee67a, 0 0 24px rgba(62, 230, 122, 0.5); }
+  60% { box-shadow: 0 0 0 1px rgba(62, 230, 122, 0.6), 0 0 18px rgba(62, 230, 122, 0.3); }
+}
+
+/* Cifras grandes con el degradado. Va en la parte visible del Contador, no en
+   el contenedor: background-clip: text también pintaría la copia oculta para
+   lectores de pantalla (.sr-only) y se veía el número dos veces. */
+.tarjeta-metrica:not(.atencion) .valor > [aria-hidden="true"], .en-curso-cifra b > [aria-hidden="true"],
+.proxima-hora, .centro.electrico > span {
+  background-image: var(--electrico-texto); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.centro .sr-only { display: none; } /* el centro del anillo ya es aria-hidden: el anillo dice el porcentaje */
+.tarjeta-metrica .valor { font-size: 38px; font-weight: 650; }
+
+/* Página abierta en el menú: barra con el degradado y su brillo */
+.barra-lateral nav a::before { background: linear-gradient(180deg, #3ee67a, #2fd3e0); box-shadow: 0 0 12px rgba(62, 230, 122, 0.7); }
+.barra-lateral nav a.activo { box-shadow: inset 0 0 0 1px rgba(62, 230, 122, 0.14); }
+.pestanas button[aria-selected="true"] { border-image: var(--electrico) 1; }
+
+/* Barras de asistencia: lo presente con el degradado */
+.barra-asistencia .presente, .leyenda-barra .presente { background-image: var(--electrico); }
+.mini-tendencia-linea, .grafica-tendencia .linea { stroke: var(--marca-600); }
+
+/* El recuadro del logo y la huella del inicio con más brillo en oscuro */
+:root[data-tema="oscuro"] .marca .icono, .tema-oscuro .logo-acceso { box-shadow: 0 0 22px rgba(57, 169, 0, 0.45); }
+.tema-oscuro .escaner-linea { stroke: #2fd3e0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .boton:not(.suave, .peligro, .exito, .peligro-solido) { transition: none; }
+  .tarjeta:not(:has(table)):hover::after, .tarjeta-metrica:hover::after, .clase-en-curso::after,
+  .en-curso-marcas li:first-child { animation: none; }
+}
