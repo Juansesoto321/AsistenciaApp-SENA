@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "@fontsource-variable/work-sans"; // la letra de la app, incluida en la compilación (sin internet)
+import "@fontsource/kaushan-script"; // solo para el lema "Formación para la vida"
 import "./estilos.css";
 import { AuthProvider } from "./contexto/AuthContext.jsx";
 import { ConfirmarProvider } from "./componentes/Confirmar.jsx";

@@ -12,6 +12,7 @@ import Panel from "./paginas/general/Panel.jsx";
 import Notificaciones from "./paginas/general/Notificaciones.jsx";
 import Soporte from "./paginas/general/Soporte.jsx";
 import Perfil from "./paginas/general/Perfil.jsx";
+import PreguntasFrecuentes from "./paginas/general/PreguntasFrecuentes.jsx";
 // Planeación académica
 import Fichas from "./paginas/academico/Fichas.jsx";
 import DetalleFicha from "./paginas/academico/DetalleFicha.jsx";
@@ -24,6 +25,7 @@ import SesionEnVivo from "./paginas/asistencia/SesionEnVivo.jsx";
 import Justificaciones from "./paginas/asistencia/Justificaciones.jsx";
 import MiAsistencia from "./paginas/asistencia/MiAsistencia.jsx";
 import MisJustificaciones from "./paginas/asistencia/MisJustificaciones.jsx";
+import MisDocumentos from "./paginas/asistencia/MisDocumentos.jsx";
 import Reportes from "./paginas/asistencia/Reportes.jsx";
 // Administración
 import Usuarios from "./paginas/administracion/Usuarios.jsx";
@@ -55,6 +57,7 @@ export default function App() {
       <Route path="/notificaciones" element={<Protegida><Notificaciones /></Protegida>} />
       <Route path="/soporte" element={<Protegida><Soporte /></Protegida>} />
       <Route path="/perfil" element={<Protegida><Perfil /></Protegida>} />
+      <Route path="/preguntas" element={<Protegida><PreguntasFrecuentes /></Protegida>} />
 
       <Route path="/fichas" element={<Protegida roles={PERSONAL}><Fichas /></Protegida>} />
       <Route path="/fichas/:id" element={<Protegida roles={PERSONAL}><DetalleFicha /></Protegida>} />
@@ -67,6 +70,7 @@ export default function App() {
       <Route path="/justificaciones" element={<Protegida roles={PERSONAL}><Justificaciones /></Protegida>} />
       <Route path="/mi-asistencia" element={<Protegida roles={["aprendiz"]}><MiAsistencia /></Protegida>} />
       <Route path="/mis-justificaciones" element={<Protegida roles={["aprendiz"]}><MisJustificaciones /></Protegida>} />
+      <Route path="/mis-documentos" element={<Protegida roles={["aprendiz"]}><MisDocumentos /></Protegida>} />
       <Route path="/reportes" element={<Protegida roles={PERSONAL}><Reportes /></Protegida>} />
 
       <Route path="/usuarios" element={<Protegida roles={["coordinador"]}><Usuarios /></Protegida>} />

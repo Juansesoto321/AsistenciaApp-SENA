@@ -5,6 +5,7 @@ import { useAuth } from "../../contexto/AuthContext.jsx";
 import EscenarioLector from "../../componentes/EscenarioLector.jsx";
 import CampoContrasena from "../../componentes/CampoContrasena.jsx";
 import Icono from "../../componentes/Iconos.jsx";
+import Logo from "../../componentes/Logo.jsx";
 import { TOTAL_CRESTAS } from "../../componentes/EscanerHuella.jsx";
 import { esperaMinima, reducirMovimiento } from "../../utilidades/movimiento";
 import { useTitulo } from "../../utilidades/titulo";
@@ -20,6 +21,18 @@ function avance(correo, contrasena, recuperando) {
   return recuperando ? deCorreo : (deCorreo + Math.min(contrasena.length / 8, 1)) / 2;
 }
 
+// "Recordar mi correo": solo el correo, en este navegador (la sesión ya dura 8 horas)
+const CLAVE_CORREO = "asistenciaapp.correo-recordado";
+function leerCorreoRecordado() {
+  try { return localStorage.getItem(CLAVE_CORREO) || ""; } catch { return ""; }
+}
+function recordarCorreo(correo, recordar) {
+  try {
+    if (recordar) localStorage.setItem(CLAVE_CORREO, correo.trim());
+    else localStorage.removeItem(CLAVE_CORREO);
+  } catch { /* sin almacenamiento: no se recuerda */ }
+}
+
 const TEXTO_ESTADO = {
   espera: "Listo para identificarte",
   leyendo: "Verificando…",
@@ -30,7 +43,8 @@ const TEXTO_ESTADO = {
 export default function IniciarSesion() {
   const navegar = useNavigate();
   const { iniciarSesion } = useAuth();
-  const [correo, setCorreo] = useState("");
+  const [correo, setCorreo] = useState(leerCorreoRecordado);
+  const [recordar, setRecordar] = useState(() => Boolean(leerCorreoRecordado()));
   const [contrasena, setContrasena] = useState("");
   const [recuperando, setRecuperando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
@@ -71,6 +85,7 @@ export default function IniciarSesion() {
         setCargando(false);
       } else {
         const r = await api("/auth/login", { method: "POST", body: { correo, contrasena } });
+        recordarCorreo(correo, recordar);
         await minimo;
         setNombre(r.usuario.nombres.split(" ")[0]);
         setEstado("exito");
@@ -105,11 +120,14 @@ export default function IniciarSesion() {
 
       <main className="login-panel">
         <form className="login-formulario" onSubmit={enviar} noValidate>
-          <h1>{recuperando ? "Recupera tu contraseña" : "Inicia sesión"}</h1>
+          <div className="login-cabeza">
+            <span className="logo-acceso" aria-hidden="true"><Logo size="1.1em" /></span>
+            <h1>{recuperando ? "Recupera tu contraseña" : "Inicia sesión"}</h1>
+          </div>
           <p className="login-ayuda">
             {recuperando
               ? "Escribe tu correo y te enviaremos un enlace para crear una contraseña nueva."
-              : "Entra con el correo y la contraseña de tu cuenta."}
+              : "Ingresa con tu correo y tu contraseña para entrar a tu cuenta de AsistenciaApp SENA."}
           </p>
 
           {mensaje && (
@@ -118,32 +136,42 @@ export default function IniciarSesion() {
             </div>
           )}
 
-          <label htmlFor="login-correo">Correo</label>
+          <label htmlFor="login-correo"><Icono nombre="correo" /> Correo electrónico</label>
           <div className="login-campo">
             <input
-              id="login-correo" type="email" autoComplete="username" inputMode="email" autoFocus
+              id="login-correo" type="email" autoComplete="username" inputMode="email" autoFocus={!correo}
               value={correo} onChange={escribir(setCorreo)} placeholder="tu.correo@sena.edu.co"
             />
             <Icono nombre="correo" className="login-campo-icono" />
           </div>
 
           {!recuperando && (<>
-            <label htmlFor="login-contrasena">Contraseña</label>
+            <label htmlFor="login-contrasena"><Icono nombre="candado" /> Contraseña</label>
             <CampoContrasena
               id="login-contrasena" value={contrasena} onChange={escribir(setContrasena)} placeholder="Tu contraseña"
+              autoFocus={Boolean(correo)}
             />
+            <div className="login-opciones">
+              <label className="casilla-recordar">
+                <input type="checkbox" checked={recordar} onChange={(e) => setRecordar(e.target.checked)} /> Recordar mi correo
+              </label>
+              <button type="button" className="login-enlace fuerte" onClick={alternarModo}>¿Olvidaste tu contraseña?</button>
+            </div>
           </>)}
 
           <button type="submit" className="boton ancho login-boton" disabled={cargando}>
+            {!cargando && !recuperando && <Icono nombre="entrar" />}
             {estado === "exito" ? "Entrando…" : cargando ? "Verificando…" : recuperando ? "Enviar enlace" : "Iniciar sesión"}
           </button>
 
-          <div className="login-enlaces">
-            <button type="button" className="login-enlace" onClick={alternarModo}>
-              {recuperando ? "Volver a iniciar sesión" : "¿Olvidaste tu contraseña?"}
-            </button>
-            <span>¿No tienes cuenta? <Link to="/registrarse">Crear cuenta</Link></span>
-          </div>
+          {recuperando ? (
+            <div className="login-enlaces">
+              <button type="button" className="login-enlace fuerte" onClick={alternarModo}>Volver a iniciar sesión</button>
+            </div>
+          ) : (<>
+            <p className="login-separador"><span>¿No tienes cuenta?</span></p>
+            <Link className="boton ancho contorno" to="/registrarse"><Icono nombre="usuarios" /> Crear cuenta <Icono nombre="flecha" /></Link>
+          </>)}
         </form>
       </main>
     </div>

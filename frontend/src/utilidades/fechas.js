@@ -62,6 +62,22 @@ export function proximaClase(horarios, ahora = new Date(), festivos) {
   return null;
 }
 
+/**
+ * Las clases de los próximos días (sin contar hoy), en orden: hasta `cuantas`,
+ * buscando dos semanas adelante. Devuelve [{ horario, fecha }].
+ */
+export function proximasClases(horarios, ahora = new Date(), festivos, cuantas = 3) {
+  const lista = [];
+  for (let d = 1; d < 15 && lista.length < cuantas; d++) {
+    const fecha = sumarDias(ahora, d);
+    horarios
+      .filter((h) => ocurreEn(h, fecha, festivos))
+      .sort((a, b) => aMinutos(a.hora_inicio) - aMinutos(b.hora_inicio))
+      .forEach((horario) => lista.push({ horario, fecha }));
+  }
+  return lista.slice(0, cuantas);
+}
+
 /** "Martes 27 oct": día y fecha, sin "Mañana" (que se confunde con la jornada). */
 export function diaYFecha(fecha) {
   const dia = fecha.toLocaleDateString("es-CO", { weekday: "long" });
