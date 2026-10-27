@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../servicios/api";
 import Icono from "../../componentes/Iconos.jsx";
-import FondoNeon from "../../componentes/FondoNeon.jsx";
+import FondoHuella from "../../componentes/FondoHuella.jsx";
 import { fechaCorta, fechaHora } from "../../utilidades/formato";
 import { useTitulo } from "../../utilidades/titulo";
 
@@ -65,7 +65,7 @@ export default function JustificarPublico() {
 
   return (
     <div className="pantalla-acceso tema-oscuro">
-      <FondoNeon />
+      <FondoHuella />
       <div className="tarjeta-acceso" style={{ maxWidth: 500 }}>
         <div className="logo-acceso"><Icono nombre="justificaciones" size="1em" /></div>
         <h1>Justificar inasistencia</h1>
