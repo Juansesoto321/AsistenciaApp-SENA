@@ -45,6 +45,11 @@ if (produccion && !ipLectores.length) {
   console.warn("[AVISO] IP_LECTORES está vacío: el lector real (/iclock) acepta marcas de cualquier equipo de la red. Define la IP de cada lector en el .env.");
 }
 
+// Puerto al que el lector real debe llamar. En Docker el backend escucha en el
+// 4000 del contenedor, pero el computador lo publica en PUERTO_API (la copia
+// usa el 4100): docker-compose lo pasa como PUERTO_PUBLICADO.
+const puertoLector = Number(process.env.PUERTO_PUBLICADO || process.env.PUERTO || 4000);
+
 // Clase de demostración con botón para reiniciarla (servicios/claseDemo.js):
 // temporal, para mostrar la app en vivo. Por defecto, en todo menos producción.
 const claseDemo = process.env.CLASE_DEMO ? process.env.CLASE_DEMO === "true" : !produccion;
@@ -56,4 +61,5 @@ module.exports = {
   origenesPermitidos,
   urlFrontend: origenesPermitidos[0],
   ipLectores,
+  puertoLector,
 };

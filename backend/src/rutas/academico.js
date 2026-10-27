@@ -39,6 +39,8 @@ router.post("/ambientes/:id/dispositivo", autorizar(...PLANEACION), controlador.
 
 // CU-09: panel de monitoreo de lectores
 router.get("/dispositivos", autorizar(...PLANEACION), controlador.listarDispositivos);
+// Asistente para conectar un lector real: qué escribir en el equipo y quién ya llamó
+router.get("/dispositivos/conexion", autorizar(...PLANEACION), controlador.conexionLector);
 
 // ---------- HORARIOS (CU-08) ----------
 router.get("/horarios", controlador.listarHorarios);

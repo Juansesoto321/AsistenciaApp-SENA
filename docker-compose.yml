@@ -45,6 +45,8 @@ services:
       JWT_SECRETO: ${JWT_SECRETO:-cambia_esta_clave_en_produccion}
       CLAVE_CIFRADO: ${CLAVE_CIFRADO:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
       PUERTO: 4000
+      # El puerto que ve el lector en este computador (el asistente para conectarlo lo muestra)
+      PUERTO_PUBLICADO: ${PUERTO_API:-4000}
       URL_FRONTEND: ${URL_FRONTEND:-http://localhost:8080}
       CORREO_HOST: ${CORREO_HOST:-}
       CORREO_PUERTO: ${CORREO_PUERTO:-587}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../../servicios/api";
+import Icono from "../../componentes/Iconos.jsx";
 import Cargando from "../../componentes/Cargando.jsx";
 import Aviso from "../../componentes/Aviso.jsx";
 import Vacio from "../../componentes/Vacio.jsx";
@@ -62,7 +64,10 @@ export default function Ambientes() {
     <>
       <div className="cabecera-pagina">
         <div><h1>Ambientes y lectores</h1><p>Cada ambiente puede tener un lector biométrico. El lector envía una señal cada pocos segundos; si pasan 3 minutos sin señal aparece como «Sin señal».</p></div>
-        <button className="boton" onClick={() => setModal("ambiente")}>+ Nuevo ambiente</button>
+        <div className="acciones-cabecera">
+          <Link className="boton suave" to="/ambientes/conectar-lector"><Icono nombre="wifi" /> Conectar un lector</Link>
+          <button className="boton" onClick={() => setModal("ambiente")}>+ Nuevo ambiente</button>
+        </div>
       </div>
       <Aviso mensaje={mensaje} alCerrar={() => setMensaje(null)} />
 

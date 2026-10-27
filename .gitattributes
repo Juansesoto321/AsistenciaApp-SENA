@@ -1,2 +1,5 @@
 # Los scripts de shell corren dentro de contenedores Linux: siempre con fin de linea LF
 *.sh text eol=lf
+# Los scripts de Windows (doble clic) necesitan fin de linea CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf

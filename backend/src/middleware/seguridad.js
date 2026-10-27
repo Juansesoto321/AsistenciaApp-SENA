@@ -55,7 +55,7 @@ function soloDesdeIps(permitidas) {
   const lista = new Set(permitidas);
   return (req, res, next) => {
     if (!lista.size) return next();
-    const ip = String(req.socket?.remoteAddress || "").replace(/^::ffff:/, "");
+    const ip = ipDeConexion(req);
     if (lista.has(ip)) return next();
     // La IP queda en el registro: si el lector legítimo aparece con otra
     // (p. ej. detrás de Docker Desktop), así se sabe cuál poner en IP_LECTORES
@@ -64,4 +64,9 @@ function soloDesdeIps(permitidas) {
   };
 }
 
-module.exports = { encabezadosSeguridad, limitarPeticiones, soloDesdeIps };
+/** IP de la conexión, sin el prefijo IPv6 de las direcciones IPv4 ("::ffff:"). */
+function ipDeConexion(req) {
+  return String(req.socket?.remoteAddress || "").replace(/^::ffff:/, "");
+}
+
+module.exports = { encabezadosSeguridad, limitarPeticiones, soloDesdeIps, ipDeConexion };

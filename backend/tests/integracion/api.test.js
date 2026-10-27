@@ -461,6 +461,25 @@ prueba("el lector real saluda y queda en línea; un serial desconocido se ignora
   assert.equal((await enviarAttlog(["900010\t2026-01-01 08:00:00"], "DESCONOCIDO")).datos, "OK");
 });
 
+prueba("el asistente para conectar un lector ve al equipo que llamó, registrado o no", async () => {
+  await e.peticion("GET", "/iclock/getrequest?SN=NUEVO-SN-01");
+  const r = await e.peticion("GET", "/api/dispositivos/conexion", { token: tokens.coordinador });
+  assert.equal(r.estado, 200);
+  assert.equal(typeof r.datos.puerto, "number");
+  const nuevo = r.datos.detectados.find((d) => d.serial === "NUEVO-SN-01");
+  assert.equal(nuevo.registrado, false);
+  assert.equal(nuevo.ambiente, null);
+  const conocido = r.datos.detectados.find((d) => d.serial === SERIAL_ADMS);
+  assert.equal(conocido.registrado, true);
+  assert.equal(conocido.ambiente, "P-2");
+
+  // Un "serial" que no parece serial no se anota; y solo la planeación ve el asistente
+  await e.peticion("GET", "/iclock/getrequest?SN=" + encodeURIComponent("<script>"));
+  const otra = await e.peticion("GET", "/api/dispositivos/conexion", { token: tokens.programador });
+  assert.ok(!otra.datos.detectados.some((d) => d.serial.includes("<")));
+  assert.equal((await e.peticion("GET", "/api/dispositivos/conexion", { token: tokens.instructor })).estado, 403);
+});
+
 prueba("el lector real usa la hora de la marca, no la de llegada, y no duplica lo que reenvía", async () => {
   // Clase de hoy en el ambiente de este lector. La clase principal de la ficha
   // (ya cerrada) se acorta a 00:00-00:01 para que la del lector sea otro bloque

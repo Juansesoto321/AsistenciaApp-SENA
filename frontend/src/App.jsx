@@ -17,6 +17,7 @@ import PreguntasFrecuentes from "./paginas/general/PreguntasFrecuentes.jsx";
 import Fichas from "./paginas/academico/Fichas.jsx";
 import DetalleFicha from "./paginas/academico/DetalleFicha.jsx";
 import Ambientes from "./paginas/academico/Ambientes.jsx";
+import ConectarLector from "./paginas/academico/ConectarLector.jsx";
 import Horarios from "./paginas/academico/Horarios.jsx";
 import Competencias from "./paginas/academico/Competencias.jsx";
 // Asistencia
@@ -62,6 +63,7 @@ export default function App() {
       <Route path="/fichas" element={<Protegida roles={PERSONAL}><Fichas /></Protegida>} />
       <Route path="/fichas/:id" element={<Protegida roles={PERSONAL}><DetalleFicha /></Protegida>} />
       <Route path="/ambientes" element={<Protegida roles={COORDINACION}><Ambientes /></Protegida>} />
+      <Route path="/ambientes/conectar-lector" element={<Protegida roles={COORDINACION}><ConectarLector /></Protegida>} />
       <Route path="/horarios" element={<Protegida roles={[...PERSONAL, "aprendiz"]}><Horarios /></Protegida>} />
       <Route path="/competencias" element={<Protegida roles={PERSONAL}><Competencias /></Protegida>} />
 

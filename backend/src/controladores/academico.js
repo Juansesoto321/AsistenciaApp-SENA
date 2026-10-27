@@ -1,4 +1,5 @@
 const servicio = require("../servicios/academico");
+const dispositivos = require("../servicios/dispositivos");
 const { festivosDelAnio } = require("../utilidades/festivos");
 const { traducirCodigos } = require("../middleware/manejadorErrores");
 
@@ -141,6 +142,15 @@ async function listarDispositivos(_req, res, next) {
   }
 }
 
+// Asistente para conectar un lector: puerto, IP del equipo y lectores que ya llamaron
+async function conexionLector(_req, res, next) {
+  try {
+    res.json(await dispositivos.conexionLector());
+  } catch (error) {
+    next(error);
+  }
+}
+
 // Festivos de Colombia del año pedido, del anterior y del siguiente (calendario)
 function listarFestivos(req, res) {
   const pedido = Number(req.query.anio);
@@ -166,4 +176,5 @@ module.exports = {
   crearAmbiente,
   asociarDispositivo,
   listarDispositivos,
+  conexionLector,
 };
