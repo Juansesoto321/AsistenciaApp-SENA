@@ -13,6 +13,7 @@ async function horariosDeHoy(usuario) {
             a.numero_ambiente,
             u.nombres || ' ' || u.apellidos AS instructor,
             d.estado AS estado_lector,
+            (h.id_horario::text = (SELECT valor FROM configuracion WHERE clave = 'clase_demo_horario')) IS TRUE AS es_demo,
             s.id_sesion,
             s.estado AS estado_sesion,
             (SELECT COUNT(*)::int FROM matricula m WHERE m.id_ficha = f.id_ficha AND m.estado = 'activa') AS matriculados,
@@ -60,7 +61,8 @@ async function buscarHorarioConLector(idHorario) {
 /**
  * Una sesión de hoy de la MISMA ficha, en otra clase que se cruza en horas con
  * esta. Pasa si el horario tiene clases duplicadas: cada una abría su propia
- * sesión y los aprendices quedaban con la misma clase dos veces.
+ * sesión y los aprendices quedaban con la misma clase dos veces. La clase de
+ * demostración (servicios/claseDemo.js) se cruza a propósito con las demás.
  */
 async function buscarSesionCruzadaHoy(idHorario) {
   const r = await pool.query(
@@ -70,6 +72,8 @@ async function buscarSesionCruzadaHoy(idHorario) {
      JOIN sesion_clase s ON s.id_horario = otro.id_horario AND s.fecha = CURRENT_DATE
      WHERE h.id_horario = $1
        AND (h.hora_inicio, h.hora_fin) OVERLAPS (otro.hora_inicio, otro.hora_fin)
+       AND NOT EXISTS (SELECT 1 FROM configuracion c WHERE c.clave = 'clase_demo_horario'
+                       AND c.valor IN (h.id_horario::text, otro.id_horario::text))
      LIMIT 1`,
     [idHorario]
   );

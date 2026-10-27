@@ -7,21 +7,25 @@ import Vacio from "../../componentes/Vacio.jsx";
 import Icono from "../../componentes/Iconos.jsx";
 import AccionSesion from "../../componentes/AccionSesion.jsx";
 import SinClasesHoy from "../../componentes/SinClasesHoy.jsx";
+import ClaseDemo from "../../componentes/ClaseDemo.jsx";
 import useTabla from "../../componentes/useTabla.jsx";
 import { fechaCorta, horaCorta } from "../../utilidades/formato";
 import { useAuth } from "../../contexto/AuthContext.jsx";
 
 const PERIODOS = [[30, "30 días"], [90, "3 meses"], [365, "1 año"]];
 
-/** Clases de hoy: iniciarlas o supervisarlas. Sin clases, dice cuál es la próxima. */
-function DeHoy({ alError }) {
+/**
+ * Clases de hoy: iniciarlas o supervisarlas. Sin clases, dice cuál es la próxima.
+ * `recarga` cambia cuando se reinicia la clase de demostración.
+ */
+function DeHoy({ alError, recarga }) {
   const [horarios, setHorarios] = useState(null);
 
   useEffect(() => {
     api("/sesiones/hoy")
       .then(setHorarios)
       .catch((e) => { setHorarios([]); alError(e.message); });
-  }, []);
+  }, [recarga]);
 
   if (horarios === null) return <Cargando texto="Buscando las clases de hoy…" />;
   if (!horarios.length) return <div className="tarjeta"><SinClasesHoy titulo="No tienes clases programadas para hoy" /></div>;
@@ -31,7 +35,10 @@ function DeHoy({ alError }) {
       <tbody>
         {horarios.map((h) => (
           <tr key={h.id_horario}>
-            <td className="principal">{horaCorta(h.hora_inicio)} – {horaCorta(h.hora_fin)}</td>
+            <td className="principal">
+              {horaCorta(h.hora_inicio)} – {horaCorta(h.hora_fin)}
+              {h.es_demo && <span className="insignia demo">demostración</span>}
+            </td>
             <td data-etiqueta="Ficha">{h.numero_ficha}</td>
             <td data-etiqueta="Programa">{h.programa}</td>
             <td data-etiqueta="Ambiente">{h.numero_ambiente}</td>
@@ -109,6 +116,7 @@ function Historial({ verInstructor, alError }) {
 
 export default function Sesiones() {
   const [mensaje, setMensaje] = useState(null);
+  const [recarga, setRecarga] = useState(0);
   const alError = (texto) => setMensaje({ tipo: "error", texto });
   const rol = useAuth().sesion.usuario.rol;
   const soloConsulta = rol === "programador";
@@ -137,7 +145,10 @@ export default function Sesiones() {
         <button role="tab" aria-selected={vista === "hoy"} onClick={() => cambiarVista("hoy")}><Icono nombre="sesiones" /> Hoy</button>
         <button role="tab" aria-selected={vista === "historial"} onClick={() => cambiarVista("historial")}><Icono nombre="registro" /> Historial de clases</button>
       </div>
-      {vista === "hoy" ? <DeHoy alError={alError} /> : <Historial verInstructor={rol !== "instructor"} alError={alError} />}
+      {vista === "hoy" ? (<>
+        {!soloConsulta && <ClaseDemo alAviso={setMensaje} alReiniciar={() => setRecarga((n) => n + 1)} />}
+        <DeHoy alError={alError} recarga={recarga} />
+      </>) : <Historial verInstructor={rol !== "instructor"} alError={alError} />}
     </>
   );
 }

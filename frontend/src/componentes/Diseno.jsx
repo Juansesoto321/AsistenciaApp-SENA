@@ -5,9 +5,12 @@ import { conectarTiempoReal } from "../servicios/socket";
 import { useAuth } from "../contexto/AuthContext.jsx";
 import { useTitulo } from "../utilidades/titulo";
 import Logo from "./Logo.jsx";
+import LogoSena from "./LogoSena.jsx";
+import AuroraMenu from "./AuroraMenu.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
 import AccionesCuenta from "./AccionesCuenta.jsx";
+import { version } from "../../package.json";
 
 const ico = (nombre) => <Icono nombre={nombre} />;
 
@@ -28,18 +31,22 @@ const DIA_A_DIA = [
   ["/reportes", ico("reportes"), "Reportes"],
 ];
 
+// Al final de todos los menús
+const AYUDA = ["Ayuda", ["/preguntas", ico("ayuda"), "Preguntas frecuentes"]];
+
 const MENUS = {
   coordinador: [
-    ["/panel", ico("panel"), "Panel"],
+    ["/panel", ico("inicio"), "Inicio"],
     ...DIA_A_DIA,
     ...PLANEACION,
     "Administración",
     ["/usuarios", ico("usuarios"), "Usuarios"],
     ["/configuracion", ico("configuracion"), "Configuración"],
     ["/registro", ico("registro"), "Registro del sistema"],
+    ...AYUDA,
   ],
   instructor: [
-    ["/panel", ico("panel"), "Panel"],
+    ["/panel", ico("inicio"), "Inicio"],
     "Día a día",
     ["/sesiones", ico("sesiones"), "Mis clases de hoy"],
     ["/justificaciones", ico("justificaciones"), "Justificaciones"],
@@ -48,23 +55,27 @@ const MENUS = {
     ["/fichas", ico("fichas"), "Mis fichas"],
     ["/horarios", ico("horarios"), "Mis horarios"],
     ["/competencias", ico("competencias"), "Competencias"],
+    ...AYUDA,
   ],
   // Mismas opciones del coordinador salvo "Usuarios": el programador apoya la
   // planeacion academica pero no administra cuentas. Las clases y las
   // justificaciones las consulta, sin iniciarlas ni decidirlas.
   programador: [
-    ["/panel", ico("panel"), "Panel"],
+    ["/panel", ico("inicio"), "Inicio"],
     ...DIA_A_DIA,
     ...PLANEACION,
     "Administración",
     ["/configuracion", ico("configuracion"), "Configuración"],
     ["/registro", ico("registro"), "Registro del sistema"],
+    ...AYUDA,
   ],
   aprendiz: [
-    ["/panel", ico("panel"), "Panel"],
+    ["/panel", ico("inicio"), "Inicio"],
     ["/mi-asistencia", ico("asistencia"), "Mi asistencia"],
     ["/mis-justificaciones", ico("justificaciones"), "Mis justificaciones"],
     ["/horarios", ico("horarios"), "Mi horario"],
+    ["/mis-documentos", ico("documento"), "Mis documentos"],
+    ...AYUDA,
   ],
 };
 
@@ -74,6 +85,8 @@ const NOMBRE_PAGINA = Object.fromEntries(
 );
 // Páginas que no están en el menú (se abren desde las acciones de la cuenta), para el título
 const OTRAS_PAGINAS = { "/notificaciones": "Notificaciones", "/perfil": "Mi perfil", "/soporte": "Soporte" };
+// Lo que el buscador puede abrir: el menú del rol y las páginas de la cuenta
+const paginasDelRol = (menu) => [...menu.filter(Array.isArray).map(([ruta, , nombre]) => [ruta, nombre]), ...Object.entries(OTRAS_PAGINAS)];
 
 const CLAVE_COMPACTO = "asistenciaapp.menu-compacto";
 function leerCompacto() {
@@ -214,12 +227,13 @@ export default function Diseno({ children }) {
 
       <aside className={`barra-lateral ${menuAbierto ? "abierta" : ""}`} aria-label="Menú principal">
         <div className="marca">
-          <div className="icono"><Logo size="1.45em" /></div>
+          <LogoSena className="marca-sena-logo" size="62px" titulo="SENA" />
           {/* El menú es angosto: "SENA" va en su propia línea, como parte del
               nombre; el nombre completo de la entidad sale en el inicio de sesión */}
           <div className="marca-texto">
             AsistenciaApp
-            <small className="marca-sena">SENA</small>
+            <small className="marca-sena">Control de asistencia</small>
+            <small className="marca-version">v{version}</small>
           </div>
           <button type="button" className="boton-salir boton-compacto" onClick={alternarCompacto}
             title={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"} aria-label={compacto ? "Mostrar el menú completo" : "Mostrar solo íconos"}>
@@ -244,11 +258,17 @@ export default function Diseno({ children }) {
             );
           })}
         </nav>
+        <p className="lema">Formación <span>para la vida</span></p>
+        <AuroraMenu />
       </aside>
       <main className="contenido" id="contenido" ref={contenidoRef} tabIndex={-1} inert={inerte}>
-        <AccionesCuenta notificaciones={notifPendientes} />
+        <AccionesCuenta notificaciones={notifPendientes} paginas={paginasDelRol(menu)} />
         {/* La key cambia con la página: el contenido nuevo entra con una animación corta (.vista) */}
         <div key={pathname} className="vista">{children}</div>
+        <footer className="pie-app">
+          <span className="pie-marca"><LogoSena size="30px" /> <b>Servicio Nacional de Aprendizaje</b> · SENA © {new Date().getFullYear()}</span>
+          <span className="pie-lemas">Tecnología · Talento · Innovación</span>
+        </footer>
       </main>
       <Aviso mensaje={avisoPermiso} alCerrar={() => setAvisoPermiso(null)} />
     </div>

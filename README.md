@@ -235,97 +235,30 @@ En el servidor real no se siembran estas cuentas: la primera se crea con
 `npm run crear-coordinador`. Para darle una contraseña nueva a cualquier cuenta:
 `npm run nueva-clave -- <correo>`.
 
-## Entorno de la feria del SENA (datos ficticios)
+## Demostración en vivo: clase de demostración
 
-Para el stand hay un entorno aparte que arranca ya con contenido: la ficha **3141592**
-con cuatro semanas de clases cerradas (presentes, tardanzas, ausencias y
-justificaciones), tres aprendices bajo el 80 %, justificaciones por revisar y una clase
-de demostración para hoy. Los nombres, documentos y correos son inventados
-(`@example.com`, un dominio que no le llega a nadie) y no hay SMTP: los correos solo se
-imprimen en la consola del backend.
+Para mostrar la app con el lector real y los aprendices que tienen la huella registrada en
+él, el instructor (o la coordinación) tiene en **Mis clases de hoy** el bloque *Clase de
+demostración* con un botón temporal:
 
-```bash
-docker compose -f docker-compose.feria.yml up -d --build
-```
+1. **Crear / Reiniciar clase de demostración** → crea una clase de hoy que empieza en ese
+   minuto y dura dos horas, con los aprendices de su ficha, en el ambiente del lector (el que
+   está en línea). Sale en la lista con la etiqueta *demostración*.
+2. **Iniciar sesión de hoy** en esa clase → queda la supervisión en vivo.
+3. Los aprendices ponen la huella: su fila pasa a *presente* en tiempo real.
+4. **Cerrar sesión de clase** → los que no marcaron quedan *ausentes* y les llega el correo
+   con el enlace para justificar.
+5. Para mostrarlo otra vez: **Reiniciar clase de demostración**. Borra esa clase con sus
+   huellas, ausencias, justificaciones y avisos, y crea otra que empieza ya. Las demás clases
+   no se tocan.
 
-Abre http://localhost:8070. La primera vez, el backend siembra la base solo
-(`backend/src/scripts/sembrar-feria.js`); lo que hizo se ve con
-`docker compose -f docker-compose.feria.yml logs backend`. No toca las otras copias:
-el proyecto se llama `asistenciaapp-feria`, su base vive en el volumen
-`asistenciaapp-feria_datos_pg` y usa los puertos **8070** (web), **4070** (API, solo
-para un lector físico) y **8071** (visor de la base). Si alguno está ocupado, cámbialo en
-el `.env` con `FERIA_PUERTO_WEB`, `FERIA_PUERTO_API` o `FERIA_PUERTO_VISOR_BD` (y
-`FERIA_URL_FRONTEND` con el puerto web nuevo).
+Los correos llegan de verdad solo si el `.env` tiene `CORREO_HOST` (y usuario y contraseña
+del SMTP); sin él, se imprimen en la consola del backend (`docker compose logs backend`).
+El botón está activo en todo menos en producción; se apaga con `CLASE_DEMO=false` en el
+`.env`.
 
-Las fechas de las clases salen del día en que se siembra. **El día de la feria**, antes de
-abrir el stand, vuelve a sembrar para que las clases lleguen hasta hoy (también borra lo
-que se haya hecho en demostraciones anteriores):
-
-```bash
-docker compose -f docker-compose.feria.yml exec backend npm run sembrar-feria -- --reiniciar
-```
-
-La clase de demostración dura dos horas desde que se siembra. Para una que empiece en este
-momento (las primeras huellas quedan *presente*; pasados los 15 min de tolerancia,
-*tardanza*):
-
-```bash
-docker compose -f docker-compose.feria.yml exec backend npm run sembrar-feria -- --clase-ahora
-```
-
-**Lector simulado:** en otra terminal, en la carpeta del proyecto,
-`node simulador-lector/simulador.js http://localhost:8070`, y escribe el documento de un
-aprendiz de la tabla (los que muestra el simulador al abrir son los de la copia de
-trabajo). Mientras corre, el lector sale *en línea*; sin él, el panel avisa «lector sin
-señal».
-
-**Apagar:** `docker compose -f docker-compose.feria.yml down` (los datos se quedan).
-Para borrarlo todo, base incluida, agrega `-v`.
-
-El script se niega a correr sobre una base que tenga alguna cuenta fuera de
-`example.com`: no puede sembrar en la base de trabajo ni en la de un servidor.
-
-### Cuentas de la feria
-
-Contraseña de todas: `Feria2026*` (pública, solo para este entorno). El documento es
-también la «huella» en el simulador.
-
-| Rol | Nombre | Correo | Documento | Para mostrar |
-|---|---|---|---|---|
-| Coordinación | Gloria Patricia Ríos Cardona | coordinacion@example.com | 1090000001 | Panel con promedio, gráfica y alertas; reportes; registro de actividad |
-| Instructor | Hernán Darío Montoya Salas | instructor@example.com | 1090000002 | 3 justificaciones por revisar; iniciar la clase de demostración |
-| Aprendiz | Valentina Rojas Castaño | valentina.rojas@example.com | 1090000101 | Asistencia alta y racha sin faltar |
-| Aprendiz | Andrés Felipe Gómez Restrepo | andres.gomez@example.com | 1090000102 | |
-| Aprendiz | María José Herrera Patiño | maria.herrera@example.com | 1090000103 | |
-| Aprendiz | Kevin Alexander Morales Díaz | kevin.morales@example.com | 1090000104 | Bajo el mínimo (~70 %), con faltas recientes por justificar |
-| Aprendiz | Laura Sofía Martínez Ospina | laura.martinez@example.com | 1090000105 | Justificación por revisar |
-| Aprendiz | Daniel Esteban Vargas Quintero | daniel.vargas@example.com | 1090000106 | El de más tardanzas |
-| Aprendiz | Sara Lucía Cárdenas Mejía | sara.cardenas@example.com | 1090000107 | Dos faltas justificadas |
-| Aprendiz | Juan David Ramírez Londoño | juan.ramirez@example.com | 1090000108 | Bajo el mínimo (~75 %), con una justificación rechazada |
-| Aprendiz | Natalia Andrea Suárez Pineda | natalia.suarez@example.com | 1090000109 | |
-| Aprendiz | Camilo Andrés Torres Beltrán | camilo.torres@example.com | 1090000110 | Justificación por revisar |
-| Aprendiz | Isabella Moreno Cifuentes | isabella.moreno@example.com | 1090000111 | Asistencia perfecta |
-| Aprendiz | Sebastián Ortiz Guerrero | sebastian.ortiz@example.com | 1090000112 | Sin huella: el instructor lo marca a mano (para enrolarla en vivo) |
-| Aprendiz | Paula Alejandra Jiménez Rincón | paula.jimenez@example.com | 1090000113 | |
-| Aprendiz | Brayan Stiven Castro Muñoz | brayan.castro@example.com | 1090000114 | Bajo el mínimo (75–79 %); si le aprueban la justificación por revisar, sale de la lista |
-| Aprendiz | Mariana Salazar Arango | mariana.salazar@example.com | 1090000115 | |
-| Aprendiz | Nicolás Rendón Valencia | nicolas.rendon@example.com | 1090000116 | |
-| Aprendiz | Daniela Gutiérrez Franco | daniela.gutierrez@example.com | 1090000117 | |
-| Aprendiz | Tomás Aguilar Serna | tomas.aguilar@example.com | 1090000118 | |
-
-**Lector de la feria:** serial `LECTOR-001`, clave API `clave-simulador-demo` (los del
-simulador por defecto), ambiente 305, ficha 3141592.
-
-## Guion de demostración (5 minutos)
-
-1. **Admin** → Fichas → ficha 3311983 → *Enrolar huella* de un aprendiz (consentimiento → 2 capturas → plantilla cifrada AES-256).
-2. **Instructor** → Sesiones de hoy → *Iniciar sesión de hoy* → queda en la vista de supervisión en vivo.
-3. En el **simulador**, escribe el documento del aprendiz (ej. `1016716963`): la fila se actualiza **en tiempo real** con presente/tardanza según los 15 min de tolerancia. Prueba `9999999999` para ver la alerta de huella no reconocida.
-4. Registra a otro aprendiz con **Registro manual** (motivo obligatorio, queda en auditoría).
-5. **Cerrar sesión de clase** (el diálogo avisa cuántos quedarán ausentes): los no marcados quedan ausentes y en la consola del backend aparece el **correo simulado** con el enlace de justificación (72 h).
-6. Abre ese enlace `/justificar/<token>` en el navegador → envía la excusa con adjunto.
-7. **Instructor** → Justificaciones → *Aprobar* → la ausencia pasa a **justificada**.
-8. **Aprendiz** (Julieth Camila) → *Mi asistencia*: anillo de porcentaje y alerta si baja del 80 %.
+**Sin lector a mano:** el simulador (`node simulador-lector/simulador.js`) marca con el
+documento del aprendiz si antes se le enroló la huella (Fichas → *Enrolar huella*).
 
 ## Cierre automático de clases
 
@@ -407,7 +340,7 @@ asistenciaapp/
 │   │   ├── modelos/             # Único lugar que toca la base de datos
 │   │   ├── middleware/          # autenticar, autenticarDispositivo, seguridad, manejadorErrores
 │   │   ├── utilidades/          # errores de negocio, formato (HTML de correos, CSV, fechas)
-│   │   └── scripts/             # migrar (esquema), sembrar (solo demo), sembrar-feria (ficticios), crear-coordinador, nueva-clave
+│   │   └── scripts/             # migrar (esquema), sembrar (solo demo), crear-coordinador, nueva-clave
 │   └── tests/                   # npm test: unitarias/ e integracion/
 ├── frontend/src/
 │   ├── App.jsx                  # Rutas y permisos por rol
@@ -424,7 +357,6 @@ asistenciaapp/
 │   └── utilidades/              # fechas de los horarios (próxima clase) y formato de textos
 ├── simulador-lector/simulador.js
 ├── docker-compose.yml
-└── docker-compose.feria.yml     # Entorno aparte para la feria, con datos ficticios
 ```
 
 El flujo es unidireccional, según la Guía 6 del programa:

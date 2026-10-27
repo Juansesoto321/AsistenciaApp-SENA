@@ -49,6 +49,8 @@ services:
       CORREO_REMITENTE: ${CORREO_REMITENTE:-AsistenciaApp SENA <no-responder@asistenciaapp.co>}
       # IP de los lectores reales, separadas por comas: solo ellos pueden enviar marcas (/iclock)
       IP_LECTORES: ${IP_LECTORES:-}
+      # Clase de demostración con botón para reiniciarla: vacío = activa salvo en producción; "false" la apaga
+      CLASE_DEMO: ${CLASE_DEMO:-}
     volumes:
       - ./db:/db:ro          # el script de siembra lee /db/init.sql
     depends_on:

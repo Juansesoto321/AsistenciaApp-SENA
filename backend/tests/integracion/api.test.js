@@ -976,3 +976,74 @@ prueba("la clase que terminó y nadie cerró se cierra sola, como la manual; la 
   const manual = await e.peticion("POST", `/api/sesiones/${terminada}/cerrar`, { token: tokens.instructor });
   assert.equal(manual.estado, 400);
 });
+
+// ---------- Clase de demostración (botón temporal para mostrar la app en vivo) ----------
+
+prueba("la clase de demostración se crea, se usa como cualquier clase y al reiniciarla se borra con todo lo que dejó", async () => {
+  const inicial = await e.peticion("GET", "/api/sesiones/demo", { token: tokens.instructor });
+  assert.deepEqual(inicial.datos, { habilitada: true, id_horario: null });
+  assert.equal((await e.peticion("POST", "/api/sesiones/demo/reiniciar", { token: tokens.programador })).estado, 403);
+
+  // El lector simulado es el que está en línea: la clase va a su ambiente
+  await e.pool.query("UPDATE dispositivo SET estado = 'fuera_de_linea'");
+  await e.pool.query("UPDATE dispositivo SET estado = 'en_linea', ultimo_heartbeat = NOW() WHERE serial = 'LECTOR-PRUEBA'");
+  const otrasClases = async () =>
+    (await e.pool.query("SELECT COUNT(*)::int AS n FROM sesion_clase s JOIN horario h USING (id_horario) WHERE h.fecha_desde IS NULL")).rows[0].n;
+  const antes = await otrasClases();
+
+  const creada = await e.peticion("POST", "/api/sesiones/demo/reiniciar", { token: tokens.instructor });
+  assert.equal(creada.estado, 200);
+  assert.match(creada.datos.mensaje, /ficha 999999, ambiente P-1/);
+  const hoy = await e.peticion("GET", "/api/sesiones/hoy", { token: tokens.instructor });
+  const demo = hoy.datos.find((h) => h.es_demo);
+  assert.equal(demo.id_horario, creada.datos.id_horario);
+  assert.equal(hoy.datos.filter((h) => h.es_demo).length, 1);
+
+  // Se inicia aunque la ficha ya tenga otra clase abierta a esa hora; Ana marca y Beto no
+  const inicio = await e.peticion("POST", "/api/sesiones/iniciar", { token: tokens.instructor, cuerpo: { id_horario: demo.id_horario } });
+  assert.equal(inicio.estado, 200);
+  const marca = await e.peticion("POST", "/api/lector/marcacion", { encabezados: LECTOR, cuerpo: { lectura: "dedo-ana" } });
+  assert.equal(marca.datos.resultado, "ok");
+  assert.equal(marca.datos.estado, "presente");
+  const sesionDemo = inicio.datos.id_sesion;
+  const anaEnDemo = await e.pool.query("SELECT estado FROM asistencia WHERE id_sesion = $1 AND id_aprendiz = $2", [sesionDemo, e.ids.aprendiz]);
+  assert.equal(anaEnDemo.rows[0].estado, "presente");
+
+  // Al cerrarla, Beto queda ausente con su enlace y su aviso, como en cualquier clase
+  assert.equal((await e.peticion("POST", `/api/sesiones/${sesionDemo}/cerrar`, { token: tokens.instructor })).estado, 200);
+  const rango = `${demo.hora_inicio.slice(0, 5)}–${demo.hora_fin.slice(0, 5)}`;
+  const avisosDemo = () => e.pool.query(
+    "SELECT 1 FROM notificacion WHERE id_usuario = $1 AND tipo = 'inasistencia' AND strpos(mensaje, $2) > 0",
+    [e.ids.ausente, `(${rango}, ficha 999999)`]
+  );
+  assert.equal((await avisosDemo()).rows.length, 1);
+  const enlaces = await e.pool.query(
+    "SELECT COUNT(*)::int AS n FROM justificacion j JOIN asistencia a USING (id_asistencia) WHERE a.id_sesion = $1", [sesionDemo]
+  );
+  assert.equal(enlaces.rows[0].n, 1);
+
+  // Otro instructor no puede reiniciar la demostración de esta ficha
+  assert.equal((await e.peticion("POST", "/api/sesiones/demo/reiniciar", { token: tokens.otro })).estado, 403);
+
+  const reiniciada = await e.peticion("POST", "/api/sesiones/demo/reiniciar", { token: tokens.instructor });
+  assert.equal(reiniciada.estado, 200);
+  assert.notEqual(reiniciada.datos.id_horario, demo.id_horario);
+  const queda = async (sql) => (await e.pool.query(sql, [sesionDemo])).rows[0].n;
+  assert.equal(await queda("SELECT COUNT(*)::int AS n FROM sesion_clase WHERE id_sesion = $1"), 0);
+  assert.equal(await queda("SELECT COUNT(*)::int AS n FROM asistencia WHERE id_sesion = $1"), 0);
+  assert.equal((await avisosDemo()).rows.length, 0);
+  assert.equal((await e.pool.query("SELECT 1 FROM horario WHERE id_horario = $1", [demo.id_horario])).rows.length, 0);
+  // Lo demás sigue igual: las otras clases y el aviso de la clase cerrada sola (07:00–09:00)
+  assert.equal(await otrasClases(), antes);
+  const avisoReal = await e.pool.query(
+    "SELECT 1 FROM notificacion WHERE id_usuario = $1 AND mensaje LIKE '%(07:00–09:00, ficha 999999)%'", [e.ids.ausente]
+  );
+  assert.equal(avisoReal.rows.length, 1);
+
+  const nueva = (await e.peticion("GET", "/api/sesiones/hoy", { token: tokens.instructor })).datos.find((h) => h.es_demo);
+  assert.equal(nueva.id_horario, reiniciada.datos.id_horario);
+  assert.equal(nueva.estado_sesion, null);
+  const auditoria = await e.pool.query("SELECT detalle FROM auditoria WHERE accion = 'reiniciar_clase_demo' ORDER BY id_auditoria");
+  assert.equal(auditoria.rows.length, 2);
+  assert.equal(auditoria.rows[1].detalle.clases_borradas, 1);
+});

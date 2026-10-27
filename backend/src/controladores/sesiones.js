@@ -1,4 +1,5 @@
 const servicio = require("../servicios/sesiones");
+const claseDemo = require("../servicios/claseDemo");
 
 async function horariosDeHoy(req, res, next) {
   try {
@@ -56,4 +57,23 @@ async function eliminarSesion(req, res, next) {
   }
 }
 
-module.exports = { historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion };
+async function estadoClaseDemo(req, res, next) {
+  try {
+    res.json(await claseDemo.estado());
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function reiniciarClaseDemo(req, res, next) {
+  try {
+    res.json(await claseDemo.reiniciar(req.usuario));
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  historialDeClases, horariosDeHoy, iniciarSesion, verDetalle, registrarAsistenciaManual, cerrarSesion, eliminarSesion,
+  estadoClaseDemo, reiniciarClaseDemo,
+};

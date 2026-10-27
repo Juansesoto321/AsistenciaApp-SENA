@@ -1,9 +1,10 @@
 /**
- * Clase en curso en el panel: la misma huella del inicio de sesión, que se va
+ * Clase en curso en el panel: la huella del lector como holograma, que se va
  * encendiendo a medida que los aprendices marcan, y las últimas marcas en vivo.
  */
 import { Link } from "react-router-dom";
-import EscanerHuella, { TOTAL_CRESTAS } from "./EscanerHuella.jsx";
+import { TOTAL_CRESTAS } from "./EscanerHuella.jsx";
+import HuellaHolograma from "./HuellaHolograma.jsx";
 import Contador from "./Contador.jsx";
 import { horaCorta } from "../utilidades/formato";
 
@@ -21,7 +22,7 @@ export default function ClaseEnCurso({ clase, marcas = [], recibidas = 0, verIns
 
   return (
     <section className="clase-en-curso">
-      <EscanerHuella
+      <HuellaHolograma
         className="en-curso-huella"
         estado={recibidas ? "marca" : "espera"}
         encendidas={encendidas}
