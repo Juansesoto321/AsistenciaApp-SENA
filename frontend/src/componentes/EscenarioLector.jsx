@@ -1,13 +1,13 @@
 /**
  * Columna izquierda de las pantallas de acceso (iniciar sesión, crear cuenta,
  * nueva contraseña): la "pantalla del lector", con la marca, la hora junto a
- * la huella y una línea de estado con su luz. También pone el fondo neón de
+ * la huella y una línea de estado con su luz. También pone el fondo de
  * toda la pantalla.
  */
 import { useEffect, useState } from "react";
 import Logo from "./Logo.jsx";
 import EscanerHuella from "./EscanerHuella.jsx";
-import FondoNeon from "./FondoNeon.jsx";
+import FondoHuella from "./FondoHuella.jsx";
 
 /** Hora y fecha como en la pantalla del lector. */
 function Reloj() {
@@ -37,7 +37,7 @@ export default function EscenarioLector({ estado = "espera", texto, encendidas =
   // El fondo va fuera de la sección: la sección es "sticky" y lo encerraría
   // en su capa, por encima del formulario.
   return (<>
-    <FondoNeon />
+    <FondoHuella />
     <section className="login-escenario">
       <div className="login-marca">
         <span className="logo-acceso"><Logo size="1.15em" /></span>

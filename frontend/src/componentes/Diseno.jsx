@@ -7,7 +7,6 @@ import { useTitulo } from "../utilidades/titulo";
 import Logo from "./Logo.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
-import FondoNeon from "./FondoNeon.jsx";
 import AccionesCuenta from "./AccionesCuenta.jsx";
 
 const ico = (nombre) => <Icono nombre={nombre} />;
@@ -200,7 +199,6 @@ export default function Diseno({ children }) {
   return (
     <div className={`aplicacion${compacto ? " compacta" : ""}`}>
       <a href="#contenido" className="saltar-contenido" onClick={saltarAlContenido}>Saltar al contenido</a>
-      <FondoNeon tenue />
       {/* Barra superior: solo se ve en celulares y tabletas (ver estilos.css) */}
       <header className="barra-superior" inert={inerte}>
         <button ref={abrirMenuRef} className="boton-menu" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú" aria-expanded={menuAbierto}>
@@ -249,7 +247,8 @@ export default function Diseno({ children }) {
       </aside>
       <main className="contenido" id="contenido" ref={contenidoRef} tabIndex={-1} inert={inerte}>
         <AccionesCuenta notificaciones={notifPendientes} />
-        {children}
+        {/* La key cambia con la página: el contenido nuevo entra con una animación corta (.vista) */}
+        <div key={pathname} className="vista">{children}</div>
       </main>
       <Aviso mensaje={avisoPermiso} alCerrar={() => setAvisoPermiso(null)} />
     </div>
