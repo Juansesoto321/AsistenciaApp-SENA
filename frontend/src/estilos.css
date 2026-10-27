@@ -5,8 +5,8 @@
    la huella; texto, enlaces y botones con texto blanco encima usan tonos más
    oscuros del mismo verde para leerse bien (contraste AA, 4,5:1).
    Estilo: superficies sólidas y tranquilas, sin vidrio ni brillos. El menú
-   lateral es azul en los dos temas; el tema oscuro (el de por defecto) es
-   azul noche y el claro, gris azulado con tinta azul. La única pieza vistosa
+   lateral es azul en los dos temas; el tema oscuro es azul noche y el claro,
+   gris azulado con tinta azul. La única pieza vistosa
    es la huella (inicio de sesión y clase en curso).
    Letra: Work Sans en toda la app (va dentro de la compilación, funciona sin
    internet), con cifras tabulares en los números.
@@ -83,7 +83,7 @@
   color-scheme: light;
 }
 
-/* ---- Modo oscuro (el de por defecto): azul noche ----
+/* ---- Modo oscuro: azul noche ----
    Solo se redefinen los colores: todos los componentes usan estas variables.
    "--blanco" es la superficie sólida de modales, menús y celdas fijas. Las
    pantallas de acceso usan este tema siempre (.tema-oscuro), como la
