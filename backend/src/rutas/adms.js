@@ -17,9 +17,17 @@
 const express = require("express");
 const controlador = require("../controladores/adms");
 const { ipLectores } = require("../config/entorno");
-const { soloDesdeIps } = require("../middleware/seguridad");
+const { soloDesdeIps, ipDeConexion } = require("../middleware/seguridad");
+const detectados = require("../servicios/lectoresDetectados");
 
 const router = express.Router();
+// Antes del filtro de IP: el asistente para conectar un lector también muestra
+// el equipo que llamó desde una IP que no está en IP_LECTORES
+router.use((req, _res, next) => {
+  const ip = ipDeConexion(req);
+  detectados.anotar(req.query.SN, ip, ipLectores.length > 0 && !ipLectores.includes(ip));
+  next();
+});
 // El serial no es un secreto: solo los equipos de IP_LECTORES pueden marcar
 router.use(soloDesdeIps(ipLectores));
 router.use(express.text({ type: "*/*" }));

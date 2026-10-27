@@ -2173,3 +2173,53 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
 :root[data-tema="claro"] .acceso-color-icono { background: rgba(255, 255, 255, 0.2); }
 /* Cifras de color: blancas con un tinte suave */
 :root[data-tema="claro"] .estadistica { background: linear-gradient(135deg, color-mix(in srgb, var(--tono) 9%, #fff), #fff 70%); }
+
+/* ============================================================
+   Asistente para conectar el lector (ConectarLector.jsx)
+   A la izquierda los pasos numerados; a la derecha, fija, la señal del
+   lector en vivo. Las rutas de menú del equipo van como teclas.
+   ============================================================ */
+.acciones-cabecera { display: flex; gap: 10px; flex-wrap: wrap; }
+.conectar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 20px; align-items: start; }
+.conectar-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.conectar-paso { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; }
+.conectar-paso h2 { font-size: 18px; margin-bottom: 6px; color: var(--tinta-fuerte); }
+.conectar-paso p { margin: 6px 0; line-height: 1.55; color: var(--tinta); }
+.conectar-numero {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  font-size: 18px; font-weight: 700; color: var(--sobre-boton); background: var(--gradiente);
+}
+.conectar-paso.listo { border-color: var(--presente); }
+.conectar-paso.listo .conectar-numero { background: var(--presente); color: #fff; }
+.conectar-ruta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; vertical-align: middle; }
+.conectar-ruta .separador { margin: 0 2px; color: var(--tinta-suave); }
+.conectar-paso kbd, .conectar-senal kbd {
+  display: inline-block; padding: 2px 8px; border-radius: 6px; font: 600 13px/1.5 var(--fuente);
+  color: var(--tinta-fuerte); background: var(--capa); border: 1px solid var(--capa-borde); border-bottom-width: 2px;
+}
+.conectar-datos { display: flex; flex-wrap: wrap; gap: 14px 28px; margin: 12px 0 10px; }
+.conectar-etiqueta { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-media); margin-bottom: 6px; }
+.conectar-valor { display: inline-flex; align-items: center; gap: 8px; }
+.conectar-valor code { font-size: 15px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: var(--capa); color: var(--tinta-fuerte); }
+.conectar-valor.grande code { font-size: 26px; padding: 6px 14px; letter-spacing: 0.02em; }
+.conectar-lista { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 8px; line-height: 1.55; }
+.conectar-nota { font-size: 13.5px; color: var(--tinta-media); }
+.conectar-otras { margin-top: 8px; font-size: 13.5px; color: var(--tinta-media); }
+.conectar-otras ul { margin: 6px 0 0; padding-left: 18px; }
+.conectar-aprendices { margin-top: 12px; max-height: 340px; overflow: auto; }
+.conectar-senal { position: sticky; top: 84px; }
+.conectar-senal h2 { display: flex; align-items: center; gap: 8px; font-size: 18px; margin-bottom: 12px; color: var(--tinta-fuerte); }
+.conectar-esperando p { margin: 8px 0; line-height: 1.55; }
+.conectar-detectados { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.conectar-detectados > li { display: grid; gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid var(--borde); background: var(--capa); }
+.conectar-equipo { display: grid; gap: 2px; }
+.conectar-equipo b { font-size: 16px; color: var(--tinta-fuerte); }
+.conectar-equipo span { font-size: 13px; color: var(--tinta-media); }
+.conectar-asociar { display: flex; gap: 8px; }
+.conectar-asociar select { flex: 1; min-width: 0; }
+.conectar-alerta { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ambar); }
+@media (max-width: 1000px) {
+  .conectar { grid-template-columns: 1fr; }
+  .conectar-senal { position: static; order: -1; }
+}
+.conectar-red { display: block; margin-top: 6px; }

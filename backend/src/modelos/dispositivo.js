@@ -53,4 +53,13 @@ async function notificarLectorCaido({ id_ambiente: idAmbiente }, mensaje) {
   return r.rows.map((f) => f.id_usuario);
 }
 
-module.exports = { buscarPorSerial, buscarPorCredenciales, marcarEnLinea, marcarFueraDeLineaSinHeartbeat, notificarLectorCaido };
+/** Serial de cada lector registrado y el ambiente al que pertenece. */
+async function listarConAmbiente() {
+  const r = await pool.query(
+    `SELECT d.serial, d.estado, a.numero_ambiente
+     FROM dispositivo d LEFT JOIN ambiente a ON a.id_ambiente = d.id_ambiente`
+  );
+  return r.rows;
+}
+
+module.exports = { buscarPorSerial, buscarPorCredenciales, marcarEnLinea, marcarFueraDeLineaSinHeartbeat, notificarLectorCaido, listarConAmbiente };

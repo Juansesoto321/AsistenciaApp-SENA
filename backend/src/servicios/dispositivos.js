@@ -2,7 +2,11 @@
  * Lectores biométricos: identificación del equipo y señal de vida (CU-09).
  * Lo usan los dos protocolos: el simulado (/api/lector) y el real ADMS (/iclock).
  */
+const fs = require("fs");
+const os = require("os");
 const modelo = require("../modelos/dispositivo");
+const detectados = require("./lectoresDetectados");
+const { ipLectores, puertoLector } = require("../config/entorno");
 const { error } = require("../utilidades/errores");
 
 /** Protocolo simulado: el lector se identifica con serial + clave de API. */
@@ -27,4 +31,31 @@ async function registrarLatido(idDispositivo) {
   await modelo.marcarEnLinea(idDispositivo);
 }
 
-module.exports = { autenticar, identificarPorSerial, registrarLatido };
+/** IPv4 de las tarjetas de red de este computador (sin la de bucle local). */
+function ipsDelEquipo() {
+  return Object.entries(os.networkInterfaces()).flatMap(([nombre, lista]) =>
+    (lista || []).filter((i) => i.family === "IPv4" && !i.internal).map((i) => ({ nombre, ip: i.address })));
+}
+
+/**
+ * Lo que necesita el asistente para conectar un lector: el puerto al que debe
+ * llamar, las IP de este computador y los equipos que ya llamaron. Dentro de
+ * Docker las IP son las del contenedor y no sirven: el asistente lo explica.
+ */
+async function conexionLector() {
+  const enDocker = fs.existsSync("/.dockerenv");
+  const registrados = new Map((await modelo.listarConAmbiente()).map((d) => [d.serial, d]));
+  return {
+    puerto: puertoLector,
+    enDocker,
+    ips: enDocker ? [] : ipsDelEquipo(),
+    ipLectores,
+    detectados: detectados.recientes().map((d) => ({
+      ...d,
+      registrado: registrados.has(d.serial),
+      ambiente: registrados.get(d.serial)?.numero_ambiente ?? null,
+    })),
+  };
+}
+
+module.exports = { autenticar, identificarPorSerial, registrarLatido, conexionLector };
