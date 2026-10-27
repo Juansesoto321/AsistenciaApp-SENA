@@ -1934,3 +1934,21 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
   .login-pie { justify-content: center; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) { .boton.contorno { transition: none; } }
+
+/* ---- Logo del SENA (LogoSena.jsx): verde SENA en claro, más brillante en oscuro ---- */
+.logo-sena { color: #39a900; }
+:root[data-tema="oscuro"] .logo-sena, .tema-oscuro .logo-sena, .barra-lateral .logo-sena {
+  color: #3ee67a; filter: drop-shadow(0 0 8px rgba(62, 230, 122, 0.45));
+}
+.marca .marca-sena-logo { flex-shrink: 0; }
+.compacta .marca .marca-sena-logo { width: 40px !important; height: 40px !important; }
+.pie-marca { display: inline-flex; align-items: center; gap: 10px; }
+.login-marca { gap: 22px; }
+.login-marca-separador { width: 1px; align-self: stretch; margin: 6px 0; background: rgba(255, 255, 255, 0.25); }
+.frase-logo { position: absolute; right: 18px; bottom: 16px; opacity: 0.9; }
+.tarjeta-frase p { padding-right: 34px; }
+.aliento-logo { position: relative; display: block; margin-bottom: 12px; }
+@media (max-width: 860px) {
+  .login-marca .login-logo-sena { width: 60px !important; height: 60px !important; }
+  .login-marca { gap: 14px; }
+}

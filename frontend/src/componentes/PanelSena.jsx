@@ -7,6 +7,7 @@
 import { Link } from "react-router-dom";
 import Icono from "./Iconos.jsx";
 import IconoHuella from "./IconoHuella.jsx";
+import LogoSena from "./LogoSena.jsx";
 import Contador from "./Contador.jsx";
 import { saludo } from "../utilidades/formato";
 import { SEDE, fraseDelDia } from "../utilidades/sede";
@@ -35,6 +36,7 @@ export function TarjetaFrase() {
     <aside className="tarjeta-frase" aria-label="Frase del día">
       <span className="frase-punto" aria-hidden="true" />
       <p>{fraseDelDia()}</p>
+      <LogoSena className="frase-logo" size="46px" />
       <svg className="frase-ondas" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
           <path key={i} d={`M0 ${70 - i * 6} C 80 ${40 - i * 8}, 160 ${95 - i * 4}, 300 ${30 - i * 6}`} />
@@ -95,6 +97,7 @@ export function TarjetaSede() {
 export function TarjetaAliento({ titulo }) {
   return (
     <aside className="tarjeta-aliento">
+      <LogoSena className="aliento-logo" size="34px" />
       <IconoHuella className="aliento-huella" size="150px" />
       <p>{titulo}</p>
       <span className="aliento-linea" aria-hidden="true" />

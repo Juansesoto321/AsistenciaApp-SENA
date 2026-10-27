@@ -5,7 +5,7 @@
  * de estado con su luz. También pone el fondo (la foto de la sede, oscurecida),
  * el lema "Formación para la vida" y el pie de página.
  */
-import Logo from "./Logo.jsx";
+import LogoSena from "./LogoSena.jsx";
 import Icono from "./Iconos.jsx";
 import IconoHuella from "./IconoHuella.jsx";
 import HuellaHolograma from "./HuellaHolograma.jsx";
@@ -31,7 +31,8 @@ export default function EscenarioLector({ estado = "espera", texto, encendidas =
     <p className="login-lema" aria-hidden="true">Formación <span>para la vida</span></p>
     <section className="login-escenario">
       <div className="login-marca">
-        <span className="logo-acceso"><Logo size="1.15em" /></span>
+        <LogoSena className="login-logo-sena" size="96px" titulo="SENA" />
+        <span className="login-marca-separador" aria-hidden="true" />
         <span>
           <strong>Asistencia<em>App</em></strong>
           <small>Servicio Nacional de Aprendizaje</small>
@@ -60,7 +61,7 @@ export default function EscenarioLector({ estado = "espera", texto, encendidas =
       </div>
     </section>
     <footer className="login-pie">
-      <span><Logo size="1.2em" /> <b>SENA</b> · Servicio Nacional de Aprendizaje</span>
+      <span><LogoSena size="34px" /> <b>SENA</b> · Servicio Nacional de Aprendizaje</span>
       <span className="pie-lemas">Tecnología · Talento · Innovación</span>
     </footer>
   </>);

@@ -5,6 +5,7 @@ import { conectarTiempoReal } from "../servicios/socket";
 import { useAuth } from "../contexto/AuthContext.jsx";
 import { useTitulo } from "../utilidades/titulo";
 import Logo from "./Logo.jsx";
+import LogoSena from "./LogoSena.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
 import AccionesCuenta from "./AccionesCuenta.jsx";
@@ -225,7 +226,7 @@ export default function Diseno({ children }) {
 
       <aside className={`barra-lateral ${menuAbierto ? "abierta" : ""}`} aria-label="Menú principal">
         <div className="marca">
-          <div className="icono"><Logo size="1.45em" /></div>
+          <LogoSena className="marca-sena-logo" size="52px" titulo="SENA" />
           {/* El menú es angosto: "SENA" va en su propia línea, como parte del
               nombre; el nombre completo de la entidad sale en el inicio de sesión */}
           <div className="marca-texto">
@@ -263,7 +264,7 @@ export default function Diseno({ children }) {
         {/* La key cambia con la página: el contenido nuevo entra con una animación corta (.vista) */}
         <div key={pathname} className="vista">{children}</div>
         <footer className="pie-app">
-          <span><b>Servicio Nacional de Aprendizaje</b> · SENA © {new Date().getFullYear()}</span>
+          <span className="pie-marca"><LogoSena size="30px" /> <b>Servicio Nacional de Aprendizaje</b> · SENA © {new Date().getFullYear()}</span>
           <span className="pie-lemas">Tecnología · Talento · Innovación</span>
         </footer>
       </main>
