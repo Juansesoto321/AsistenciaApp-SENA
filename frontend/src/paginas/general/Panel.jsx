@@ -125,7 +125,7 @@ function ClaseDeHoy({ h, verInstructor, alError }) {
         {h.estado_sesion === "activa" && <span className="insignia activa"><span className="pulso" />En curso</span>}
       </div>
       <div className="clase-info">
-        <b>Ficha {h.numero_ficha}</b>
+        <b>Ficha {h.numero_ficha}</b>{h.es_demo && <span className="insignia demo">demostración</span>}
         <small>
           Ambiente {h.numero_ambiente}{verInstructor ? ` · ${h.instructor}` : ""}
           {" · "}

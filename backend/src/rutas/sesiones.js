@@ -17,6 +17,9 @@ const GESTION = ["instructor", "coordinador"];
 router.get("/hoy", autorizar(...SUPERVISION), controlador.horariosDeHoy);
 router.get("/historial", autorizar(...SUPERVISION), controlador.historialDeClases);
 router.post("/iniciar", autorizar(...GESTION), controlador.iniciarSesion);
+// Clase de demostración (temporal): antes de "/:id" para que "demo" no se lea como id
+router.get("/demo", autorizar(...GESTION), controlador.estadoClaseDemo);
+router.post("/demo/reiniciar", autorizar(...GESTION), controlador.reiniciarClaseDemo);
 router.get("/:id", autorizar(...SUPERVISION), controlador.verDetalle);
 router.post("/:id/asistencia-manual", autorizar(...GESTION), controlador.registrarAsistenciaManual);
 router.post("/:id/cerrar", autorizar(...GESTION), controlador.cerrarSesion);

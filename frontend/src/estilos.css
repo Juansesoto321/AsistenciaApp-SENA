@@ -654,6 +654,17 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
 .insignia.ausente, .insignia.inactivo, .insignia.bloqueado, .insignia.rechazada, .insignia.fuera_de_linea, .insignia.vencida { background: var(--rojo-suave); color: var(--rojo); }
 .insignia.justificada, .insignia.manual, .insignia.cerrada { background: var(--azul-suave); color: var(--azul); }
 .insignia.huella, .insignia.sistema { background: var(--marca-100); color: var(--marca-700); }
+.insignia.demo { margin-left: 8px; background: var(--azul-suave); color: var(--azul); vertical-align: 1px; }
+
+/* ---- Clase de demostración (temporal, ClaseDemo.jsx) ---- */
+.clase-demo {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 18px 22px; border-radius: var(--radio);
+  background: var(--vidrio); border: 1px solid var(--borde-luz); box-shadow: var(--sombra);
+}
+.clase-demo h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--tinta-fuerte); }
+.clase-demo h2 svg { color: var(--marca-600); }
+.clase-demo ol { margin: 8px 0 0; padding-left: 20px; color: var(--tinta-media); font-size: 14px; line-height: 1.6; }
 
 /* ---- Utilidades ---- */
 .rejilla-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -1226,7 +1237,8 @@ table.tabla { width: 100%; border-collapse: collapse; background: var(--blanco);
   font-family: var(--fuente-lector); font-weight: 300; letter-spacing: -0.03em; font-size: 58px; line-height: 1;
   color: var(--tinta-fuerte); font-variant-numeric: tabular-nums;
 }
-.en-curso-cifra span { color: var(--tinta-media); font-size: 15px; }
+/* Solo el texto de al lado: el número también trae spans adentro (Contador) */
+.en-curso-cifra > span { color: var(--tinta-media); font-size: 15px; }
 .en-curso-marcas { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; max-width: 480px; }
 .en-curso-marcas li {
   display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 10px;
