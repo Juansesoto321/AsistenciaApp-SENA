@@ -14,6 +14,7 @@ import { SEDE, fraseDelDia } from "../utilidades/sede";
 import fotoFachada from "../assets/img/sede-fachada.webp";
 import fotoCalle from "../assets/img/sede-calle.webp";
 import fotoLector from "../assets/img/lector-zkteco.webp";
+import fotoLectorClaro from "../assets/img/lector-zkteco-claro.webp";
 
 /** Portada: saludo y nombre sobre la foto de la sede. `detalle`: programa o rol. */
 export function PortadaSede({ nombre, detalle, llegada }) {
@@ -65,8 +66,10 @@ export function TarjetaLector({ titulo = "Registro de asistencia", subtitulo = "
         <IconoHuella size="58px" />
       </div>
       <p className={`chip-lector ${estado}`} role="status"><span aria-hidden="true" />{texto}</p>
+      {/* Una foto por tema: la de fondo negro se funde con el oscuro y la de fondo blanco con el claro */}
       <div className="lector-foto">
-        <img src={fotoLector} alt="Lector de huella ZKTeco SenseFace 2A" />
+        <img className="solo-oscuro" src={fotoLector} alt="Lector de huella ZKTeco SenseFace 2A" />
+        <img className="solo-claro" src={fotoLectorClaro} alt="Lector de huella ZKTeco SenseFace 2A" />
       </div>
     </section>
   );

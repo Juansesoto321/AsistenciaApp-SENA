@@ -6,6 +6,7 @@ import { useAuth } from "../contexto/AuthContext.jsx";
 import { useTitulo } from "../utilidades/titulo";
 import Logo from "./Logo.jsx";
 import LogoSena from "./LogoSena.jsx";
+import AuroraMenu from "./AuroraMenu.jsx";
 import Icono from "./Iconos.jsx";
 import Aviso from "./Aviso.jsx";
 import AccionesCuenta from "./AccionesCuenta.jsx";
@@ -226,7 +227,7 @@ export default function Diseno({ children }) {
 
       <aside className={`barra-lateral ${menuAbierto ? "abierta" : ""}`} aria-label="Menú principal">
         <div className="marca">
-          <LogoSena className="marca-sena-logo" size="52px" titulo="SENA" />
+          <LogoSena className="marca-sena-logo" size="62px" titulo="SENA" />
           {/* El menú es angosto: "SENA" va en su propia línea, como parte del
               nombre; el nombre completo de la entidad sale en el inicio de sesión */}
           <div className="marca-texto">
@@ -258,6 +259,7 @@ export default function Diseno({ children }) {
           })}
         </nav>
         <p className="lema">Formación <span>para la vida</span></p>
+        <AuroraMenu />
       </aside>
       <main className="contenido" id="contenido" ref={contenidoRef} tabIndex={-1} inert={inerte}>
         <AccionesCuenta notificaciones={notifPendientes} paginas={paginasDelRol(menu)} />

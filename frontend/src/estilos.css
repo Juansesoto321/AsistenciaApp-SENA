@@ -52,9 +52,9 @@
   --vidrio-acceso-borde: #dce3e8;
   --sombra-acceso: 0 24px 60px rgba(11, 34, 51, 0.12);
   /* Menú lateral: azul en los dos temas (sus colores de texto, en .barra-lateral) */
-  --menu-fondo: #0a2b40;
-  --menu-borde: rgba(255, 255, 255, 0.06);
-  --menu-activo: #123a54;
+  --menu-fondo: #ffffff;
+  --menu-borde: rgba(22, 101, 52, 0.12);
+  --menu-activo: #e7f6ec;
   /* Capas tenues sobre las pantallas del lector (botones, bordes, píldoras) */
   --capa: rgba(11, 34, 51, 0.05);
   --capa-borde: rgba(11, 34, 51, 0.12);
@@ -383,8 +383,9 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
 
 /* ---- Layout con barra lateral ---- */
 .aplicacion { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
-/* El menú es azul en los dos temas: aquí adentro la tinta es clara */
-.barra-lateral, .barra-superior {
+/* En oscuro el menú es azul noche: aquí adentro la tinta es clara. En claro
+   el menú es blanco y usa la tinta de siempre (ver "Revisión del equipo"). */
+:root[data-tema="oscuro"] .barra-lateral, :root[data-tema="oscuro"] .barra-superior {
   --tinta-fuerte: #ffffff; --tinta: #e3ebf0; --tinta-media: #c3d1db; --tinta-suave: #8fa5b4;
   --capa: rgba(255, 255, 255, 0.07); --capa-borde: rgba(255, 255, 255, 0.12); --capa-fuerte: rgba(255, 255, 255, 0.3);
   --marca-600: #3ee67a;
@@ -598,9 +599,10 @@ label { display: block; font-size: 13.5px; font-weight: 600; color: var(--tinta-
   .barra-superior { padding-right: 140px !important; }
   .marca-mini { min-width: 0; }
   .marca-mini-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* Quedan sobre la barra superior, que es azul: íconos claros */
-  .accion-cuenta { width: 36px; height: 36px; border-radius: 50%; color: #c3d1db; }
-  .accion-cuenta:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+  /* Quedan sobre la barra superior: en oscuro es azul noche, íconos claros */
+  .accion-cuenta { width: 36px; height: 36px; border-radius: 50%; }
+  :root[data-tema="oscuro"] .accion-cuenta { color: #c3d1db; }
+  :root[data-tema="oscuro"] .accion-cuenta:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
   .accion-cuenta .contador-notif { box-shadow: 0 0 0 2px var(--menu-fondo); }
   .avatar-cuenta { width: 36px; height: 36px; }
   .boton-cuenta { position: relative; padding: 0; }
@@ -1516,7 +1518,7 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
 }
 .lema {
   position: relative; flex-shrink: 0; margin: 14px 8px 4px; padding-bottom: 12px; transform: rotate(-6deg);
-  font-family: "Kaushan Script", cursive; font-size: 23px; line-height: 1.15; color: #fff;
+  font-family: "Kaushan Script", cursive; font-size: 23px; line-height: 1.15; color: var(--tinta-fuerte);
 }
 .lema span { display: block; padding-left: 22px; }
 .lema::after {
@@ -1752,13 +1754,17 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
 @media (max-width: 1100px) { .accesos-color-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- Accesos adicionales ---- */
-.accesos-adicionales-lista { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+/* De a dos cuando la tarjeta es angosta y en una fila cuando hay espacio (sin partir palabras) */
+.accesos-adicionales { container-type: inline-size; }
+.accesos-adicionales-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+@container (min-width: 460px) { .accesos-adicionales-lista { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .acceso-adicional {
   display: grid; justify-items: center; align-content: center; gap: 8px; min-height: 104px; padding: 12px 6px; border-radius: 14px;
   text-align: center; font-size: 13px; font-weight: 600; color: var(--tinta); border: 1px solid var(--vidrio-borde); background: var(--marca-50);
   transition: border-color .2s, transform .2s var(--frenar);
 }
 .acceso-adicional > svg:first-child { color: var(--marca-600); }
+.acceso-adicional span { font-size: 13px; line-height: 1.25; }
 .acceso-adicional-flecha { width: 14px !important; height: 14px !important; color: var(--tinta-suave); }
 .acceso-adicional:hover { border-color: var(--borde-luz); transform: translateY(-2px); }
 
@@ -1937,7 +1943,7 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
 
 /* ---- Logo del SENA (LogoSena.jsx): verde SENA en claro, más brillante en oscuro ---- */
 .logo-sena { color: #39a900; }
-:root[data-tema="oscuro"] .logo-sena, .tema-oscuro .logo-sena, .barra-lateral .logo-sena {
+:root[data-tema="oscuro"] .logo-sena, .tema-oscuro .logo-sena {
   color: #3ee67a; filter: drop-shadow(0 0 8px rgba(62, 230, 122, 0.45));
 }
 .marca .marca-sena-logo { flex-shrink: 0; }
@@ -1952,3 +1958,191 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
   .login-marca .login-logo-sena { width: 60px !important; height: 60px !important; }
   .login-marca { gap: 14px; }
 }
+
+/* ============================================================
+   Revisión del equipo (referencias de la feria)
+   - Menú como un panel con borde de luz, auroras de líneas finas abajo y el
+     logo del SENA en contorno como marca de agua (AuroraMenu.jsx).
+   - Línea de luz debajo de la barra de arriba y más brillo en las tarjetas.
+   - Modo claro: blanco con verdes suaves, el menú blanco y los accesos de
+     colores sólidos.
+   ============================================================ */
+:root {
+  --menu-degradado: linear-gradient(180deg, #ffffff 0%, #f6fbf8 55%, #edf8f1 100%);
+  --menu-linea: rgba(22, 163, 74, 0.22);
+  --menu-brillo: 0 12px 34px rgba(16, 64, 34, 0.08);
+  --linea-arriba: rgba(22, 163, 74, 0.2);
+  --aurora-1: #16a34a; --aurora-2: #22c55e; --aurora-3: #14b8a6;
+  --marca-agua: rgba(22, 101, 52, 0.28);
+}
+:root[data-tema="oscuro"], .tema-oscuro {
+  --menu-degradado: linear-gradient(180deg, #071a24 0%, #05131c 50%, #04141a 100%);
+  --menu-linea: rgba(62, 230, 122, 0.34);
+  --menu-brillo: 0 0 0 1px rgba(62, 230, 122, 0.06), 0 0 36px rgba(62, 230, 122, 0.14), inset 0 0 44px rgba(62, 230, 122, 0.05);
+  --linea-arriba: rgba(62, 230, 122, 0.28);
+  --aurora-1: #39a900; --aurora-2: #3ee67a; --aurora-3: #2fd3e0;
+  --marca-agua: rgba(62, 230, 122, 0.32);
+}
+
+/* ---- Menú: panel con borde de luz ---- */
+.barra-lateral { isolation: isolate; overflow: hidden; background: var(--menu-degradado); }
+@media (min-width: 861px) {
+  .aplicacion { grid-template-columns: 270px 1fr; }
+  .aplicacion.compacta { grid-template-columns: 100px 1fr; }
+  .barra-lateral {
+    top: 14px; height: calc(100vh - 28px); margin: 14px 0 14px 14px; border-radius: 26px;
+    border: 1px solid var(--menu-linea); box-shadow: var(--menu-brillo);
+  }
+}
+/* Resplandor en la esquina de arriba y una línea de luz por el borde derecho */
+.barra-lateral::before {
+  content: ""; position: absolute; z-index: -1; top: -70px; right: -70px; width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--aurora-2) 26%, transparent), transparent); pointer-events: none;
+}
+.barra-lateral::after {
+  content: ""; position: absolute; top: 6%; bottom: 6%; right: 0; width: 1.5px; pointer-events: none;
+  background: linear-gradient(transparent, var(--aurora-2), var(--aurora-3) 70%, transparent); opacity: 0.6;
+}
+.barra-lateral > :not(.menu-aurora) { position: relative; z-index: 1; }
+
+/* La marca: el logo del SENA grande, el nombre y la versión */
+.marca { gap: 12px; padding: 6px 2px 20px 4px; }
+.marca-texto { flex: 1; min-width: 0; font-size: 20px; font-weight: 700; color: var(--tinta-fuerte); }
+.marca .marca-sena { margin-top: 2px; color: var(--marca-600); font-size: 12.5px; font-weight: 500; }
+.marca .marca-version { display: block; width: fit-content; margin: 6px 0 0 auto; }
+/* El botón de solo íconos va arriba en la esquina, chico, sobre la marca y sin taparla */
+@media (min-width: 861px) {
+  .marca { padding-top: 24px; }
+  .marca .boton-compacto { position: absolute; top: -6px; right: -6px; width: 30px; height: 30px; padding: 4px; opacity: 0.7; }
+  .marca .boton-compacto:hover { opacity: 1; }
+  .compacta .marca { padding-right: 0; padding-top: 26px; }
+  .compacta .marca .boton-compacto { right: 50%; translate: 50% 0; }
+}
+
+/* Opciones más grandes; la elegida, una píldora con borde de luz */
+.barra-lateral nav { gap: 5px; }
+.barra-lateral nav a { padding: 11px 14px; font-size: 15px; border-radius: 12px; }
+.barra-lateral nav a svg { width: 21px !important; height: 21px !important; }
+.barra-lateral nav a.activo {
+  color: #166534; background: linear-gradient(90deg, #dcf3e4, #f1faf4);
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.3);
+}
+:root[data-tema="oscuro"] .barra-lateral nav a.activo {
+  color: #fff; background: linear-gradient(90deg, rgba(62, 230, 122, 0.2), rgba(62, 230, 122, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(62, 230, 122, 0.42), 0 0 20px rgba(62, 230, 122, 0.16);
+}
+.grupo-menu { margin-top: 16px; }
+
+/* Auroras de abajo (AuroraMenu.jsx) */
+.menu-aurora { position: absolute; left: 0; right: 0; bottom: 0; height: 52%; z-index: 0; pointer-events: none; }
+.menu-aurora .menu-ondas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.aurora-a { stop-color: var(--aurora-1); stop-opacity: 0.25; }
+.aurora-b { stop-color: var(--aurora-2); stop-opacity: 1; }
+.aurora-c { stop-color: var(--aurora-3); stop-opacity: 0.55; }
+.menu-cinta path { fill: none; stroke: url(#menu-cinta); stroke-width: 0.55; opacity: 0.5; }
+.menu-cinta path:nth-child(5n + 1) { stroke-width: 0.9; opacity: 0.75; }
+.cinta-alta path:nth-child(9), .cinta-baja path:nth-child(7) { stroke-width: 1.8; opacity: 1; filter: drop-shadow(0 0 4px var(--aurora-2)); }
+.menu-puntos circle { fill: var(--aurora-2); opacity: 0.85; filter: drop-shadow(0 0 3px var(--aurora-2)); }
+:root[data-tema="claro"] .menu-cinta path { opacity: 0.32; }
+:root[data-tema="claro"] .menu-puntos circle { opacity: 0.5; filter: none; }
+.menu-aurora .menu-marca-agua {
+  position: absolute; left: 50%; bottom: 26px; translate: -50% 0;
+  fill: none; stroke: currentColor; stroke-width: 9; color: var(--marca-agua); filter: none;
+}
+.compacta .menu-marca-agua { display: none; }
+/* El lema va justo después de las opciones; abajo quedan las auroras y la marca de agua */
+.barra-lateral nav { flex: 0 1 auto; }
+.lema { margin-top: 26px; }
+
+/* ---- Línea de luz debajo de la barra de arriba ---- */
+.barra-cuenta::after {
+  content: ""; position: absolute; left: -32px; right: -32px; bottom: -11px; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--linea-arriba) 18%, var(--linea-arriba) 82%, transparent);
+}
+@media (max-width: 860px) { .barra-cuenta::after { display: none; } }
+
+/* ---- Más brillo en las tarjetas principales (oscuro) ---- */
+:root[data-tema="oscuro"] :is(.portada-sede, .proxima-clase, .clase-en-curso, .tarjeta-frase, .tarjeta-aliento) {
+  border-color: rgba(62, 230, 122, 0.45);
+  box-shadow: 0 0 0 1px rgba(62, 230, 122, 0.06), 0 0 30px rgba(62, 230, 122, 0.13), inset 0 0 34px rgba(62, 230, 122, 0.05);
+}
+:root[data-tema="oscuro"] :is(.tarjeta, .tarjeta-lector, .tarjeta-sede, .estadistica) {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+:root[data-tema="oscuro"] .frase-ondas path { opacity: 0.5; }
+:root[data-tema="oscuro"] .frase-ondas path:nth-child(even) { stroke: #2fd3e0; }
+
+/* ---- Foto del lector: una por tema ---- */
+.solo-claro { display: none !important; }
+:root[data-tema="claro"] .solo-oscuro { display: none !important; }
+:root[data-tema="claro"] .solo-claro { display: block !important; }
+
+/* ============================================================
+   Modo claro (como la referencia): blanco con verdes suaves
+   ============================================================ */
+:root[data-tema="claro"] {
+  --fondo: #f3f8f5;
+  --borde: #e2eee6;
+  --vidrio-borde: #dcebe1;
+  --borde-luz: rgba(22, 163, 74, 0.3);
+  --halo: rgba(34, 197, 94, 0.09);
+  --marca-50: #f1f8f3;
+  --marca-100: #e2f3e7;
+  --marca-600: #15803d;
+  --marca-700: #166534;
+  --verde-tono: #15803d;
+  --sombra: 0 1px 2px rgba(16, 64, 34, 0.05), 0 8px 24px rgba(16, 64, 34, 0.07);
+  --aurora: radial-gradient(900px 520px at 0% 100%, rgba(34, 197, 94, 0.13), transparent 62%),
+            radial-gradient(900px 480px at 100% -5%, rgba(45, 212, 191, 0.11), transparent 60%);
+}
+/* Portada: la foto se funde con blanco hacia el texto */
+:root[data-tema="claro"] .portada-sede { background: #fff; border-color: var(--vidrio-borde); box-shadow: var(--sombra); }
+:root[data-tema="claro"] .portada-sede::before {
+  background: linear-gradient(90deg, #fff 32%, rgba(255, 255, 255, 0.86) 48%, rgba(255, 255, 255, 0.15) 76%, transparent);
+}
+:root[data-tema="claro"] .portada-saludo, :root[data-tema="claro"] .portada-detalle { color: var(--tinta-fuerte); }
+:root[data-tema="claro"] .portada-sede-nombre, :root[data-tema="claro"] .portada-direccion { color: var(--tinta-media); }
+:root[data-tema="claro"] .portada-direccion svg { color: #15803d; }
+:root[data-tema="claro"] .portada-nombre { background-image: linear-gradient(110deg, #15803d, #16a34a 55%, #0d9488); }
+@media (max-width: 700px) { :root[data-tema="claro"] .portada-foto { opacity: 0.3; } }
+
+/* Tarjetas de frase y aliento: verde menta suave */
+:root[data-tema="claro"] .tarjeta-frase,
+:root[data-tema="claro"] .tarjeta-aliento { background: linear-gradient(140deg, #e3f5e9, #ffffff 72%); border-color: #cfe9d8; }
+:root[data-tema="claro"] .proxima-clase { background: radial-gradient(420px 260px at 80% 60%, rgba(45, 212, 191, 0.1), transparent 70%), #fff; }
+
+/* Holograma en verde sobre blanco */
+:root[data-tema="claro"] .holograma-marco {
+  background: linear-gradient(160deg, rgba(34, 197, 94, 0.14), rgba(20, 184, 166, 0.06));
+  box-shadow: inset 0 0 22px rgba(34, 197, 94, 0.18), 0 0 30px rgba(34, 197, 94, 0.14);
+}
+:root[data-tema="claro"] .holograma-marco::before { --c: #16a34a; filter: drop-shadow(0 0 4px rgba(22, 163, 74, 0.45)); }
+:root[data-tema="claro"] .holograma-base i { border-color: rgba(22, 163, 74, 0.5); box-shadow: 0 0 12px rgba(34, 197, 94, 0.3), inset 0 0 10px rgba(34, 197, 94, 0.2); }
+:root[data-tema="claro"] .holograma-base i:nth-child(1) { background: radial-gradient(closest-side, rgba(34, 197, 94, 0.35), transparent); }
+:root[data-tema="claro"] .holograma-halo { opacity: 0.3; }
+
+/* El lector: anillo y foto sobre blanco */
+:root[data-tema="claro"] .lector-anillo {
+  color: #16a34a; box-shadow: 0 0 26px rgba(34, 197, 94, 0.25);
+  background: radial-gradient(closest-side, #ffffff 72%, transparent 73%), conic-gradient(from var(--angulo), #16a34a, #22c55e, #14b8a6, transparent 70%, #16a34a);
+}
+:root[data-tema="claro"] .lector-anillo svg { filter: none; }
+:root[data-tema="claro"] .lector-foto { background: radial-gradient(260px 160px at 50% 100%, rgba(34, 197, 94, 0.14), transparent 70%), #fff; border: 1px solid var(--vidrio-borde); }
+:root[data-tema="claro"] .lector-foto img { mix-blend-mode: multiply; filter: none; }
+
+/* Reloj de la barra */
+:root[data-tema="claro"] .chip-reloj { background: #ecfdf3; border-color: rgba(22, 163, 74, 0.35); color: #15803d; }
+
+/* Accesos rápidos de colores sólidos (texto blanco, todos en AA) */
+.verde { --solido-a: #166534; --solido-b: #15803d; }
+.azul { --solido-a: #1d4ed8; --solido-b: #2563eb; }
+.morado { --solido-a: #6d28d9; --solido-b: #7c3aed; }
+.rojo { --solido-a: #be123c; --solido-b: #e11d48; }
+.ambar { --solido-a: #b45309; --solido-b: #c2410c; }
+:root[data-tema="claro"] .acceso-color {
+  color: #fff; border-color: transparent; background: linear-gradient(120deg, var(--solido-a), var(--solido-b));
+  box-shadow: 0 10px 22px -12px var(--solido-a);
+}
+:root[data-tema="claro"] .acceso-color-icono { background: rgba(255, 255, 255, 0.2); }
+/* Cifras de color: blancas con un tinte suave */
+:root[data-tema="claro"] .estadistica { background: linear-gradient(135deg, color-mix(in srgb, var(--tono) 9%, #fff), #fff 70%); }
