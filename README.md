@@ -169,6 +169,10 @@ ambiente **y ficha**, solo entre clases cuyas fechas se traslapan (la vista
 `horario_vigencia` calcula esas fechas). Los horarios creados antes de los
 trimestres siguen valiendo durante todo su periodo.
 
+La carga curricular CF11 de ADSO (7 competencias y 27 resultados de aprendizaje) está
+en `docs/competencias_cf11.csv`: se pega tal cual en **Competencias → Carga masiva**.
+Si se vuelve a cargar no duplica nada.
+
 ### Copias de seguridad
 
 El servicio `respaldos` de `docker-compose.yml` copia la base de datos al arrancar y
@@ -204,6 +208,8 @@ La sesión dura 8 horas, pero se renueva sola mientras la persona sigue usando l
 (`POST /api/auth/renovar` cuando le quedan menos de 2 horas). Al renovarse se vuelve a
 leer el usuario: si lo desactivaron, ya no entra. Cada persona elige en **Mi perfil**
 el tema claro, oscuro o el de su equipo, y en el menú puede dejar solo los íconos.
+Quien todavía no ha elegido ve el tema claro; las pantallas de acceso (inicio de
+sesión, registro, recuperar contraseña) son siempre oscuras.
 
 ## Opción C · Nube gratuita (Render / Railway)
 

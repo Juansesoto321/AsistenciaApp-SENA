@@ -4,7 +4,7 @@
    color de la asistencia. El verde oficial va en el recuadro del logo y en
    la huella; texto, enlaces y botones con texto blanco encima usan tonos más
    oscuros del mismo verde para leerse bien (contraste AA, 4,5:1).
-   Estilo "verde eléctrico": azul noche casi negro (tema por defecto) con el
+   Estilo "verde eléctrico": azul noche casi negro con el
    verde SENA como protagonista en un degradado verde → menta → cian que se
    mueve en lo importante: botones, cifras, el anillo de asistencia, la barra
    de la página abierta y el borde de la clase en curso. Las tarjetas encienden
@@ -85,7 +85,7 @@
   color-scheme: light;
 }
 
-/* ---- Modo oscuro (el de por defecto): azul noche ----
+/* ---- Modo oscuro: azul noche ----
    Solo se redefinen los colores: todos los componentes usan estas variables.
    "--blanco" es la superficie sólida de modales, menús y celdas fijas. Las
    pantallas de acceso usan este tema siempre (.tema-oscuro), como la
