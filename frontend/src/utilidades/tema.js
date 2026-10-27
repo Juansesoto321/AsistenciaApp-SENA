@@ -1,7 +1,7 @@
 /**
  * Tema claro / oscuro. La preferencia ("claro", "oscuro" o "sistema") se
  * guarda en este navegador; "sistema" sigue la configuración del equipo.
- * Quien no ha elegido ve el oscuro: es el diseño principal de la app.
+ * Quien no ha elegido ve el tema claro.
  * index.html aplica el tema antes de pintar la página para que no parpadee.
  */
 import { useEffect, useState } from "react";
@@ -12,9 +12,9 @@ const oyentes = new Set();
 
 export function leerPreferencia() {
   try {
-    return localStorage.getItem(CLAVE) || "oscuro";
+    return localStorage.getItem(CLAVE) || "claro";
   } catch {
-    return "oscuro"; // navegador sin almacenamiento (modo privado estricto)
+    return "claro"; // navegador sin almacenamiento (modo privado estricto)
   }
 }
 
