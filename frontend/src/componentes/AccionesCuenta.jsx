@@ -1,8 +1,9 @@
 /**
- * Acciones de la cuenta, arriba a la derecha de cada página (a la altura del
- * título): cambiar el tema, las notificaciones con su número sin leer y el
- * avatar, que abre un menú con Mi perfil, Soporte y Salir de la cuenta.
- * En celular se ubican dentro de la barra superior (ver estilos.css).
+ * Barra de arriba de cada página: el buscador, la fecha, el reloj en vivo, el
+ * tema, las notificaciones con su número sin leer y el avatar, que abre un
+ * menú con Mi perfil, Soporte y Salir de la cuenta. En celular el buscador
+ * queda arriba del contenido y los botones dentro de la barra superior (ver
+ * estilos.css). `paginas` es lo que el buscador puede abrir.
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -10,11 +11,29 @@ import { useAuth } from "../contexto/AuthContext.jsx";
 import { useTema } from "../utilidades/tema";
 import Icono from "./Iconos.jsx";
 import IconoSoporte from "./IconoSoporte.jsx";
+import Buscador from "./Buscador.jsx";
+import { mayusculaInicial } from "../utilidades/formato";
 
 const iniciales = ({ nombres = "", apellidos = "" }) =>
   `${nombres.trim().charAt(0)}${apellidos.trim().charAt(0)}`.toUpperCase();
 
-export default function AccionesCuenta({ notificaciones = 0 }) {
+/** Fecha de hoy y hora con segundos, como el reloj del lector. */
+function FechaYHora() {
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const fecha = mayusculaInicial(ahora.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+  return (<>
+    <span className="chip-fecha"><Icono nombre="horarios" /> {fecha}</span>
+    <time className="chip-reloj" dateTime={ahora.toISOString()} aria-label="Hora actual">
+      <Icono nombre="reloj" /> {ahora.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}
+    </time>
+  </>);
+}
+
+export default function AccionesCuenta({ notificaciones = 0, paginas = [] }) {
   const { sesion, cerrarSesion } = useAuth();
   const navegar = useNavigate();
   const { pathname } = useLocation();
@@ -57,7 +76,10 @@ export default function AccionesCuenta({ notificaciones = 0 }) {
 
   const textoTema = oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
   return (
+    <header className="barra-cuenta">
+    <Buscador paginas={paginas} />
     <div className="acciones-cuenta" ref={contenedor}>
+      <FechaYHora />
       <button type="button" className="accion-cuenta" onClick={() => cambiarTema(oscuro ? "claro" : "oscuro")} title={textoTema} aria-label={textoTema}>
         <Icono nombre={oscuro ? "sol" : "luna"} />
       </button>
@@ -73,10 +95,11 @@ export default function AccionesCuenta({ notificaciones = 0 }) {
       <span className="separador-acciones" aria-hidden="true" />
 
       <button
-        type="button" ref={boton} className="avatar-cuenta" onClick={() => setAbierto(!abierto)}
+        type="button" ref={boton} className="boton-cuenta" onClick={() => setAbierto(!abierto)}
         aria-haspopup="menu" aria-expanded={abierto} aria-label={`Cuenta de ${usuario.nombres}`} title={`${usuario.nombres} ${usuario.apellidos}`}
       >
-        {iniciales(usuario)}
+        <span className="avatar-cuenta" aria-hidden="true">{iniciales(usuario)}</span>
+        <Icono nombre="desplegar" className="avatar-flecha" />
       </button>
 
       {abierto && (
@@ -95,5 +118,6 @@ export default function AccionesCuenta({ notificaciones = 0 }) {
         </div>
       )}
     </div>
+    </header>
   );
 }

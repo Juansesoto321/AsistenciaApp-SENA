@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import useTabla from "../../componentes/useTabla.jsx";
 import { api } from "../../servicios/api";
 import Cargando from "../../componentes/Cargando.jsx";
@@ -10,7 +11,13 @@ const VACIO = { nombres: "", apellidos: "", tipo_documento: "CC", documento: "",
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState(null);
-  const [filtro, setFiltro] = useState({ rol: "", estado: "", buscar: "" });
+  // ?buscar= llega desde el buscador de la barra de arriba (también estando ya en esta página)
+  const [parametros] = useSearchParams();
+  const [filtro, setFiltro] = useState(() => ({ rol: "", estado: "", buscar: parametros.get("buscar") || "" }));
+  useEffect(() => {
+    const buscar = parametros.get("buscar");
+    if (buscar !== null) setFiltro((actual) => ({ ...actual, buscar }));
+  }, [parametros]);
   const [modal, setModal] = useState(null); // 'crear' | 'masiva'
   const [f, setF] = useState(VACIO);
   const [csv, setCsv] = useState("");

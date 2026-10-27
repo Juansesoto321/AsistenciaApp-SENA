@@ -45,8 +45,13 @@ if (produccion && !ipLectores.length) {
   console.warn("[AVISO] IP_LECTORES está vacío: el lector real (/iclock) acepta marcas de cualquier equipo de la red. Define la IP de cada lector en el .env.");
 }
 
+// Clase de demostración con botón para reiniciarla (servicios/claseDemo.js):
+// temporal, para mostrar la app en vivo. Por defecto, en todo menos producción.
+const claseDemo = process.env.CLASE_DEMO ? process.env.CLASE_DEMO === "true" : !produccion;
+
 module.exports = {
   produccion,
+  claseDemo,
   zonaHoraria: process.env.TZ,
   origenesPermitidos,
   urlFrontend: origenesPermitidos[0],
