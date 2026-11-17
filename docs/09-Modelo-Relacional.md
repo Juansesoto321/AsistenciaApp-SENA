@@ -9,7 +9,14 @@ Para verlo fuera de GitHub (WhatsApp, Drive, Word): [PDF](09-Modelo-Relacional.p
 
 ## Diagrama entidad-relación
 
+[![Diagrama entidad-relación de AsistenciaApp SENA](09-Modelo-Relacional.svg)](09-Modelo-Relacional.svg)
+
+*Haz clic en la imagen para abrirla en grande y acercarla. También está en [PDF](09-Modelo-Relacional.pdf).*
+
 Notación pata de gallo: `||` exactamente uno, `|o` cero o uno, `o{` cero o muchos. PK = llave primaria, FK = llave foránea, UK = valor único.
+
+<details>
+<summary>Código Mermaid del diagrama (para editarlo o regenerarlo)</summary>
 
 ```mermaid
 erDiagram
@@ -271,6 +278,8 @@ erDiagram
   usuario ||--o{ busqueda_guardada : "id_usuario"
   usuario |o--o{ log_error : "id_usuario"
 ```
+
+</details>
 
 ## Tablas por módulo
 
