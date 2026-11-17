@@ -291,16 +291,20 @@ El backend expone dos contratos que puede consumir un dispositivo:
 
 El aprendiz se matricula en el propio dispositivo usando como PIN su número de documento; el enrolamiento biométrico en sí (capturar el dedo o el rostro) se hace directamente en el equipo, no desde esta plataforma web.
 
-### Conectar el lector por WiFi, paso a paso
+### Conectar el lector por WiFi o por cable, paso a paso
 
 En la app: **Ambientes y lectores → Conectar un lector** (coordinación o programación). El
 asistente muestra la IP y el puerto que hay que escribir en el lector, la lista de
 aprendices con el documento que va como *User ID* y, en vivo, cuándo llama el lector: si es
 nuevo, se asocia a un ambiente ahí mismo, sin escribir el serial. En resumen:
 
-1. El lector y el computador en la **misma red WiFi** (mejor el hotspot de un celular o la
-   *Zona con cobertura inalámbrica móvil* del computador: las redes públicas suelen aislar
-   los equipos). En el lector: `M/OK › COMM. › Wi-Fi Settings`.
+1. El lector y el computador en la **misma red**:
+   - **WiFi**: mejor el hotspot de un celular o la *Zona con cobertura inalámbrica móvil* del
+     computador (las redes públicas suelen aislar los equipos). En el lector:
+     `M/OK › COMM. › Wi-Fi Settings`.
+   - **Cable**: los dos al mismo router o switch, y en el lector `M/OK › COMM. › Ethernet`
+     con *DHCP* activado. Con cable directo, sin router, las IP van a mano (por ejemplo el
+     computador `192.168.1.10` y el lector `192.168.1.201`, máscara `255.255.255.0`).
 2. Doble clic en **`herramientas\preparar-lector.bat`**: abre el puerto del backend en el
    firewall de Windows (pide permiso de administrador) y muestra la IP del computador.
 3. En el lector: `COMM. › PC Connection` → *HTTPS* apagado, y `COMM. › Cloud Server

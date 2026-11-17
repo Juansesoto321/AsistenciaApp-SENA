@@ -2223,3 +2223,4 @@ body { background: var(--aurora), var(--fondo); background-attachment: fixed; }
   .conectar-senal { position: static; order: -1; }
 }
 .conectar-red { display: block; margin-top: 6px; }
+.conectar-medio { display: flex; gap: 8px; margin: 4px 0 10px; }

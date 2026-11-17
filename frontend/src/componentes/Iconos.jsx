@@ -277,6 +277,12 @@ const TRAZOS = {
       <path d="M12 19.5h.01" />
     </>
   ),
+  cable: (
+    <>
+      <rect x="6" y="3" width="12" height="9" rx="1.5" />
+      <path d="M9 3v3M12 3v3M15 3v3M12 12v4.5a3.5 3.5 0 0 1-3.5 3.5H6" />
+    </>
+  ),
   copiar: (
     <>
       <rect x="8" y="8" width="12" height="12" rx="2" />

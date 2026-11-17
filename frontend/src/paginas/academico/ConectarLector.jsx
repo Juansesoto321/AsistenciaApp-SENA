@@ -18,17 +18,23 @@ const VIRTUAL = /vethernet|wsl|docker|virtualbox|vmware|hyper-v|loopback|bluetoo
 const INALAMBRICA = /wi-?fi|wlan|wireless|inal[aá]mbrica/i;
 // La zona con cobertura inalámbrica de Windows siempre usa 192.168.137.1
 const HOTSPOT_WINDOWS = /^192\.168\.137\./;
+const CABLEADA = /ethernet|cable|lan\b/i;
+// Cómo llega el lector a la red; se recuerda en este navegador
+const CLAVE_MEDIO = "asistenciaapp.medio-lector";
 
 function etiquetaRed({ nombre, ip }) {
   if (HOTSPOT_WINDOWS.test(ip)) return "Zona con cobertura (hotspot) de este computador";
   if (INALAMBRICA.test(nombre)) return `Red Wi-Fi (${nombre})`;
-  if (/ethernet|cable/i.test(nombre)) return `Red por cable (${nombre})`;
+  if (CABLEADA.test(nombre)) return `Red por cable (${nombre})`;
   return nombre;
 }
 
-/** Las IP de este computador, la más probable para el lector primero. */
-function ipsSugeridas(conexion) {
-  const orden = (i) => (INALAMBRICA.test(i.nombre) ? 0 : HOTSPOT_WINDOWS.test(i.ip) ? 1 : 2);
+/** Las IP de este computador, primero la de la red por donde va el lector. */
+function ipsSugeridas(conexion, medio) {
+  const orden = (i) => {
+    if (medio === "cable") return CABLEADA.test(i.nombre) && !INALAMBRICA.test(i.nombre) ? 0 : 1;
+    return INALAMBRICA.test(i.nombre) ? 0 : HOTSPOT_WINDOWS.test(i.ip) ? 1 : 2;
+  };
   const lista = (conexion?.ips || [])
     .filter((i) => !VIRTUAL.test(i.nombre) && !i.ip.startsWith("169.254."))
     .map((i) => ({ ...i, etiqueta: etiquetaRed(i) }))
@@ -86,6 +92,13 @@ export default function ConectarLector() {
   const [aprendices, setAprendices] = useState([]);
   const [eleccion, setEleccion] = useState({}); // serial -> id_ambiente elegido
   const [mensaje, setMensaje] = useState(null);
+  const [medio, setMedio] = useState(() => {
+    try { return localStorage.getItem(CLAVE_MEDIO) || "wifi"; } catch { return "wifi"; }
+  });
+  const elegirMedio = (m) => {
+    setMedio(m);
+    try { localStorage.setItem(CLAVE_MEDIO, m); } catch { /* navegador sin almacenamiento */ }
+  };
 
   const cargarAmbientes = () => api("/ambientes").then(setAmbientes).catch(() => {});
   useEffect(() => {
@@ -115,7 +128,7 @@ export default function ConectarLector() {
     } catch (e) { setMensaje({ tipo: "error", texto: e.message }); }
   }
 
-  const ips = ipsSugeridas(conexion);
+  const ips = ipsSugeridas(conexion, medio);
   const ip = ips[0]?.ip;
   const puerto = conexion?.puerto ?? "…";
   const detectados = conexion?.detectados || [];
@@ -134,10 +147,24 @@ export default function ConectarLector() {
 
     <div className="conectar">
       <ol className="conectar-pasos">
-        <Paso numero={1} titulo="Pon el lector y este computador en la misma red WiFi">
-          <p>Lo más seguro en un evento es el <b>punto de acceso (hotspot) de un celular</b>: las redes WiFi públicas suelen no dejar que los equipos se vean entre sí. Conecta este computador a esa red.</p>
-          <p>Otra opción: que este computador cree la red en <b>Configuración › Red e Internet › Zona con cobertura inalámbrica móvil</b> y conectar el lector a ella (la dirección es entonces <code>192.168.137.1</code>).</p>
-          <p>En el lector: <Ruta pasos={["M/OK", "COMM.", "Wi-Fi Settings"]} />. Activa el Wi-Fi, toca la red, escribe la contraseña y presiona <kbd>M/OK</kbd>. Arriba en la pantalla aparece el ícono del WiFi.</p>
+        <Paso numero={1} titulo="Pon el lector y este computador en la misma red">
+          <div className="conectar-medio" role="group" aria-label="Cómo se conecta el lector">
+            <button type="button" className={`boton mini${medio === "wifi" ? "" : " suave"}`} aria-pressed={medio === "wifi"} onClick={() => elegirMedio("wifi")}>
+              <Icono nombre="wifi" /> Por WiFi
+            </button>
+            <button type="button" className={`boton mini${medio === "cable" ? "" : " suave"}`} aria-pressed={medio === "cable"} onClick={() => elegirMedio("cable")}>
+              <Icono nombre="cable" /> Por cable
+            </button>
+          </div>
+          {medio === "wifi" ? (<>
+            <p>Lo más seguro en un evento es el <b>punto de acceso (hotspot) de un celular</b>: las redes WiFi públicas suelen no dejar que los equipos se vean entre sí. Conecta este computador a esa red.</p>
+            <p>Otra opción: que este computador cree la red en <b>Configuración › Red e Internet › Zona con cobertura inalámbrica móvil</b> y conectar el lector a ella (la dirección es entonces <code>192.168.137.1</code>).</p>
+            <p>En el lector: <Ruta pasos={["M/OK", "COMM.", "Wi-Fi Settings"]} />. Activa el Wi-Fi, toca la red, escribe la contraseña y presiona <kbd>M/OK</kbd>. Arriba en la pantalla aparece el ícono del WiFi.</p>
+          </>) : (<>
+            <p>Conecta el lector y este computador con cable de red al <b>mismo router o switch</b>.</p>
+            <p>En el lector: <Ruta pasos={["M/OK", "COMM.", "Ethernet"]} /> y activa <b>DHCP</b> para que tome su dirección solo. Mira la <b>IP Address</b> que recibió: debe ser de la misma red que este computador (en una red de casa u oficina, normalmente con los tres primeros números iguales). Si quedó en <code>192.168.1.201</code>, la de fábrica, el lector no tomó dirección de la red.</p>
+            <p><b>¿Cable directo del lector al computador, sin router?</b> Ahí nadie reparte direcciones y van a mano: en este computador <b>Configuración › Red e Internet › Ethernet › Asignación de IP › Editar › Manual</b>, IP <code>192.168.1.10</code> y máscara <code>255.255.255.0</code>; en el lector, DHCP apagado, IP <code>192.168.1.201</code> y máscara <code>255.255.255.0</code>. La dirección del paso 3 es entonces <code>192.168.1.10</code>.</p>
+          </>)}
         </Paso>
 
         <Paso numero={2} titulo="Abre el puerto en este computador (una sola vez)">
@@ -217,7 +244,7 @@ export default function ConectarLector() {
         {!detectados.length ? (
           <div className="conectar-esperando">
             <p><span className="pulso" aria-hidden="true" /><b>Esperando a que el lector llame…</b> Aparece aquí en cuanto guardes los datos del paso 3 (puede tardar hasta un minuto).</p>
-            <p className="conectar-nota">¿Pasan dos minutos y nada? Revisa que estén en la misma red, que hayas corrido <code>preparar-lector.bat</code>, y prueba en el lector <Ruta pasos={["COMM.", "Network Diagnosis"]} /> con la IP de este computador.</p>
+            <p className="conectar-nota">¿Pasan dos minutos y nada? Revisa que estén en la misma red, que hayas corrido <code>preparar-lector.bat</code>, y prueba en el lector <Ruta pasos={["COMM.", "Network Diagnosis"]} /> con la IP de este computador. Si falla estando en la misma red, puede que la red de la sede no deje que los equipos se hablen: usen un router o switch propio solo para el computador y el lector.</p>
           </div>
         ) : (
           <ul className="conectar-detectados">

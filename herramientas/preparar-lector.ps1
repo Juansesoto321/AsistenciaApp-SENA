@@ -1,4 +1,4 @@
-﻿# Prepara este computador para que el lector ZKTeco se conecte por la red (WiFi):
+﻿# Prepara este computador para que el lector ZKTeco se conecte por la red (WiFi o cable):
 # abre en el firewall de Windows el puerto del backend y muestra lo que hay que
 # escribir en el lector (COMM. > Cloud Server Settings). Se ejecuta con doble
 # clic en preparar-lector.bat; pide permiso de administrador para el firewall.
@@ -41,17 +41,16 @@ Write-Host ""
 Write-Host "Escribe esto en el lector:  M/OK > COMM. > Cloud Server Settings" -ForegroundColor Cyan
 Write-Host "  Enable Domain Name: apagado   ·   Enable Proxy Server: apagado"
 if (-not $redes) {
-  Write-Host "  No encontré una red. Conecta este computador a la misma WiFi del lector y vuelve a abrir este archivo." -ForegroundColor Yellow
+  Write-Host "  No encontré una red. Conecta este computador a la red del lector (WiFi o cable) y vuelve a abrir este archivo." -ForegroundColor Yellow
+} else {
+  Write-Host "  Server Address: la IP de la red por donde va el lector" -ForegroundColor White
 }
-$primera = $true
 foreach ($red in $redes) {
-  $tipo = if ($red.IPAddress -like "192.168.137.*") { "hotspot de este computador" } else { $red.InterfaceAlias }
-  if ($primera) {
-    Write-Host ("  Server Address: {0}   ({1})" -f $red.IPAddress, $tipo) -ForegroundColor White
-    $primera = $false
-  } else {
-    Write-Host ("  ...o si el lector está en otra red: {0}   ({1})" -f $red.IPAddress, $tipo) -ForegroundColor DarkGray
-  }
+  $tipo = if ($red.IPAddress -like "192.168.137.*") { "hotspot de este computador" }
+          elseif ($red.InterfaceAlias -match "Wi-?Fi|WLAN|inal") { "por WiFi" }
+          elseif ($red.InterfaceAlias -match "Ethernet") { "por cable" }
+          else { $red.InterfaceAlias }
+  Write-Host ("      {0,-16} {1}" -f $red.IPAddress, $tipo) -ForegroundColor White
 }
 Write-Host ("  Server Port:    {0}" -f $Puerto) -ForegroundColor White
 Write-Host ""
