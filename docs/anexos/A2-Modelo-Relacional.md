@@ -5,13 +5,13 @@ El esquema de esa base coincide línea por línea con una instalación limpia de
 
 **24 tablas · 173 columnas · 36 llaves foráneas · 22 reglas CHECK · 3 índices únicos parciales**
 
-Para verlo fuera de GitHub (WhatsApp, Drive, Word): [PDF](09-Modelo-Relacional.pdf) · [página web en un solo archivo](09-Modelo-Relacional.html) · [PNG](09-Modelo-Relacional.png) · [SVG](09-Modelo-Relacional.svg). Historial de cambios: [10-Cambios-en-la-Base-de-Datos.md](10-Cambios-en-la-Base-de-Datos.md).
+Para verlo fuera de GitHub (WhatsApp, Drive, Word): [PDF](A2-Modelo-Relacional.pdf) · [página web en un solo archivo](A2-Modelo-Relacional.html) · [PNG](A2-Modelo-Relacional.png) · [SVG](A2-Modelo-Relacional.svg). Historial de cambios: [A3-Cambios-en-la-Base-de-Datos.md](A3-Cambios-en-la-Base-de-Datos.md).
 
 ## Diagrama entidad-relación
 
-[![Diagrama entidad-relación de AsistenciaApp SENA](09-Modelo-Relacional.svg)](09-Modelo-Relacional.svg)
+[![Diagrama entidad-relación de AsistenciaApp SENA](A2-Modelo-Relacional.svg)](A2-Modelo-Relacional.svg)
 
-*Haz clic en la imagen para abrirla en grande y acercarla. También está en [PDF](09-Modelo-Relacional.pdf).*
+*Haz clic en la imagen para abrirla en grande y acercarla. También está en [PDF](A2-Modelo-Relacional.pdf).*
 
 Notación pata de gallo: `||` exactamente uno, `|o` cero o uno, `o{` cero o muchos. PK = llave primaria, FK = llave foránea, UK = valor único.
 

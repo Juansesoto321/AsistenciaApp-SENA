@@ -1,7 +1,7 @@
 # Cambios en la base de datos — AsistenciaApp SENA
 
-Estado actual del esquema: [09-Modelo-Relacional.md](09-Modelo-Relacional.md) (también en
-[PDF](09-Modelo-Relacional.pdf) y como [página web](09-Modelo-Relacional.html)).
+Estado actual del esquema: [A2-Modelo-Relacional.md](A2-Modelo-Relacional.md) (también en
+[PDF](A2-Modelo-Relacional.pdf) y como [página web](A2-Modelo-Relacional.html)).
 
 El esquema de la base en uso coincide línea por línea con una instalación limpia de
 `db/init.sql` más las migraciones `001` a `010`: no tiene cambios hechos a mano.
