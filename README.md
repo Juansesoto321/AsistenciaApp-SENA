@@ -176,7 +176,7 @@ trimestres siguen valiendo durante todo su periodo.
 La carga curricular CF11 de ADSO (7 competencias y 27 resultados de aprendizaje) está
 en `docs/competencias_cf11.csv`: se pega tal cual en **Competencias → Carga masiva**.
 Si se vuelve a cargar no duplica nada. También se puede cargar desde la terminal con
-`db/datos/competencias_cf11.sql` (instrucciones en `docs/10-Cambios-en-la-Base-de-Datos.md`).
+`db/datos/competencias_cf11.sql` (instrucciones en `docs/anexos/A3-Cambios-en-la-Base-de-Datos.md`).
 
 ### Copias de seguridad
 
@@ -361,16 +361,28 @@ npm test
 
 ## Documentación del proyecto
 
-En la carpeta `docs/`:
+En la carpeta `docs/`, en Word (`.docx`). La misma versión en PDF está en `docs/pdf/`, para leerla en GitHub o en el celular.
 
 | Documento | Contenido |
 |---|---|
-| `01` a `07` (.docx) | Requisitos, casos de uso, arquitectura, diccionario de datos, mapa de navegación, manual técnico y manual de usuario |
-| `08-Caracterizacion-AS-IS-TO-BE.md` | Proceso de asistencia antes y después de la app, y en qué se enfoca la mejora |
-| `08-Proceso-Asistencia-TO-BE.bpmn` | Diagrama BPMN 2.0 del proceso TO-BE (se abre arrastrándolo a demo.bpmn.io) |
-| `09-Modelo-Relacional.md` | Modelo relacional de la base: diagrama, tablas por módulo, relaciones y reglas. También en `.pdf`, `.html`, `.png` y `.svg` |
-| `10-Cambios-en-la-Base-de-Datos.md` | Migraciones, scripts de datos y cambios registrados en la auditoría |
+| `01-Requisitos-Funcionales-y-No-Funcionales` | Roles, 72 requisitos funcionales y 25 no funcionales, con su trazabilidad |
+| `02-Catalogo-de-Casos-de-Uso` | 32 casos de uso con actores, flujo, excepciones y resultado |
+| `03-Arquitectura-y-Stack-Tecnologico` | Componentes, capas del backend, integración con el lector, seguridad, stack y despliegue |
+| `04-Diccionario-de-Datos` | Las 24 tablas y 173 columnas de la base, con restricciones, índices y configuración |
+| `05-Mapa-de-Navegacion` | Pantallas, menú de cada rol, control de acceso y flujos principales |
+| `06-Manual-Tecnico-de-Instalacion-y-Despliegue` | Instalación local, con Docker y en servidor real; variables, correo, lector y problemas frecuentes |
+| `07-Manual-de-Usuario` | Uso por rol con capturas reales de la aplicación |
+| `08-Plan-de-Respaldo-y-Restauracion` | Política de copias, verificación, restauración y escenarios de falla |
+| `09-Plan-de-Pruebas` | Estrategia, las 90 pruebas automáticas, pruebas manuales con el lector real y resultados |
 | `competencias_cf11.csv` | Competencias y resultados de aprendizaje de la ficha CF11, para la carga masiva |
+
+Anexos, en `docs/anexos/`:
+
+| Anexo | Contenido |
+|---|---|
+| `A1-Caracterizacion-AS-IS-TO-BE.md` y `.bpmn` | Proceso de asistencia antes y después de la app, con el diagrama BPMN 2.0 (se abre arrastrándolo a demo.bpmn.io) |
+| `A2-Modelo-Relacional` | Diagrama entidad-relación de la base en `.md`, `.pdf`, `.html`, `.png` y `.svg` |
+| `A3-Cambios-en-la-Base-de-Datos.md` | Migraciones, scripts de datos y cambios registrados en la auditoría |
 
 ## Estructura del proyecto
 
@@ -383,7 +395,7 @@ asistenciaapp/
 │   ├── datos/                   # Cargas de datos revisables (competencias_cf11.sql)
 │   ├── limpieza/                # Correcciones puntuales; revisar antes de ejecutar
 │   └── respaldos/               # respaldar.sh y restaurar.sh (servicio "respaldos" de Docker)
-├── docs/                        # Documentación (ver «Documentación del proyecto»)
+├── docs/                        # Documentos 01 a 09 en Word; pdf/ y anexos/ (ver «Documentación del proyecto»)
 ├── backend/
 │   ├── src/
 │   │   ├── app.js               # Punto de entrada: middlewares, rutas y servidor

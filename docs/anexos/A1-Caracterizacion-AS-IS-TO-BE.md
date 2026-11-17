@@ -1,6 +1,6 @@
 # Caracterización del proceso de control de asistencia — AsistenciaApp SENA
 
-Diagrama BPMN 2.0 del proceso TO-BE: [08-Proceso-Asistencia-TO-BE.bpmn](08-Proceso-Asistencia-TO-BE.bpmn).
+Diagrama BPMN 2.0 del proceso TO-BE: [A1-Proceso-Asistencia-TO-BE.bpmn](A1-Proceso-Asistencia-TO-BE.bpmn).
 Para verlo, abre <https://demo.bpmn.io> y arrastra el archivo a la página (o usa Camunda Modeler).
 
 ## 1. Situación actual (AS-IS) y situación propuesta (TO-BE)
