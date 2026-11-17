@@ -175,7 +175,8 @@ trimestres siguen valiendo durante todo su periodo.
 
 La carga curricular CF11 de ADSO (7 competencias y 27 resultados de aprendizaje) está
 en `docs/competencias_cf11.csv`: se pega tal cual en **Competencias → Carga masiva**.
-Si se vuelve a cargar no duplica nada.
+Si se vuelve a cargar no duplica nada. También se puede cargar desde la terminal con
+`db/datos/competencias_cf11.sql` (instrucciones en `docs/10-Cambios-en-la-Base-de-Datos.md`).
 
 ### Copias de seguridad
 
@@ -354,6 +355,19 @@ npm test
 - Si no hay PostgreSQL disponible, las de integración se omiten en vez de fallar. Para
   usar otro servidor define `DATABASE_URL_PRUEBAS`.
 
+## Documentación del proyecto
+
+En la carpeta `docs/`:
+
+| Documento | Contenido |
+|---|---|
+| `01` a `07` (.docx) | Requisitos, casos de uso, arquitectura, diccionario de datos, mapa de navegación, manual técnico y manual de usuario |
+| `08-Caracterizacion-AS-IS-TO-BE.md` | Proceso de asistencia antes y después de la app, y en qué se enfoca la mejora |
+| `08-Proceso-Asistencia-TO-BE.bpmn` | Diagrama BPMN 2.0 del proceso TO-BE (se abre arrastrándolo a demo.bpmn.io) |
+| `09-Modelo-Relacional.md` | Modelo relacional de la base: diagrama, tablas por módulo, relaciones y reglas. También en `.pdf`, `.html`, `.png` y `.svg` |
+| `10-Cambios-en-la-Base-de-Datos.md` | Migraciones, scripts de datos y cambios registrados en la auditoría |
+| `competencias_cf11.csv` | Competencias y resultados de aprendizaje de la ficha CF11, para la carga masiva |
+
 ## Estructura del proyecto
 
 ```
@@ -361,8 +375,11 @@ asistenciaapp/
 ├── db/
 │   ├── init.sql                 # Esquema completo + configuración inicial
 │   ├── semilla.sql
-│   ├── migraciones/             # 001_logs … 007_soporte_captura (idempotentes, se aplican en orden)
+│   ├── migraciones/             # 001_logs … 010_enlace_notificacion (idempotentes, se aplican en orden)
+│   ├── datos/                   # Cargas de datos revisables (competencias_cf11.sql)
+│   ├── limpieza/                # Correcciones puntuales; revisar antes de ejecutar
 │   └── respaldos/               # respaldar.sh y restaurar.sh (servicio "respaldos" de Docker)
+├── docs/                        # Documentación (ver «Documentación del proyecto»)
 ├── backend/
 │   ├── src/
 │   │   ├── app.js               # Punto de entrada: middlewares, rutas y servidor

@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AsistenciaApp SENA · Proceso TO-BE de control de asistencia con lector biométrico ZKTeco.
+     Ábrelo en https://demo.bpmn.io (arrastra este archivo a la página) o en Camunda Modeler. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="Definiciones_AsistenciaApp"
+  targetNamespace="https://github.com/Juansesoto321/AsistenciaApp-SENA/bpmn"
+  exporter="AsistenciaApp SENA" exporterVersion="1.0">
+  <bpmn:dataStore id="AlmacenPostgreSQL" name="PostgreSQL 16" />
+  <bpmn:collaboration id="Colaboracion_Asistencia">
+    <bpmn:participant id="Participante_AsistenciaApp" name="AsistenciaApp SENA · Control de asistencia (TO-BE)" processRef="Proceso_ControlAsistencia" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proceso_ControlAsistencia" name="Control de asistencia con huella (TO-BE)" isExecutable="false">
+    <bpmn:laneSet id="Carriles_Asistencia">
+      <bpmn:lane id="Carril_AprendizLector" name="Aprendiz / Lector ZKTeco">
+        <bpmn:flowNodeRef>Compuerta_SiguienteAprendiz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_PonerHuella</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_IdentificarHuella</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Compuerta_HuellaReconocida</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_Reintentar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_EnviarADMS</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_RecibirCorreo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Compuerta_Justifica</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Carril_Backend" name="Backend Node.js / PostgreSQL">
+        <bpmn:flowNodeRef>Tarea_AbrirSesion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_ValidarMarca</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Compuerta_MarcaValida</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_RechazarMarca</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_CalcularEstado</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_GuardarAsistencia</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Compuerta_ClaseCerrada</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_CerrarSesion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_CrearEnlace</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_EnviarCorreo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_VencerEnlace</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_MarcarJustificada</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Compuerta_UnirRevision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_ActualizarReportes</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Carril_Frontend" name="Frontend React (instructor, aprendiz, coordinación)">
+        <bpmn:flowNodeRef>Inicio_HoraClase</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_IniciarSesion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_PanelEnVivo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_LlenarJustificacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_RevisarJustificacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Compuerta_Aprobada</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_RechazarJustificacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Tarea_ConsultarReportes</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Fin_AsistenciaConsolidada</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Inicio_HoraClase" name="Llega la hora de la clase">
+      <bpmn:outgoing>Flujo_01</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="Inicio_HoraClase_Temporizador" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Tarea_IniciarSesion" name="Iniciar la sesión de clase">
+      <bpmn:incoming>Flujo_01</bpmn:incoming>
+      <bpmn:outgoing>Flujo_02</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Tarea_AbrirSesion" name="Abrir la sesión activa y auditar">
+      <bpmn:incoming>Flujo_02</bpmn:incoming>
+      <bpmn:outgoing>Flujo_03</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Compuerta_SiguienteAprendiz">
+      <bpmn:incoming>Flujo_03</bpmn:incoming>
+      <bpmn:incoming>Flujo_09</bpmn:incoming>
+      <bpmn:incoming>Flujo_18</bpmn:incoming>
+      <bpmn:outgoing>Flujo_04</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Tarea_PonerHuella" name="Poner el dedo en el lector">
+      <bpmn:incoming>Flujo_04</bpmn:incoming>
+      <bpmn:outgoing>Flujo_05</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:serviceTask id="Tarea_IdentificarHuella" name="Identificar la huella (1:N) en el equipo">
+      <bpmn:incoming>Flujo_05</bpmn:incoming>
+      <bpmn:outgoing>Flujo_06</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Compuerta_HuellaReconocida" name="¿Huella reconocida?">
+      <bpmn:incoming>Flujo_06</bpmn:incoming>
+      <bpmn:outgoing>Flujo_07</bpmn:outgoing>
+      <bpmn:outgoing>Flujo_08</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Tarea_Reintentar" name="Indicar «intente de nuevo»">
+      <bpmn:incoming>Flujo_08</bpmn:incoming>
+      <bpmn:outgoing>Flujo_09</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Tarea_EnviarADMS" name="Enviar la marca por ADMS (PIN + hora)">
+      <bpmn:incoming>Flujo_07</bpmn:incoming>
+      <bpmn:outgoing>Flujo_10</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:serviceTask id="Tarea_ValidarMarca" name="Validar PIN, ficha y ventana de marcación">
+      <bpmn:incoming>Flujo_10</bpmn:incoming>
+      <bpmn:outgoing>Flujo_11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Compuerta_MarcaValida" name="¿Marca válida?">
+      <bpmn:incoming>Flujo_11</bpmn:incoming>
+      <bpmn:outgoing>Flujo_12</bpmn:outgoing>
+      <bpmn:outgoing>Flujo_13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Tarea_RechazarMarca" name="Rechazar la marca y dejar registro">
+      <bpmn:incoming>Flujo_13</bpmn:incoming>
+      <bpmn:outgoing>Flujo_17</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:businessRuleTask id="Tarea_CalcularEstado" name="Calcular estado: presente o tardanza">
+      <bpmn:incoming>Flujo_12</bpmn:incoming>
+      <bpmn:outgoing>Flujo_14</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:serviceTask id="Tarea_GuardarAsistencia" name="Guardar la asistencia">
+      <bpmn:incoming>Flujo_14</bpmn:incoming>
+      <bpmn:outgoing>Flujo_15</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="Asoc_Datos_1">
+        <bpmn:targetRef>BD_Asistencia</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:task id="Tarea_PanelEnVivo" name="Mostrar la marca en el panel en vivo (Socket.IO)">
+      <bpmn:incoming>Flujo_15</bpmn:incoming>
+      <bpmn:outgoing>Flujo_16</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Compuerta_ClaseCerrada" name="¿Se cerró la clase o terminó el horario?">
+      <bpmn:incoming>Flujo_16</bpmn:incoming>
+      <bpmn:incoming>Flujo_17</bpmn:incoming>
+      <bpmn:outgoing>Flujo_18</bpmn:outgoing>
+      <bpmn:outgoing>Flujo_19</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Tarea_CerrarSesion" name="Cerrar la sesión y marcar ausentes">
+      <bpmn:incoming>Flujo_19</bpmn:incoming>
+      <bpmn:outgoing>Flujo_20</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Tarea_CrearEnlace" name="Crear el enlace de justificación y la notificación">
+      <bpmn:incoming>Flujo_20</bpmn:incoming>
+      <bpmn:outgoing>Flujo_21</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Tarea_EnviarCorreo" name="Enviar el correo de inasistencia">
+      <bpmn:incoming>Flujo_21</bpmn:incoming>
+      <bpmn:outgoing>Flujo_22</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Tarea_RecibirCorreo" name="Recibir el correo con el enlace «Justificar»">
+      <bpmn:incoming>Flujo_22</bpmn:incoming>
+      <bpmn:outgoing>Flujo_23</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Compuerta_Justifica" name="¿Justifica dentro del plazo?">
+      <bpmn:incoming>Flujo_23</bpmn:incoming>
+      <bpmn:outgoing>Flujo_24</bpmn:outgoing>
+      <bpmn:outgoing>Flujo_25</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Tarea_LlenarJustificacion" name="Llenar la justificación y adjuntar el soporte">
+      <bpmn:incoming>Flujo_24</bpmn:incoming>
+      <bpmn:outgoing>Flujo_26</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Tarea_VencerEnlace" name="Vencer el enlace: la falta queda sin justificar">
+      <bpmn:incoming>Flujo_25</bpmn:incoming>
+      <bpmn:outgoing>Flujo_31</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Tarea_RevisarJustificacion" name="Revisar la justificación (instructor)">
+      <bpmn:incoming>Flujo_26</bpmn:incoming>
+      <bpmn:outgoing>Flujo_27</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Compuerta_Aprobada" name="¿Aprobada?">
+      <bpmn:incoming>Flujo_27</bpmn:incoming>
+      <bpmn:outgoing>Flujo_28</bpmn:outgoing>
+      <bpmn:outgoing>Flujo_29</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Tarea_MarcarJustificada" name="Cambiar la falta a «justificada» y auditar">
+      <bpmn:incoming>Flujo_28</bpmn:incoming>
+      <bpmn:outgoing>Flujo_30</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="Asoc_Datos_2">
+        <bpmn:targetRef>BD_Justificaciones</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Tarea_RechazarJustificacion" name="Rechazar con observación obligatoria">
+      <bpmn:incoming>Flujo_29</bpmn:incoming>
+      <bpmn:outgoing>Flujo_32</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Compuerta_UnirRevision">
+      <bpmn:incoming>Flujo_30</bpmn:incoming>
+      <bpmn:incoming>Flujo_31</bpmn:incoming>
+      <bpmn:incoming>Flujo_32</bpmn:incoming>
+      <bpmn:outgoing>Flujo_33</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Tarea_ActualizarReportes" name="Actualizar reportes y % de asistencia">
+      <bpmn:incoming>Flujo_33</bpmn:incoming>
+      <bpmn:outgoing>Flujo_34</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Tarea_ConsultarReportes" name="Consultar reportes y alertas (coordinación)">
+      <bpmn:incoming>Flujo_34</bpmn:incoming>
+      <bpmn:outgoing>Flujo_35</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="Fin_AsistenciaConsolidada" name="Asistencia consolidada y trazable">
+      <bpmn:incoming>Flujo_35</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flujo_01" sourceRef="Inicio_HoraClase" targetRef="Tarea_IniciarSesion" />
+    <bpmn:sequenceFlow id="Flujo_02" sourceRef="Tarea_IniciarSesion" targetRef="Tarea_AbrirSesion" />
+    <bpmn:sequenceFlow id="Flujo_03" sourceRef="Tarea_AbrirSesion" targetRef="Compuerta_SiguienteAprendiz" />
+    <bpmn:sequenceFlow id="Flujo_04" sourceRef="Compuerta_SiguienteAprendiz" targetRef="Tarea_PonerHuella" />
+    <bpmn:sequenceFlow id="Flujo_05" sourceRef="Tarea_PonerHuella" targetRef="Tarea_IdentificarHuella" />
+    <bpmn:sequenceFlow id="Flujo_06" sourceRef="Tarea_IdentificarHuella" targetRef="Compuerta_HuellaReconocida" />
+    <bpmn:sequenceFlow id="Flujo_07" name="Sí" sourceRef="Compuerta_HuellaReconocida" targetRef="Tarea_EnviarADMS" />
+    <bpmn:sequenceFlow id="Flujo_08" name="No" sourceRef="Compuerta_HuellaReconocida" targetRef="Tarea_Reintentar" />
+    <bpmn:sequenceFlow id="Flujo_09" sourceRef="Tarea_Reintentar" targetRef="Compuerta_SiguienteAprendiz" />
+    <bpmn:sequenceFlow id="Flujo_10" sourceRef="Tarea_EnviarADMS" targetRef="Tarea_ValidarMarca" />
+    <bpmn:sequenceFlow id="Flujo_11" sourceRef="Tarea_ValidarMarca" targetRef="Compuerta_MarcaValida" />
+    <bpmn:sequenceFlow id="Flujo_12" name="Sí" sourceRef="Compuerta_MarcaValida" targetRef="Tarea_CalcularEstado" />
+    <bpmn:sequenceFlow id="Flujo_13" name="No" sourceRef="Compuerta_MarcaValida" targetRef="Tarea_RechazarMarca" />
+    <bpmn:sequenceFlow id="Flujo_14" sourceRef="Tarea_CalcularEstado" targetRef="Tarea_GuardarAsistencia" />
+    <bpmn:sequenceFlow id="Flujo_15" sourceRef="Tarea_GuardarAsistencia" targetRef="Tarea_PanelEnVivo" />
+    <bpmn:sequenceFlow id="Flujo_16" sourceRef="Tarea_PanelEnVivo" targetRef="Compuerta_ClaseCerrada" />
+    <bpmn:sequenceFlow id="Flujo_17" sourceRef="Tarea_RechazarMarca" targetRef="Compuerta_ClaseCerrada" />
+    <bpmn:sequenceFlow id="Flujo_18" name="No: siguiente aprendiz" sourceRef="Compuerta_ClaseCerrada" targetRef="Compuerta_SiguienteAprendiz" />
+    <bpmn:sequenceFlow id="Flujo_19" name="Sí" sourceRef="Compuerta_ClaseCerrada" targetRef="Tarea_CerrarSesion" />
+    <bpmn:sequenceFlow id="Flujo_20" sourceRef="Tarea_CerrarSesion" targetRef="Tarea_CrearEnlace" />
+    <bpmn:sequenceFlow id="Flujo_21" sourceRef="Tarea_CrearEnlace" targetRef="Tarea_EnviarCorreo" />
+    <bpmn:sequenceFlow id="Flujo_22" sourceRef="Tarea_EnviarCorreo" targetRef="Tarea_RecibirCorreo" />
+    <bpmn:sequenceFlow id="Flujo_23" sourceRef="Tarea_RecibirCorreo" targetRef="Compuerta_Justifica" />
+    <bpmn:sequenceFlow id="Flujo_24" name="Sí" sourceRef="Compuerta_Justifica" targetRef="Tarea_LlenarJustificacion" />
+    <bpmn:sequenceFlow id="Flujo_25" name="No: venció" sourceRef="Compuerta_Justifica" targetRef="Tarea_VencerEnlace" />
+    <bpmn:sequenceFlow id="Flujo_26" sourceRef="Tarea_LlenarJustificacion" targetRef="Tarea_RevisarJustificacion" />
+    <bpmn:sequenceFlow id="Flujo_27" sourceRef="Tarea_RevisarJustificacion" targetRef="Compuerta_Aprobada" />
+    <bpmn:sequenceFlow id="Flujo_28" name="Sí" sourceRef="Compuerta_Aprobada" targetRef="Tarea_MarcarJustificada" />
+    <bpmn:sequenceFlow id="Flujo_29" name="No" sourceRef="Compuerta_Aprobada" targetRef="Tarea_RechazarJustificacion" />
+    <bpmn:sequenceFlow id="Flujo_30" sourceRef="Tarea_MarcarJustificada" targetRef="Compuerta_UnirRevision" />
+    <bpmn:sequenceFlow id="Flujo_31" sourceRef="Tarea_VencerEnlace" targetRef="Compuerta_UnirRevision" />
+    <bpmn:sequenceFlow id="Flujo_32" sourceRef="Tarea_RechazarJustificacion" targetRef="Compuerta_UnirRevision" />
+    <bpmn:sequenceFlow id="Flujo_33" sourceRef="Compuerta_UnirRevision" targetRef="Tarea_ActualizarReportes" />
+    <bpmn:sequenceFlow id="Flujo_34" sourceRef="Tarea_ActualizarReportes" targetRef="Tarea_ConsultarReportes" />
+    <bpmn:sequenceFlow id="Flujo_35" sourceRef="Tarea_ConsultarReportes" targetRef="Fin_AsistenciaConsolidada" />
+    <bpmn:dataStoreReference id="BD_Asistencia" name="PostgreSQL (asistencia)" dataStoreRef="AlmacenPostgreSQL" />
+    <bpmn:dataStoreReference id="BD_Justificaciones" name="PostgreSQL (auditoría)" dataStoreRef="AlmacenPostgreSQL" />
+    <bpmn:textAnnotation id="Nota_Privacidad">
+      <bpmn:text>Solo viajan el PIN (documento) y la hora: la huella no sale del lector (Ley 1581/2012)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Nota_Privacidad_Asoc" associationDirection="None" sourceRef="Tarea_EnviarADMS" targetRef="Nota_Privacidad" />
+    <bpmn:textAnnotation id="Nota_Tolerancia">
+      <bpmn:text>Tardanza si marca después de la tolerancia (15 min por defecto)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Nota_Tolerancia_Asoc" associationDirection="None" sourceRef="Tarea_CalcularEstado" targetRef="Nota_Tolerancia" />
+    <bpmn:textAnnotation id="Nota_Cierre">
+      <bpmn:text>Cierre manual desde React o automático: una tarea revisa cada minuto (hora fin + 10 min)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Nota_Cierre_Asoc" associationDirection="None" sourceRef="Tarea_CerrarSesion" targetRef="Nota_Cierre" />
+    <bpmn:textAnnotation id="Nota_Plazo">
+      <bpmn:text>Plazo configurable (72 h por defecto). Correo con Nodemailer + SMTP</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Nota_Plazo_Asoc" associationDirection="None" sourceRef="Tarea_EnviarCorreo" targetRef="Nota_Plazo" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagrama_Asistencia">
+    <bpmndi:BPMNPlane id="Plano_Asistencia" bpmnElement="Colaboracion_Asistencia">
+      <bpmndi:BPMNShape id="Participante_AsistenciaApp_di" bpmnElement="Participante_AsistenciaApp" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="3938" height="870" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Carril_AprendizLector_di" bpmnElement="Carril_AprendizLector" isHorizontal="true">
+        <dc:Bounds x="180" y="80" width="3908" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Carril_Backend_di" bpmnElement="Carril_Backend" isHorizontal="true">
+        <dc:Bounds x="180" y="380" width="3908" height="330" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Carril_Frontend_di" bpmnElement="Carril_Frontend" isHorizontal="true">
+        <dc:Bounds x="180" y="710" width="3908" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inicio_HoraClase_di" bpmnElement="Inicio_HoraClase">
+        <dc:Bounds x="242" y="772" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="210" y="814" width="100" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_IniciarSesion_di" bpmnElement="Tarea_IniciarSesion">
+        <dc:Bounds x="360" y="750" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_AbrirSesion_di" bpmnElement="Tarea_AbrirSesion">
+        <dc:Bounds x="510" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_SiguienteAprendiz_di" bpmnElement="Compuerta_SiguienteAprendiz" isMarkerVisible="true">
+        <dc:Bounds x="685" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_PonerHuella_di" bpmnElement="Tarea_PonerHuella">
+        <dc:Bounds x="810" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_IdentificarHuella_di" bpmnElement="Tarea_IdentificarHuella">
+        <dc:Bounds x="960" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_HuellaReconocida_di" bpmnElement="Compuerta_HuellaReconocida" isMarkerVisible="true">
+        <dc:Bounds x="1135" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1110" y="131" width="100" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_Reintentar_di" bpmnElement="Tarea_Reintentar">
+        <dc:Bounds x="1110" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_EnviarADMS_di" bpmnElement="Tarea_EnviarADMS">
+        <dc:Bounds x="1260" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_ValidarMarca_di" bpmnElement="Tarea_ValidarMarca">
+        <dc:Bounds x="1260" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_MarcaValida_di" bpmnElement="Compuerta_MarcaValida" isMarkerVisible="true">
+        <dc:Bounds x="1435" y="520" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1410" y="575" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_RechazarMarca_di" bpmnElement="Tarea_RechazarMarca">
+        <dc:Bounds x="1410" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_CalcularEstado_di" bpmnElement="Tarea_CalcularEstado">
+        <dc:Bounds x="1560" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_GuardarAsistencia_di" bpmnElement="Tarea_GuardarAsistencia">
+        <dc:Bounds x="1710" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_PanelEnVivo_di" bpmnElement="Tarea_PanelEnVivo">
+        <dc:Bounds x="1860" y="750" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_ClaseCerrada_di" bpmnElement="Compuerta_ClaseCerrada" isMarkerVisible="true">
+        <dc:Bounds x="2035" y="520" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2065" y="456" width="120" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_CerrarSesion_di" bpmnElement="Tarea_CerrarSesion">
+        <dc:Bounds x="2160" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_CrearEnlace_di" bpmnElement="Tarea_CrearEnlace">
+        <dc:Bounds x="2310" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_EnviarCorreo_di" bpmnElement="Tarea_EnviarCorreo">
+        <dc:Bounds x="2460" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_RecibirCorreo_di" bpmnElement="Tarea_RecibirCorreo">
+        <dc:Bounds x="2610" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_Justifica_di" bpmnElement="Compuerta_Justifica" isMarkerVisible="true">
+        <dc:Bounds x="2785" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2760" y="131" width="100" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_LlenarJustificacion_di" bpmnElement="Tarea_LlenarJustificacion">
+        <dc:Bounds x="2910" y="750" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_VencerEnlace_di" bpmnElement="Tarea_VencerEnlace">
+        <dc:Bounds x="2910" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_RevisarJustificacion_di" bpmnElement="Tarea_RevisarJustificacion">
+        <dc:Bounds x="3060" y="750" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_Aprobada_di" bpmnElement="Compuerta_Aprobada" isMarkerVisible="true">
+        <dc:Bounds x="3235" y="765" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3210" y="820" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_MarcarJustificada_di" bpmnElement="Tarea_MarcarJustificada">
+        <dc:Bounds x="3360" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_RechazarJustificacion_di" bpmnElement="Tarea_RechazarJustificacion">
+        <dc:Bounds x="3360" y="750" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Compuerta_UnirRevision_di" bpmnElement="Compuerta_UnirRevision" isMarkerVisible="true">
+        <dc:Bounds x="3535" y="520" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_ActualizarReportes_di" bpmnElement="Tarea_ActualizarReportes">
+        <dc:Bounds x="3660" y="505" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Tarea_ConsultarReportes_di" bpmnElement="Tarea_ConsultarReportes">
+        <dc:Bounds x="3810" y="750" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Fin_AsistenciaConsolidada_di" bpmnElement="Fin_AsistenciaConsolidada">
+        <dc:Bounds x="3992" y="772" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3960" y="814" width="100" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BD_Asistencia_di" bpmnElement="BD_Asistencia">
+        <dc:Bounds x="1735" y="625" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1791" y="635" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BD_Justificaciones_di" bpmnElement="BD_Justificaciones">
+        <dc:Bounds x="3385" y="625" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3441" y="635" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Nota_Privacidad_di" bpmnElement="Nota_Privacidad">
+        <dc:Bounds x="1445" y="280" width="230" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Nota_Tolerancia_di" bpmnElement="Nota_Tolerancia">
+        <dc:Bounds x="1510" y="620" width="200" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Nota_Cierre_di" bpmnElement="Nota_Cierre">
+        <dc:Bounds x="2100" y="620" width="220" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Nota_Plazo_di" bpmnElement="Nota_Plazo">
+        <dc:Bounds x="2400" y="620" width="220" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flujo_01_di" bpmnElement="Flujo_01">
+        <di:waypoint x="278" y="790" />
+        <di:waypoint x="360" y="790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_02_di" bpmnElement="Flujo_02">
+        <di:waypoint x="460" y="790" />
+        <di:waypoint x="560" y="790" />
+        <di:waypoint x="560" y="585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_03_di" bpmnElement="Flujo_03">
+        <di:waypoint x="560" y="505" />
+        <di:waypoint x="560" y="200" />
+        <di:waypoint x="685" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_04_di" bpmnElement="Flujo_04">
+        <di:waypoint x="735" y="200" />
+        <di:waypoint x="810" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_05_di" bpmnElement="Flujo_05">
+        <di:waypoint x="910" y="200" />
+        <di:waypoint x="960" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_06_di" bpmnElement="Flujo_06">
+        <di:waypoint x="1060" y="200" />
+        <di:waypoint x="1135" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_07_di" bpmnElement="Flujo_07">
+        <di:waypoint x="1185" y="200" />
+        <di:waypoint x="1260" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1170" y="178" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_08_di" bpmnElement="Flujo_08">
+        <di:waypoint x="1160" y="225" />
+        <di:waypoint x="1160" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1146" y="235" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_09_di" bpmnElement="Flujo_09">
+        <di:waypoint x="1110" y="310" />
+        <di:waypoint x="710" y="310" />
+        <di:waypoint x="710" y="225" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_10_di" bpmnElement="Flujo_10">
+        <di:waypoint x="1310" y="240" />
+        <di:waypoint x="1310" y="505" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_11_di" bpmnElement="Flujo_11">
+        <di:waypoint x="1360" y="545" />
+        <di:waypoint x="1435" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_12_di" bpmnElement="Flujo_12">
+        <di:waypoint x="1485" y="545" />
+        <di:waypoint x="1560" y="545" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1490" y="523" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_13_di" bpmnElement="Flujo_13">
+        <di:waypoint x="1460" y="520" />
+        <di:waypoint x="1460" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1466" y="478" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_14_di" bpmnElement="Flujo_14">
+        <di:waypoint x="1660" y="545" />
+        <di:waypoint x="1710" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_15_di" bpmnElement="Flujo_15">
+        <di:waypoint x="1810" y="545" />
+        <di:waypoint x="1910" y="545" />
+        <di:waypoint x="1910" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_16_di" bpmnElement="Flujo_16">
+        <di:waypoint x="1960" y="790" />
+        <di:waypoint x="2060" y="790" />
+        <di:waypoint x="2060" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_17_di" bpmnElement="Flujo_17">
+        <di:waypoint x="1510" y="430" />
+        <di:waypoint x="1990" y="430" />
+        <di:waypoint x="1990" y="545" />
+        <di:waypoint x="2035" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_18_di" bpmnElement="Flujo_18">
+        <di:waypoint x="2060" y="520" />
+        <di:waypoint x="2060" y="100" />
+        <di:waypoint x="710" y="100" />
+        <di:waypoint x="710" y="175" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1880" y="104" width="154" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_19_di" bpmnElement="Flujo_19">
+        <di:waypoint x="2085" y="545" />
+        <di:waypoint x="2160" y="545" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2092" y="548" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_20_di" bpmnElement="Flujo_20">
+        <di:waypoint x="2260" y="545" />
+        <di:waypoint x="2310" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_21_di" bpmnElement="Flujo_21">
+        <di:waypoint x="2410" y="545" />
+        <di:waypoint x="2460" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_22_di" bpmnElement="Flujo_22">
+        <di:waypoint x="2560" y="545" />
+        <di:waypoint x="2660" y="545" />
+        <di:waypoint x="2660" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_23_di" bpmnElement="Flujo_23">
+        <di:waypoint x="2710" y="200" />
+        <di:waypoint x="2785" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_24_di" bpmnElement="Flujo_24">
+        <di:waypoint x="2810" y="225" />
+        <di:waypoint x="2810" y="790" />
+        <di:waypoint x="2910" y="790" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2816" y="236" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_25_di" bpmnElement="Flujo_25">
+        <di:waypoint x="2835" y="200" />
+        <di:waypoint x="2960" y="200" />
+        <di:waypoint x="2960" y="505" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2845" y="178" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_26_di" bpmnElement="Flujo_26">
+        <di:waypoint x="3010" y="790" />
+        <di:waypoint x="3060" y="790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_27_di" bpmnElement="Flujo_27">
+        <di:waypoint x="3160" y="790" />
+        <di:waypoint x="3235" y="790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_28_di" bpmnElement="Flujo_28">
+        <di:waypoint x="3260" y="765" />
+        <di:waypoint x="3260" y="545" />
+        <di:waypoint x="3360" y="545" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3266" y="730" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_29_di" bpmnElement="Flujo_29">
+        <di:waypoint x="3285" y="790" />
+        <di:waypoint x="3360" y="790" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3292" y="768" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_30_di" bpmnElement="Flujo_30">
+        <di:waypoint x="3460" y="545" />
+        <di:waypoint x="3535" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_31_di" bpmnElement="Flujo_31">
+        <di:waypoint x="3010" y="545" />
+        <di:waypoint x="3060" y="545" />
+        <di:waypoint x="3060" y="430" />
+        <di:waypoint x="3560" y="430" />
+        <di:waypoint x="3560" y="520" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_32_di" bpmnElement="Flujo_32">
+        <di:waypoint x="3460" y="790" />
+        <di:waypoint x="3560" y="790" />
+        <di:waypoint x="3560" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_33_di" bpmnElement="Flujo_33">
+        <di:waypoint x="3585" y="545" />
+        <di:waypoint x="3660" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_34_di" bpmnElement="Flujo_34">
+        <di:waypoint x="3760" y="545" />
+        <di:waypoint x="3860" y="545" />
+        <di:waypoint x="3860" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flujo_35_di" bpmnElement="Flujo_35">
+        <di:waypoint x="3910" y="790" />
+        <di:waypoint x="3992" y="790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Asoc_Datos_1_di" bpmnElement="Asoc_Datos_1">
+        <di:waypoint x="1760" y="585" />
+        <di:waypoint x="1760" y="625" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Asoc_Datos_2_di" bpmnElement="Asoc_Datos_2">
+        <di:waypoint x="3410" y="585" />
+        <di:waypoint x="3410" y="625" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Nota_Privacidad_Asoc_di" bpmnElement="Nota_Privacidad_Asoc">
+        <di:waypoint x="1360" y="200" />
+        <di:waypoint x="1455" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Nota_Tolerancia_Asoc_di" bpmnElement="Nota_Tolerancia_Asoc">
+        <di:waypoint x="1610" y="585" />
+        <di:waypoint x="1610" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Nota_Cierre_Asoc_di" bpmnElement="Nota_Cierre_Asoc">
+        <di:waypoint x="2210" y="585" />
+        <di:waypoint x="2210" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Nota_Plazo_Asoc_di" bpmnElement="Nota_Plazo_Asoc">
+        <di:waypoint x="2510" y="585" />
+        <di:waypoint x="2510" y="620" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
