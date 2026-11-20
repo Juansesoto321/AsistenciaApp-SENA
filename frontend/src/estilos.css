@@ -4,12 +4,19 @@
    color de la asistencia. El verde oficial va en el recuadro del logo y en
    la huella; texto, enlaces y botones con texto blanco encima usan tonos más
    oscuros del mismo verde para leerse bien (contraste AA, 4,5:1).
+<<<<<<< HEAD
+   Estilo: superficies sólidas y tranquilas, sin vidrio ni brillos. El menú
+   lateral es azul en los dos temas; el tema oscuro (el de por defecto) es
+   azul noche y el claro, gris azulado con tinta azul. La única pieza vistosa
+   es la huella (inicio de sesión y clase en curso).
+=======
    Estilo "verde eléctrico": azul noche casi negro con el
    verde SENA como protagonista en un degradado verde → menta → cian que se
    mueve en lo importante: botones, cifras, el anillo de asistencia, la barra
    de la página abierta y el borde de la clase en curso. Las tarjetas encienden
    un borde de luz que recorre su contorno al pasar el mouse. Lo demás queda
    sólido y tranquilo para que eso resalte (ver el bloque del final).
+>>>>>>> 721e4b75932af27bcf4e77d8eea31a5c8900309c
    Letra: Work Sans en toda la app (va dentro de la compilación, funciona sin
    internet), con cifras tabulares en los números.
    ============================================================ */
